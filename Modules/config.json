@@ -744,7 +744,7 @@
             "control"
         ],
         "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"qianwen_ui@1,qianwen_api,deepseek_ui,doubao_ui\"}",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"qianwen_ui@2,qianwen_api,deepseek_ui,doubao_ui\"}",
         "message": "正在执行 News (千问网页→千问API→DS网页→豆包)..."
     },
     {
@@ -754,7 +754,7 @@
             "option"
         ],
         "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"qianwen_ui@1,qianwen_api,deepseek_ui,doubao_ui\"}",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"qianwen_ui@2,qianwen_api,deepseek_ui,doubao_ui\"}",
         "message": "正在执行 News (千问网页起始, Force)..."
     },
     {

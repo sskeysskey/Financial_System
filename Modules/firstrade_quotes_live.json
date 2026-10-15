@@ -1,8 +1,8 @@
 {
  "_meta": {
-  "updated_at": 1791900113.007353,
-  "updated_at_str": "2026-10-13 22:01:53",
-  "count": 150
+  "updated_at": 1791986857.957027,
+  "updated_at_str": "2026-10-14 22:07:37",
+  "count": 157
  },
  "quotes": {
   "AA": {
@@ -60,15 +60,6 @@
    "change_pct": "0.00%",
    "change_pct_num": 0,
    "last": "65.03",
-   "source": "temp",
-   "group": "temp"
-  },
-  "APP": {
-   "symbol": "APP",
-   "updated_at": 1790930570.302687,
-   "change_pct": "+0.46%",
-   "change_pct_num": 0.458569,
-   "last": "282.60",
    "source": "temp",
    "group": "temp"
   },
@@ -171,14 +162,6 @@
    "change_pct": "-0.95%",
    "change_pct_num": -0.953932,
    "last": "85.14",
-   "source": "positions"
-  },
-  "EQT": {
-   "symbol": "EQT",
-   "updated_at": 1790947497.189492,
-   "change_pct": "-0.46%",
-   "change_pct_num": -0.459173,
-   "last": "49.86",
    "source": "positions"
   },
   "OXY": {
@@ -289,14 +272,6 @@
    "change_pct": "+0.26%",
    "change_pct_num": 0.263852,
    "last": "38.00",
-   "source": "positions"
-  },
-  "AEIS": {
-   "symbol": "AEIS",
-   "updated_at": 1791260292.625258,
-   "change_pct": "+0.91%",
-   "change_pct_num": 0.911568,
-   "last": "300.00",
    "source": "positions"
   },
   "BABA": {
@@ -670,14 +645,6 @@
    "last": "134.76",
    "source": "positions"
   },
-  "BNY": {
-   "symbol": "BNY",
-   "updated_at": 1791382663.988178,
-   "change_pct": "-1.36%",
-   "change_pct_num": -1.35671,
-   "last": "141.78",
-   "source": "positions"
-  },
   "STZ": {
    "symbol": "STZ",
    "updated_at": 1791438667.271988,
@@ -720,14 +687,6 @@
    "change_pct": "0.00%",
    "change_pct_num": 0,
    "last": "53.44",
-   "source": "positions"
-  },
-  "UMBF": {
-   "symbol": "UMBF",
-   "updated_at": 1791438869.170669,
-   "change_pct": "-0.04%",
-   "change_pct_num": -0.038999,
-   "last": "128.16",
    "source": "positions"
   },
   "SLB": {
@@ -808,14 +767,6 @@
    "change_pct": "-0.23%",
    "change_pct_num": -0.232496,
    "last": "111.57",
-   "source": "positions"
-  },
-  "GFI": {
-   "symbol": "GFI",
-   "updated_at": 1791439197.108146,
-   "change_pct": "-0.49%",
-   "change_pct_num": -0.485021,
-   "last": "34.88",
    "source": "positions"
   },
   "AGNC": {
@@ -1026,14 +977,6 @@
    "last": "31.43",
    "source": "positions"
   },
-  "BB": {
-   "symbol": "BB",
-   "updated_at": 1791522697.564229,
-   "change_pct": "-0.93%",
-   "change_pct_num": -0.926999,
-   "last": "8.55",
-   "source": "positions"
-  },
   "RYTM": {
    "symbol": "RYTM",
    "updated_at": 1791522880.541905,
@@ -1236,14 +1179,6 @@
    "last": "19.24",
    "source": "positions"
   },
-  "NVDA": {
-   "symbol": "NVDA",
-   "updated_at": 1791875758.736402,
-   "change_pct": "-1.08%",
-   "change_pct_num": -1.082538,
-   "last": "223.87",
-   "source": "positions"
-  },
   "JNJ": {
    "symbol": "JNJ",
    "updated_at": 1791899850.410468,
@@ -1274,6 +1209,126 @@
    "change_pct": "-0.47%",
    "change_pct_num": -0.468372,
    "last": "189.13",
+   "source": "positions"
+  },
+  "JMUB": {
+   "symbol": "JMUB",
+   "updated_at": 1791955875.816416,
+   "change_pct": "-3.78%",
+   "change_pct_num": -3.7803,
+   "last": "46.07",
+   "source": "positions"
+  },
+  "APP": {
+   "symbol": "APP",
+   "updated_at": 1791985347.006102,
+   "change_pct": "-1.72%",
+   "change_pct_num": -1.7225,
+   "last": "267.59",
+   "source": "positions"
+  },
+  "CRWV": {
+   "symbol": "CRWV",
+   "updated_at": 1791985560.108858,
+   "change_pct": "-12.99%",
+   "change_pct_num": -12.993189,
+   "last": "67.70",
+   "source": "positions"
+  },
+  "ESAB": {
+   "symbol": "ESAB",
+   "updated_at": 1791985605.136111,
+   "change_pct": "-1.45%",
+   "change_pct_num": -1.450793,
+   "last": "65.89",
+   "source": "positions"
+  },
+  "UMBF": {
+   "symbol": "UMBF",
+   "updated_at": 1791985655.214688,
+   "change_pct": "-1.84%",
+   "change_pct_num": -1.836625,
+   "last": "127.74",
+   "source": "positions"
+  },
+  "NVDA": {
+   "symbol": "NVDA",
+   "updated_at": 1791985855.732172,
+   "change_pct": "-1.21%",
+   "change_pct_num": -1.207772,
+   "last": "225.76",
+   "source": "positions"
+  },
+  "GTLB": {
+   "symbol": "GTLB",
+   "updated_at": 1791985993.763977,
+   "change_pct": "+3.50%",
+   "change_pct_num": 3.503369,
+   "last": "53.77",
+   "source": "positions"
+  },
+  "GFI": {
+   "symbol": "GFI",
+   "updated_at": 1791986058.2351592,
+   "change_pct": "-1.98%",
+   "change_pct_num": -1.981288,
+   "last": "35.62",
+   "source": "positions"
+  },
+  "BB": {
+   "symbol": "BB",
+   "updated_at": 1791986143.367869,
+   "change_pct": "-2.38%",
+   "change_pct_num": -2.382527,
+   "last": "8.27",
+   "source": "positions"
+  },
+  "ECG": {
+   "symbol": "ECG",
+   "updated_at": 1791986339.015875,
+   "change_pct": "-3.57%",
+   "change_pct_num": -3.573843,
+   "last": "114.13",
+   "source": "positions"
+  },
+  "EQT": {
+   "symbol": "EQT",
+   "updated_at": 1791986366.486497,
+   "change_pct": "-1.60%",
+   "change_pct_num": -1.598383,
+   "last": "53.56",
+   "source": "positions"
+  },
+  "MMYT": {
+   "symbol": "MMYT",
+   "updated_at": 1791986512.10723,
+   "change_pct": "-1.22%",
+   "change_pct_num": -1.219239,
+   "last": "44.16",
+   "source": "positions"
+  },
+  "TTMI": {
+   "symbol": "TTMI",
+   "updated_at": 1791986661.260484,
+   "change_pct": "-3.86%",
+   "change_pct_num": -3.858742,
+   "last": "111.62",
+   "source": "positions"
+  },
+  "AEIS": {
+   "symbol": "AEIS",
+   "updated_at": 1791986804.445683,
+   "change_pct": "-2.23%",
+   "change_pct_num": -2.227462,
+   "last": "269.51",
+   "source": "positions"
+  },
+  "BNY": {
+   "symbol": "BNY",
+   "updated_at": 1791986857.953741,
+   "change_pct": "-2.90%",
+   "change_pct_num": -2.900092,
+   "last": "136.94",
    "source": "positions"
   }
  }

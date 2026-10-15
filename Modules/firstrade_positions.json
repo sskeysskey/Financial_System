@@ -54,20 +54,22 @@
   "quantity": "21",
   "cost": "999.77",
   "last_price": "46.07",
-  "day_change": "-3.32%",
+  "day_change": "-3.78%",
   "gainloss": "-3.23%",
   "gainloss_amount": "-32.30",
-  "allocation": "0.28%"
+  "allocation": "0.28%",
+  "patched_at": 1791955875.821253
  },
  "CRWV": {
   "symbol": "CRWV",
   "quantity": "12",
   "cost": "961.68",
-  "last_price": "77.90",
-  "day_change": "-2.94%",
-  "gainloss": "-2.80%",
-  "gainloss_amount": "-26.88",
-  "allocation": "0.27%"
+  "last_price": "67.70",
+  "day_change": "-12.99%",
+  "gainloss": "-15.52%",
+  "gainloss_amount": "-149.28",
+  "allocation": "0.24%",
+  "patched_at": 1791985560.1132889
  },
  "BX": {
   "symbol": "BX",
@@ -93,21 +95,23 @@
   "symbol": "BNY",
   "quantity": "34.51362",
   "cost": "5,000.00",
-  "last_price": "141.34",
-  "day_change": "-1.06%",
-  "gainloss": "-2.44%",
-  "gainloss_amount": "-121.83",
-  "allocation": "1.42%"
+  "last_price": "136.94",
+  "day_change": "-2.90%",
+  "gainloss": "-5.47%",
+  "gainloss_amount": "-273.70",
+  "allocation": "1.39%",
+  "patched_at": 1791986857.960311
  },
  "UMBF": {
   "symbol": "UMBF",
   "quantity": "37.66635",
   "cost": "5,050.72",
-  "last_price": "131.28",
-  "day_change": "+0.01%",
-  "gainloss": "-2.10%",
-  "gainloss_amount": "-105.88",
-  "allocation": "1.44%"
+  "last_price": "127.74",
+  "day_change": "-1.84%",
+  "gainloss": "-4.74%",
+  "gainloss_amount": "-239.22",
+  "allocation": "1.41%",
+  "patched_at": 1791985655.219618
  },
  "BMRN": {
   "symbol": "BMRN",
@@ -123,11 +127,12 @@
   "symbol": "APP",
   "quantity": "14",
   "cost": "3,891.04",
-  "last_price": "272.58",
-  "day_change": "+0.63%",
-  "gainloss": "-1.93%",
-  "gainloss_amount": "-74.92",
-  "allocation": "1.11%"
+  "last_price": "267.59",
+  "day_change": "-1.72%",
+  "gainloss": "-3.72%",
+  "gainloss_amount": "-144.78",
+  "allocation": "1.10%",
+  "patched_at": 1791985347.0098581
  },
  "GRFS": {
   "symbol": "GRFS",
@@ -613,51 +618,56 @@
   "symbol": "MMYT",
   "quantity": "70",
   "cost": "3,028.97",
-  "last_price": "44.49",
-  "day_change": "+0.34%",
-  "gainloss": "+2.82%",
-  "gainloss_amount": "+85.33",
-  "allocation": "0.90%"
+  "last_price": "44.16",
+  "day_change": "-1.22%",
+  "gainloss": "+2.04%",
+  "gainloss_amount": "+61.88",
+  "allocation": "0.91%",
+  "patched_at": 1791986512.1136792
  },
  "BB": {
   "symbol": "BB",
   "quantity": "486.69046",
   "cost": "4,000.00",
-  "last_price": "8.47",
-  "day_change": "+0.24%",
-  "gainloss": "+3.06%",
-  "gainloss_amount": "+122.27",
-  "allocation": "1.20%"
+  "last_price": "8.27",
+  "day_change": "-2.38%",
+  "gainloss": "+0.60%",
+  "gainloss_amount": "+24.05",
+  "allocation": "1.18%",
+  "patched_at": 1791986143.372264
  },
  "NVDA": {
   "symbol": "NVDA",
   "quantity": "40.96545",
   "cost": "9,108.04",
-  "last_price": "229.39",
-  "day_change": "+1.36%",
-  "gainloss": "+3.17%",
-  "gainloss_amount": "+289.02",
-  "allocation": "2.73%"
+  "last_price": "225.76",
+  "day_change": "-1.21%",
+  "gainloss": "+1.54%",
+  "gainloss_amount": "+140.32",
+  "allocation": "2.71%",
+  "patched_at": 1791985855.736608
  },
  "GFI": {
   "symbol": "GFI",
   "quantity": "56",
   "cost": "1,983.93",
-  "last_price": "36.58",
-  "day_change": "-0.49%",
-  "gainloss": "+3.25%",
-  "gainloss_amount": "+64.55",
-  "allocation": "0.59%"
+  "last_price": "35.62",
+  "day_change": "-1.98%",
+  "gainloss": "+0.54%",
+  "gainloss_amount": "+10.79",
+  "allocation": "0.58%",
+  "patched_at": 1791986058.238997
  },
  "ESAB": {
   "symbol": "ESAB",
   "quantity": "30.89757",
   "cost": "2,000.00",
-  "last_price": "66.86",
-  "day_change": "+0.71%",
-  "gainloss": "+3.29%",
-  "gainloss_amount": "+65.81",
-  "allocation": "0.60%"
+  "last_price": "65.89",
+  "day_change": "-1.45%",
+  "gainloss": "+1.79%",
+  "gainloss_amount": "+35.84",
+  "allocation": "0.60%",
+  "patched_at": 1791985605.140024
  },
  "GMED": {
   "symbol": "GMED",
@@ -673,11 +683,12 @@
   "symbol": "AEIS",
   "quantity": "26.23746",
   "cost": "7,000.00",
-  "last_price": "275.65",
-  "day_change": "-1.82%",
-  "gainloss": "+3.32%",
-  "gainloss_amount": "+232.36",
-  "allocation": "2.10%"
+  "last_price": "269.51",
+  "day_change": "-2.23%",
+  "gainloss": "+1.02%",
+  "gainloss_amount": "+71.26",
+  "allocation": "2.07%",
+  "patched_at": 1791986804.45201
  },
  "HD": {
   "symbol": "HD",
@@ -713,11 +724,12 @@
   "symbol": "ECG",
   "quantity": "17.41317",
   "cost": "2,000.00",
-  "last_price": "119.00",
-  "day_change": "-0.87%",
-  "gainloss": "+3.61%",
-  "gainloss_amount": "+72.17",
-  "allocation": "0.60%"
+  "last_price": "114.13",
+  "day_change": "-3.57%",
+  "gainloss": "-0.63%",
+  "gainloss_amount": "-12.63",
+  "allocation": "0.58%",
+  "patched_at": 1791986339.019625
  },
  "DE": {
   "symbol": "DE",
@@ -963,11 +975,12 @@
   "symbol": "TTMI",
   "quantity": "9",
   "cost": "976.64",
-  "last_price": "116.30",
-  "day_change": "+5.41%",
-  "gainloss": "+7.17%",
-  "gainloss_amount": "+70.06",
-  "allocation": "0.30%"
+  "last_price": "111.62",
+  "day_change": "-3.86%",
+  "gainloss": "+2.86%",
+  "gainloss_amount": "+27.94",
+  "allocation": "0.29%",
+  "patched_at": 1791986661.265561
  },
  "EAT": {
   "symbol": "EAT",
@@ -1013,11 +1026,12 @@
   "symbol": "GTLB",
   "quantity": "43.33848",
   "cost": "2,000.00",
-  "last_price": "49.82",
-  "day_change": "-11.05%",
-  "gainloss": "+7.96%",
-  "gainloss_amount": "+159.12",
-  "allocation": "0.63%"
+  "last_price": "53.77",
+  "day_change": "+3.50%",
+  "gainloss": "+16.52%",
+  "gainloss_amount": "+330.31",
+  "allocation": "0.68%",
+  "patched_at": 1791985993.768759
  },
  "V": {
   "symbol": "V",
@@ -1043,11 +1057,12 @@
   "symbol": "EQT",
   "quantity": "40.52924",
   "cost": "2,008.65",
-  "last_price": "54.43",
-  "day_change": "+2.27%",
-  "gainloss": "+9.83%",
-  "gainloss_amount": "+197.36",
-  "allocation": "0.64%"
+  "last_price": "53.56",
+  "day_change": "-1.60%",
+  "gainloss": "+8.07%",
+  "gainloss_amount": "+162.10",
+  "allocation": "0.64%",
+  "patched_at": 1791986366.493887
  },
  "YOU": {
   "symbol": "YOU",
@@ -1094,6 +1109,8 @@
   "updated_at_str": "2026-10-14 09:34:25",
   "count": 109,
   "mode": "overwrite",
-  "schema": "lean_v1"
+  "schema": "lean_v1",
+  "patched_at": 1791986857.9603121,
+  "patched_symbol": "BNY"
  }
 }

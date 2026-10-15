@@ -9,12 +9,20 @@ MW_Today.py
   - Bonds / Currencies / Crypto / Indices / Commodities -> 行情概览页的实时价格
 
 用法:
-    python MW_Today.py                      # 默认无头模式
-    python MW_Today.py --headful            # 有界面（首次运行 / 遇到验证码时推荐）
+    python MW_Today.py                      # 默认无头模式（遇到滑块验证会自动切换为有界面模式并自动拖拽）
+    python MW_Today.py --headful            # 有界面
     python MW_Today.py --groups ETFs Energy # 只跑指定分组
     python MW_Today.py --dry-run            # 只抓取并打印，不写库、不改 JSON（验证映射用）
     python MW_Today.py --no-sanity          # 关闭价格偏差校验
     python MW_Today.py --no-check           # 结束后不调用 Check_yesterday.py
+    python MW_Today.py --no-auto-slider     # 关闭滑块自动验证（遇到验证码只能手动）
+    python MW_Today.py --no-escalate        # 无头模式遇到验证码时不自动切换为有界面模式
+
+滑块自动验证（macOS）：
+    检测到验证码 -> 将爬虫启动的 Chrome Beta 窗口切到最前台 -> 屏幕模板匹配 marketwatch_verify.png
+    -> 拟人化拖拽 -> 滑块消失即判定通过 -> 把终端切回最前台 -> 等待页面自动跳转后继续抓取。
+    自动失败时退回手动模式（系统通知 + 等待 CAPTCHA_MANUAL_WAIT 秒），手动通过后同样切回终端。
+    需要给终端授予「屏幕录制」「辅助功能」「自动化」权限。
 
 防串页机制（修复"上一个 symbol 的数据被写到下一个 symbol"）：
     1. 每次导航前先跳 about:blank，并在旧文档上打 window.__mwStalePage 标记；
@@ -46,6 +54,7 @@ from tqdm import tqdm
 
 # ================= 配置区域 =================
 USER_HOME = os.path.expanduser("~")
+IS_MAC = platform.system() == 'Darwin'
 
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
@@ -78,7 +87,7 @@ PROFILE_CACHE_SUBPATHS = [
     "component_crx_cache", "extensions_crx_cache", "Crashpad",
 ]
 
-if platform.system() == 'Darwin':
+if IS_MAC:
     CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
     CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
 elif platform.system() == 'Windows':
@@ -101,6 +110,25 @@ MAX_CONSECUTIVE_BLOCKS = 3      # 连续被反爬拦截次数达到此值，终�
 BLOCK_BACKOFF_SECONDS = 10      # 被拦截后的退避基数（秒）
 REQUEST_DELAY_RANGE = (2.0, 4.5)  # 每个 symbol 之间的随机间隔（秒）
 MAX_ROWS_TO_EXTRACT = 5         # 从表格顶部提取的行数（用于日期匹配）
+
+# ---- 滑块自动验证（macOS） ----
+AUTO_SLIDER_ENABLED = True                       # 总开关（命令行 --no-auto-slider 可关闭）
+AUTO_ESCALATE_HEADFUL = True                     # 无头模式遇到验证码 -> 自动切换为有界面模式再处理
+SLIDER_MODULE_DIR = os.path.join(USER_HOME, "Coding", "python_code", "Modules")
+SLIDER_TEMPLATE = "marketwatch_verify.png"      # 位于 ~/Coding/python_code/Resource/ 下（也可写绝对路径）
+SLIDER_THRESHOLD = 0.85                          # 模板匹配阈值
+SLIDER_DISTANCE = 223                            # 实测滑轨行程 657 -> 880
+SLIDER_OVERSHOOT = 30                            # 多拖一点（滑轨到头会卡住，多拖无害）
+SLIDER_OVERSHOOT_JITTER = 10
+SLIDER_GRAB_OFFSET = (0, 0)                      # 按住点相对模板中心的偏移
+SLIDER_ATTEMPTS_PER_ROUND = 2                    # 每轮 solve 内最多拖几遍
+AUTO_SLIDER_MAX_ROUNDS = 2                       # 同一页面最多自动处理几轮，之后退回手动
+SLIDER_APPEAR_TIMEOUT = 15                       # 切到浏览器后等待滑块出现的秒数
+WINDOW_ACTIVATE_SETTLE = 1.0                     # 切换窗口后等待动画完成的秒数
+CAPTCHA_POST_SOLVE_REFRESH_AFTER = 8             # 拖拽成功后页面仍未跳转，多少秒后主动刷新
+CAPTCHA_POST_SOLVE_WAIT = 15                     # 拖拽成功后最多等多少秒视为本轮无效
+RETURN_TO_TERMINAL = True                        # 验证完成后把终端切回前台
+SLIDER_DEBUG_DIR = "/tmp"                        # 失败截图目录；None 关闭
 
 # 日期对不上时的策略：
 #   "overwrite_date" -> 取最新数据并把日期改为最近有效开盘日写入
@@ -204,7 +232,7 @@ _caffeinate_proc = None
 
 def start_caffeinate():
     global _caffeinate_proc
-    if platform.system() == 'Darwin':
+    if IS_MAC:
         try:
             _caffeinate_proc = subprocess.Popen(["caffeinate", "-idmu"])
             print(">>> [系统] 已开启防休眠模式 (caffeinate)")
@@ -684,6 +712,10 @@ def create_driver(headless=True):
     options.add_argument('--disable-extensions')
     options.add_argument('--disable-gpu')
     options.add_argument('--blink-settings=imagesEnabled=false')
+    # 有界面模式下 Chrome 常被终端窗口遮挡：禁止 Chrome 对被遮挡/后台窗口降频，避免页面"加载不完"
+    options.add_argument('--disable-backgrounding-occluded-windows')
+    options.add_argument('--disable-renderer-backgrounding')
+    options.add_argument('--disable-background-timer-throttling')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
     options.add_argument('--no-first-run')
@@ -696,6 +728,13 @@ def create_driver(headless=True):
 
     driver = webdriver.Chrome(service=Service(executable_path=CHROME_DRIVER_PATH), options=options)
     driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
+
+    if not headless:
+        # 固定到主屏左上角：ImageGrab 只截主屏，窗口跑到副屏会导致滑块永远识别不到
+        try:
+            driver.set_window_position(0, 0)
+        except Exception:
+            pass
 
     try:
         driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
@@ -774,6 +813,245 @@ def detect_body_symbol_type(driver):
     return m.group(1).lower() if m else None
 
 
+# ================= 4.5 滑块自动验证（macOS） =================
+
+_TERM_PROGRAM_APPS = {
+    "Apple_Terminal": "Terminal",
+    "iTerm.app": "iTerm",
+    "vscode": "Visual Studio Code",
+    "WarpTerminal": "Warp",
+    "ghostty": "Ghostty",
+    "WezTerm": "WezTerm",
+    "Hyper": "Hyper",
+}
+
+
+def _osascript(script, timeout=10.0):
+    try:
+        r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=timeout)
+        return r.returncode == 0, (r.stderr or r.stdout or "").strip()
+    except Exception as e:
+        return False, str(e)
+
+
+def _mac_app_name_from_binary(binary_path):
+    m = re.search(r'/([^/]+)\.app/', binary_path or '')
+    return m.group(1) if m else "Google Chrome"
+
+
+class CaptchaAutoSolver:
+    """
+    负责：切换窗口（浏览器 <-> 终端）、调用 Slider_Verify 识别并拖拽滑块、手动兜底提醒。
+    Slider_Verify 延迟到第一次需要时才加载（避免无谓的截图/权限弹窗）。
+    """
+
+    def __init__(self, enabled=True):
+        self.enabled = bool(enabled) and IS_MAC
+        if enabled and not IS_MAC:
+            tqdm.write("⚠️ 滑块自动验证仅支持 macOS，已关闭。")
+        self._sv = None
+        self._solver = None
+        self._init_failed = False
+        self._browser_activated = False
+        self._pid_cache = {}
+        self.chrome_app_name = _mac_app_name_from_binary(CHROME_BINARY_PATH)
+        self.stats = {"solved": 0, "failed": 0, "manual": 0}
+
+    # ---------- 模块加载 ----------
+    def _get_solver(self):
+        if self._solver is not None:
+            return self._solver
+        if self._init_failed or not self.enabled:
+            return None
+        try:
+            if SLIDER_MODULE_DIR not in sys.path:
+                sys.path.insert(0, SLIDER_MODULE_DIR)
+            with tqdm.external_write_mode():
+                import Slider_Verify as sv
+                cfg = sv.SliderConfig(
+                    template=SLIDER_TEMPLATE, threshold=SLIDER_THRESHOLD,
+                    distance=SLIDER_DISTANCE, overshoot=SLIDER_OVERSHOOT,
+                    overshoot_jitter=SLIDER_OVERSHOOT_JITTER, grab_offset=SLIDER_GRAB_OFFSET,
+                    max_attempts=SLIDER_ATTEMPTS_PER_ROUND, debug_dir=SLIDER_DEBUG_DIR,
+                )
+                solver = sv.SliderSolver(cfg)
+            if not solver.available:
+                raise RuntimeError(f"模板不可用: {solver.template_path}")
+            self._sv, self._solver = sv, solver
+            tqdm.write(f"🧩 滑块模块已加载（模板 {solver.template_path}，屏幕缩放 {solver.scale:.2f}）")
+            return solver
+        except Exception as e:
+            self._init_failed = True
+            self.enabled = False
+            tqdm.write(f"⚠️ 滑块自动验证不可用，将退回手动处理: {e}")
+            return None
+
+    def ensure_ready(self):
+        return self.enabled and self._get_solver() is not None
+
+    # ---------- 窗口切换 ----------
+    def _browser_pid(self, driver):
+        key = id(driver)
+        pid = self._pid_cache.get(key)
+        if pid:
+            try:
+                os.kill(pid, 0)
+                return pid
+            except OSError:
+                self._pid_cache.pop(key, None)
+        try:
+            svc_pid = driver.service.process.pid
+            out = subprocess.run(["pgrep", "-P", str(svc_pid)], capture_output=True, text=True, timeout=5)
+            pids = [int(x) for x in out.stdout.split() if x.strip().isdigit()]
+            chosen = None
+            for p in pids:
+                comm = subprocess.run(["ps", "-o", "comm=", "-p", str(p)],
+                                      capture_output=True, text=True, timeout=5).stdout
+                if "chrome" in comm.lower():
+                    chosen = p
+                    break
+            chosen = chosen or (min(pids) if pids else None)
+            if chosen:
+                self._pid_cache[key] = chosen
+            return chosen
+        except Exception:
+            return None
+
+    def activate_browser(self, driver):
+        """把爬虫启动的 Chrome Beta 切到最前台（优先按进程号，避免误切到你自己开的 Chrome Beta）"""
+        if not IS_MAC:
+            return False
+        ok = False
+        pid = self._browser_pid(driver)
+        if pid:
+            ok, msg = _osascript(
+                'tell application "System Events"\n'
+                f'  set p to first process whose unix id is {pid}\n'
+                '  set frontmost of p to true\n'
+                '  try\n'
+                '    perform action "AXRaise" of window 1 of p\n'
+                '  end try\n'
+                'end tell')
+            if not ok:
+                tqdm.write(f"   ⚠️ 按进程号切换浏览器失败（{msg[:120]}），改用应用名激活")
+        if not ok:
+            ok, msg = _osascript(f'tell application "{self.chrome_app_name}" to activate')
+            if not ok:
+                tqdm.write(f"   ⚠️ 激活 {self.chrome_app_name} 失败: {msg[:120]}")
+        try:
+            driver.execute_cdp_cmd("Page.bringToFront", {})
+        except Exception:
+            pass
+        if ok:
+            self._browser_activated = True
+        return ok
+
+    def activate_terminal(self):
+        if not (IS_MAC and RETURN_TO_TERMINAL):
+            return False
+        bid = os.environ.get("MW_TERMINAL_BUNDLE_ID") or os.environ.get("__CFBundleIdentifier")
+        if bid and "chrome" not in bid.lower():
+            ok, _ = _osascript(f'tell application id "{bid}" to activate')
+            if ok:
+                return True
+        name = os.environ.get("MW_TERMINAL_APP") or _TERM_PROGRAM_APPS.get(
+            os.environ.get("TERM_PROGRAM", ""), "Terminal")
+        ok, msg = _osascript(f'tell application "{name}" to activate')
+        if not ok:
+            tqdm.write(f"   ⚠️ 切回终端 {name} 失败: {msg[:120]}")
+        return ok
+
+    def restore_terminal(self):
+        """仅当本模块曾把浏览器切到前台时，才切回终端"""
+        if not self._browser_activated:
+            return
+        self._browser_activated = False
+        time.sleep(0.3)
+        if self.activate_terminal():
+            tqdm.write("   🖥️ 已将终端切回前台")
+
+    # ---------- 手动兜底 ----------
+    def alert_manual(self, driver):
+        self.stats["manual"] += 1
+        if not IS_MAC:
+            return
+        self.activate_browser(driver)
+        _osascript('display notification "MarketWatch 需要人工完成验证，请切到 Chrome 窗口处理" '
+                   'with title "MW_Today" sound name "Glass"')
+
+    # ---------- 自动处理 ----------
+    def try_solve(self, driver, is_captcha_fn):
+        """
+        返回: "solved" 拖拽后滑块消失 / "passed" 页面已不再是验证页 /
+              "not_found" 屏幕上未找到滑块 / "failed" 拖拽未通过 / "aborted" 用户接管 / "unavailable"
+        """
+        solver = self._get_solver()
+        if solver is None:
+            return "unavailable"
+
+        self.activate_browser(driver)
+        time.sleep(WINDOW_ACTIVATE_SETTLE)
+
+        hit = None
+        deadline = time.time() + SLIDER_APPEAR_TIMEOUT
+        with tqdm.external_write_mode():
+            while True:
+                try:
+                    hit = solver.locate()
+                except Exception as e:
+                    print(f"[Slider] 截图/识别异常: {e}", flush=True)
+                    hit = None
+                    break
+                if hit:
+                    break
+                if not is_captcha_fn():
+                    break
+                if time.time() >= deadline:
+                    break
+                time.sleep(0.5)
+
+        if hit is None:
+            if not is_captcha_fn():
+                tqdm.write("   ✅ 验证页已自行消失")
+                self.restore_terminal()
+                return "passed"
+            tqdm.write(f"   ❓ {SLIDER_APPEAR_TIMEOUT}s 内屏幕上未找到滑块"
+                       f"（检查：屏幕录制权限 / 窗口是否在主屏且未被遮挡 / 模板是否匹配）")
+            try:
+                with tqdm.external_write_mode():
+                    solver._save_debug("notfound")
+            except Exception:
+                pass
+            return "not_found"
+
+        try:
+            with tqdm.external_write_mode():
+                res = solver.solve(hit)
+        except self._sv.pyautogui.FailSafeException:
+            tqdm.write("   ✋ 检测到鼠标甩到屏幕角落（FailSafe），本轮运行停用自动拖拽，请手动完成。")
+            self.enabled = False
+            return "aborted"
+        except Exception as e:
+            tqdm.write(f"   ❌ 拖拽过程异常: {e}")
+            self.stats["failed"] += 1
+            return "failed"
+
+        if res.solved:
+            self.stats["solved"] += 1
+            tqdm.write(f"   ✅ 滑块验证已通过（拖拽 {res.attempts} 次）")
+            self.restore_terminal()
+            return "solved"
+        self.stats["failed"] += 1
+        tqdm.write(f"   ❌ 滑块验证未通过: {res.message}")
+        return "failed"
+
+    def summary(self):
+        s = self.stats
+        if any(s.values()):
+            return f"🧩 滑块验证：自动通过 {s['solved']} | 自动失败 {s['failed']} | 转手动 {s['manual']}"
+        return None
+
+
 # ================= 5. 页面解析：历史表格 (ETFs / 股票) =================
 
 JS_COMMON = r"""
@@ -806,6 +1084,10 @@ function mwPathSymbolSeg() {
     try { seg = decodeURIComponent(seg); } catch (e) {}
     return seg;
 }
+"""
+
+CAPTCHA_CHECK_JS = JS_COMMON + r"""
+return mwIsCaptcha();
 """
 
 PAGE_STATE_JS = JS_COMMON + r"""
@@ -867,11 +1149,34 @@ return { data: out, path_seg: mwPathSymbolSeg(), url: location.href };
 """
 
 
-def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=None, expect_seg=None):
+def _is_captcha_now(driver):
+    """页面跳转中脚本执行失败时按"仍在验证"处理，宁可多等也不误判"""
+    try:
+        return bool(driver.execute_script(CAPTCHA_CHECK_JS))
+    except WebDriverException:
+        return True
+
+
+def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=None, expect_seg=None,
+               captcha_solver=None):
     deadline = time.time() + timeout
-    captcha_notified = False
+    manual_mode = False
+    auto_rounds = 0
+    solved_at = None
+    refreshed = False
+    seen_captcha = False
+
     while True:
         state = state_fn()
+
+        # 刚离开验证页：若本模块曾切走窗口（例如手动完成），把终端切回来
+        if seen_captcha and state != 'captcha':
+            seen_captcha = False
+            if captcha_solver:
+                captcha_solver.restore_terminal()
+            if manual_mode:
+                tqdm.write("   ✅ 验证已完成，继续抓取")
+
         if state == 'ready':
             return
         if state == 'notfound':
@@ -889,13 +1194,47 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=Non
             raise SymbolNotFoundError(
                 f"页面 URL 中的代码与预期 '{expect_seg or '?'}' 不符（可能被重定向到其它代码）: {final_url}",
                 actual_type=actual, final_url=final_url)
+
         if state == 'captcha':
             if headless:
                 raise CaptchaBlockedError("触发反爬验证（无头模式无法处理）")
-            if not captcha_notified:
+            seen_captcha = True
+            now = time.time()
+            auto_ok = captcha_solver is not None and captcha_solver.enabled and not manual_mode
+
+            if auto_ok and solved_at is not None:
+                # 已拖拽成功，等待页面自动跳转；迟迟不跳则刷新一次；仍不行视为新一轮验证
+                elapsed = now - solved_at
+                if elapsed >= CAPTCHA_POST_SOLVE_REFRESH_AFTER and not refreshed:
+                    refreshed = True
+                    tqdm.write("   🔄 滑块已通过但页面未跳转，主动刷新一次...")
+                    try:
+                        driver.refresh()
+                    except WebDriverException:
+                        pass
+                elif elapsed >= CAPTCHA_POST_SOLVE_WAIT:
+                    tqdm.write("   ⚠️ 刷新后仍为验证页，可能出现了新一轮验证")
+                    solved_at = None
+            elif auto_ok and auto_rounds < AUTO_SLIDER_MAX_ROUNDS:
+                auto_rounds += 1
+                tqdm.write(f"🧩 检测到滑块验证，开始自动处理（第 {auto_rounds}/{AUTO_SLIDER_MAX_ROUNDS} 轮）...")
+                result = captcha_solver.try_solve(driver, lambda: _is_captcha_now(driver))
+                deadline = time.time() + CAPTCHA_POST_SOLVE_WAIT + 5
+                if result == "solved":
+                    solved_at = time.time()
+                    refreshed = False
+                elif result in ("not_found", "failed"):
+                    time.sleep(1.5)
+                elif result in ("aborted", "unavailable"):
+                    pass  # enabled 已被置 False，下一轮进入手动模式
+                continue
+            elif not manual_mode:
+                manual_mode = True
+                if captcha_solver:
+                    captcha_solver.alert_manual(driver)
                 tqdm.write(f"🧩 检测到验证码，请在浏览器窗口中手动完成（最多等待 {CAPTCHA_MANUAL_WAIT} 秒）...")
                 deadline = time.time() + CAPTCHA_MANUAL_WAIT
-                captcha_notified = True
+
         if time.time() > deadline:
             if state == 'captcha':
                 raise CaptchaBlockedError("验证码等待超时")
@@ -905,10 +1244,10 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=Non
         time.sleep(0.5)
 
 
-def wait_for_table(driver, timeout, headless, expect_seg=None):
+def wait_for_table(driver, timeout, headless, expect_seg=None, captcha_solver=None):
     _wait_loop(driver, timeout, headless,
                lambda: driver.execute_script(PAGE_STATE_JS, (expect_seg or "").lower()),
-               "等待数据表格超时", expect_seg=expect_seg)
+               "等待数据表格超时", expect_seg=expect_seg, captcha_solver=captcha_solver)
 
 
 def extract_rows(driver, symbol, expect_seg=None):
@@ -1037,10 +1376,10 @@ return {
 """
 
 
-def wait_for_quote(driver, timeout, headless, expect_type):
+def wait_for_quote(driver, timeout, headless, expect_type, captcha_solver=None):
     _wait_loop(driver, timeout, headless,
                lambda: driver.execute_script(QUOTE_STATE_JS, expect_type or ""), "等待行情价格超时",
-               expect_type=expect_type)
+               expect_type=expect_type, captcha_solver=captcha_solver)
 
 
 def extract_quote(driver):
@@ -1133,20 +1472,23 @@ def build_task_list(tasks_dict, only_groups=None):
 
 def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, opts,
                    expect_type=None, mw_path=None):
-    headless = opts["headless"]
     table_type = get_table_type(group)
+    solver = opts.get("captcha_solver")
 
-    for attempt in range(1, MAX_RETRIES + 1):
+    attempt = 0
+    while attempt < MAX_RETRIES:
+        attempt += 1
         if driver is None:
             ctx["aborted"] = True
             return "failed", None
+        headless = opts["headless"]  # 每次重试都读取最新模式（可能已从无头切换为有界面）
 
         try:
             load_page(driver, url)
             page_info = ""
 
             if handler["parser"] == "ohlcv_table":
-                wait_for_table(driver, TABLE_WAIT_TIMEOUT, headless, expect_seg=mw_path)
+                wait_for_table(driver, TABLE_WAIT_TIMEOUT, headless, expect_seg=mw_path, captcha_solver=solver)
                 ctx["consecutive_blocks"] = 0
                 rows = extract_rows(driver, symbol, expect_seg=mw_path)
                 if not rows:
@@ -1154,7 +1496,7 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                 check_and_register_fingerprint(ctx, table_fingerprint(rows), symbol, group)
                 selected_row, note = select_row(rows, last_valid_date)
             else:
-                wait_for_quote(driver, QUOTE_WAIT_TIMEOUT, headless, expect_type)
+                wait_for_quote(driver, QUOTE_WAIT_TIMEOUT, headless, expect_type, captcha_solver=solver)
                 ctx["consecutive_blocks"] = 0
                 quote = extract_quote(driver)
                 check_and_register_fingerprint(ctx, quote_fingerprint(quote), symbol, group)
@@ -1208,6 +1550,22 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
             return "not_found", driver
 
         except CaptchaBlockedError as e:
+            # 无头模式下无法拖滑块：用同一 Profile 重启为有界面模式，本次不计入重试次数
+            if headless and opts.get("escalate") and solver is not None and solver.ensure_ready():
+                tqdm.write(f"🔁 [{symbol}] 无头模式触发验证，切换为有界面模式以自动拖拽滑块...")
+                safe_quit(driver)
+                time.sleep(1.5)  # 等待 Profile 锁释放
+                try:
+                    driver = create_driver(headless=False)
+                except Exception as ce:
+                    tqdm.write(f"❌ 有界面浏览器启动失败: {ce}")
+                    ctx["aborted"] = True
+                    return "failed", None
+                opts["headless"] = False
+                solver.activate_terminal()
+                attempt -= 1
+                continue
+
             ctx["consecutive_blocks"] += 1
             tqdm.write(f"🛑 [{symbol}] 被反爬拦截 ({ctx['consecutive_blocks']}/{MAX_CONSECUTIVE_BLOCKS}): {e}")
             if ctx["consecutive_blocks"] >= MAX_CONSECUTIVE_BLOCKS:
@@ -1227,7 +1585,7 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                 tqdm.write("♻️ 浏览器会话已失效，正在重建...")
                 safe_quit(driver)
                 try:
-                    driver = create_driver(headless)
+                    driver = create_driver(opts["headless"])
                 except Exception as ce:
                     tqdm.write(f"❌ 浏览器重建失败: {ce}")
                     ctx["aborted"] = True
@@ -1240,7 +1598,8 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
     return "failed", driver
 
 
-def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=True):
+def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=True,
+                       auto_slider=True, escalate=True):
     tasks_dict = load_tasks_from_json(SECTORS_JSON_PATH)
     alias_to_symbol = load_alias_mapping(SYMBOL_MAPPING_PATH)
     mw_overrides = load_mw_overrides(MW_SYMBOL_OVERRIDE_PATH)
@@ -1260,8 +1619,11 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
         tqdm.write("✅ 支持的分组中没有待抓取的 Symbol，任务结束。")
         return empty_stats
 
+    captcha_solver = CaptchaAutoSolver(enabled=auto_slider and AUTO_SLIDER_ENABLED)
+
     tqdm.write(f"共加载 {len(task_list)} 个待抓取任务。（模式: {'无头' if headless else '有界面'}"
-               f"{' | DRY-RUN 不写库' if dry_run else ''}{' | 已关闭价格校验' if not sanity else ''}）")
+               f"{' | DRY-RUN 不写库' if dry_run else ''}{' | 已关闭价格校验' if not sanity else ''}"
+               f"{' | 滑块自动验证' if captcha_solver.enabled else ' | 滑块需手动'}）")
 
     prepare_profile_dir()
     try:
@@ -1274,10 +1636,15 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
         empty_stats["aborted"] = True
         return empty_stats
 
+    if not headless:
+        captcha_solver.activate_terminal()  # 有界面浏览器启动会抢焦点，把终端切回来
+
     stats = {"success": [], "failed": [], "not_found": [], "skipped": [], "aborted": False}
     ctx = {"consecutive_blocks": 0, "aborted": False, "mismatch_hints": [], "fingerprints": {}}
-    opts = {"headless": headless, "dry_run": dry_run, "sanity": sanity}
+    opts = {"headless": headless, "dry_run": dry_run, "sanity": sanity,
+            "captcha_solver": captcha_solver, "escalate": escalate and AUTO_ESCALATE_HEADFUL}
 
+    pbar = None
     try:
         pbar = tqdm(task_list, desc="总体进度", position=0)
         for idx, (symbol, group, handler) in enumerate(pbar):
@@ -1323,6 +1690,8 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
             if idx < len(task_list) - 1:
                 time.sleep(random.uniform(*REQUEST_DELAY_RANGE))
     finally:
+        if pbar is not None:
+            pbar.close()
         safe_quit(driver)
         clean_profile_cache()
         tqdm.write("🎉 所有任务执行完毕。")
@@ -1332,6 +1701,9 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
     for key, label in (("failed", "失败"), ("not_found", "未找到"), ("skipped", "跳过")):
         if stats[key]:
             tqdm.write(f"   {label}列表: {', '.join(stats[key])}")
+    s = captcha_solver.summary()
+    if s:
+        tqdm.write(s)
     return stats
 
 
@@ -1364,11 +1736,14 @@ def run_check_yesterday_if_empty():
 
 def parse_args():
     parser = argparse.ArgumentParser(description="MarketWatch 每日数据抓取")
-    parser.add_argument("--headful", action="store_true", help="显示浏览器窗口（可手动处理验证码）")
+    parser.add_argument("--headful", action="store_true", help="显示浏览器窗口")
     parser.add_argument("--groups", nargs="+", default=None, help="只抓取指定分组，例如 --groups Currencies Indices")
     parser.add_argument("--dry-run", action="store_true", help="只抓取并打印，不写数据库、不修改 JSON")
     parser.add_argument("--no-sanity", action="store_true", help="关闭价格偏差合理性校验")
     parser.add_argument("--no-check", action="store_true", help="结束后不调用 Check_yesterday.py")
+    parser.add_argument("--no-auto-slider", action="store_true", help="关闭滑块自动验证（只能手动）")
+    parser.add_argument("--no-escalate", action="store_true",
+                        help="无头模式遇到验证码时不自动切换为有界面模式")
     return parser.parse_args()
 
 
@@ -1377,7 +1752,8 @@ if __name__ == "__main__":
     start_caffeinate()
     try:
         scrape_marketwatch(headless=not args.headful, only_groups=args.groups,
-                           dry_run=args.dry_run, sanity=not args.no_sanity)
+                           dry_run=args.dry_run, sanity=not args.no_sanity,
+                           auto_slider=not args.no_auto_slider, escalate=not args.no_escalate)
         if not args.no_check and not args.dry_run:
             run_check_yesterday_if_empty()
     finally:

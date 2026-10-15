@@ -4,8 +4,9 @@ import sqlite3
 import subprocess
 import os
 import tempfile
+from contextlib import closing
 from datetime import date, datetime, timedelta
-from functools import partial
+from functools import partial, lru_cache
 from collections import OrderedDict
 
 from PyQt6.QtWidgets import (
@@ -16,6 +17,12 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor, QShortcut, QAction
 from PyQt6.QtCore import Qt, QTimer
+
+try:
+    from zoneinfo import ZoneInfo
+    US_EASTERN = ZoneInfo("America/New_York")
+except Exception:
+    US_EASTERN = None
 
 # --- 路径处理 ---
 HOME = os.path.expanduser("~")
@@ -30,29 +37,31 @@ COMPARE_DATA_PATH = os.path.join(HOME, 'Coding/News/backup/Compare_All.txt')
 PANEL_CONFIG_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_panel.json')
 # Polymarket 预测数据路径
 POLYMARKET_TXT_PATH = os.path.join(HOME, "Coding/News/earning_polymarket.txt")
-# 新增：Firstrade 盘前涨跌数据路径
+# Firstrade 盘前/盘后涨跌数据路径
 FIRSTRADE_JSON_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/firstrade_watchlist_earning.json")
 
 PERIOD_DISPLAY = {"BMO": "↩︎", "AMC": "↪︎", "TNS": "？"}
 PERIOD_CN_MAP = {"BMO": "前", "AMC": "后", "TNS": "未"}  # 用于标题显示的中文映射
+WEEKDAY_CN = "一二三四五六日"
 
 # --- 列索引常量（避免加列后硬编码索引错位） ---
 COL_SYMBOL = 0
 COL_PRED = 1
-COL_PREMARKET = 2
 
-# table2（前天）
-T2_COL_OLD = 3
-T2_COL_NEW = 4
-T2_COL_OP = 5
-T2_HEADERS = ["Symbol", "预测", "盘前", "旧百分比%", "新百分比%", "操作", "———————————————"]
+# table2（前一交易日之前的交易日，已发布）—— 无盘前/盘后列
+T2_COL_OLD = 2
+T2_COL_NEW = 3
+T2_COL_OP = 4
+T2_HEADERS = ["Symbol", "预测", "旧百分比%", "新百分比%", "操作", "———————————————"]
 
-# table1（昨天）
+# table1（上一交易日）—— 盘后列
+T1_COL_POST = 2
 T1_COL_PCT = 3
 T1_COL_OP = 4
-T1_HEADERS = ["Symbol", "预测", "盘前", "百分比(%)", "操作", "——————————————————————"]
+T1_HEADERS = ["Symbol", "预测", "盘后", "百分比(%)", "操作", "——————————————————————"]
 
-# table_today（今天）
+# table_today（今天）—— 盘前列
+T0_COL_PRE = 2
 T0_HEADERS = ["Symbol", "预测", "盘前", "——————————————————————————"]
 
 COLOR_UP = QColor(255, 0, 0)        # 涨：红
@@ -61,6 +70,94 @@ COLOR_STALE = QColor(128, 128, 128)  # 过期数据：灰
 COLOR_PRED = QColor(255, 165, 0)    # 预测：橙
 
 
+# ----------------------------------------------------------------------
+# NYSE 交易日历（无第三方依赖）
+# ----------------------------------------------------------------------
+# 临时休市（国葬、极端天气等），遇到新情况在此追加
+NYSE_SPECIAL_CLOSURES = {
+    date(2012, 10, 29), date(2012, 10, 30),  # 飓风桑迪
+    date(2018, 12, 5),                        # 老布什国葬
+    date(2025, 1, 9),                         # 卡特国葬
+}
+
+
+def _nth_weekday(year, month, weekday, n):
+    d = date(year, month, 1)
+    return d + timedelta(days=(weekday - d.weekday()) % 7 + 7 * (n - 1))
+
+
+def _last_weekday(year, month, weekday):
+    nxt = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    d = nxt - timedelta(days=1)
+    return d - timedelta(days=(d.weekday() - weekday) % 7)
+
+
+def _easter(year):
+    """Anonymous Gregorian algorithm"""
+    a = year % 19
+    b, c = divmod(year, 100)
+    d, e = divmod(b, 4)
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = divmod(c, 4)
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return date(year, month, day)
+
+
+def _observed(d):
+    """周六 -> 周五，周日 -> 周一"""
+    if d.weekday() == 5:
+        return d - timedelta(days=1)
+    if d.weekday() == 6:
+        return d + timedelta(days=1)
+    return d
+
+
+@lru_cache(maxsize=None)
+def nyse_holidays(year):
+    h = set()
+    # 元旦：落在周日顺延周一；落在周六不补休（NYSE 规则）
+    ny = date(year, 1, 1)
+    if ny.weekday() == 6:
+        h.add(date(year, 1, 2))
+    elif ny.weekday() < 5:
+        h.add(ny)
+    h.add(_nth_weekday(year, 1, 0, 3))        # 马丁·路德·金日：1 月第 3 个周一
+    h.add(_nth_weekday(year, 2, 0, 3))        # 总统日：2 月第 3 个周一
+    h.add(_easter(year) - timedelta(days=2))  # 耶稣受难日
+    h.add(_last_weekday(year, 5, 0))          # 阵亡将士纪念日：5 月最后一个周一
+    if year >= 2022:
+        h.add(_observed(date(year, 6, 19)))   # 六月节
+    h.add(_observed(date(year, 7, 4)))        # 独立日
+    h.add(_nth_weekday(year, 9, 0, 1))        # 劳动节：9 月第 1 个周一
+    h.add(_nth_weekday(year, 11, 3, 4))       # 感恩节：11 月第 4 个周四
+    h.add(_observed(date(year, 12, 25)))      # 圣诞节
+    h |= {d for d in NYSE_SPECIAL_CLOSURES if d.year == year}
+    return frozenset(h)
+
+
+def is_trading_day(d):
+    return d.weekday() < 5 and d not in nyse_holidays(d.year)
+
+
+def prev_trading_day(d):
+    d -= timedelta(days=1)
+    while not is_trading_day(d):
+        d -= timedelta(days=1)
+    return d
+
+
+def fmt_day(d):
+    return f"{d.strftime('%Y-%m-%d')} 周{WEEKDAY_CN[d.weekday()]}"
+
+
+# ----------------------------------------------------------------------
+# 通用工具
+# ----------------------------------------------------------------------
 def pct_color(val):
     """与现有规则保持一致：>=0 红色，<0 绿色"""
     return COLOR_UP if val >= 0 else COLOR_DOWN
@@ -132,7 +229,7 @@ def load_text_data(path):
 
 def load_premarket_data(path):
     """
-    读取 Firstrade 盘前 JSON。
+    读取 Firstrade 盘前/盘后 JSON。
     返回: (quotes_dict, meta_dict)
       quotes_dict: {SYMBOL: {"text": "-2.50%", "num": -2.50, "last": "1,706.40"}}
     文件缺失/损坏时返回空字典，不影响主程序运行。
@@ -167,13 +264,11 @@ def load_premarket_data(path):
             num = float(num) if num is not None and num != "" else None
         except (TypeError, ValueError):
             num = None
-        # 数值缺失时尝试从文本解析
         if num is None and text:
             try:
                 num = float(text.replace('%', '').replace(',', '').replace('+', '').strip())
             except ValueError:
                 num = None
-        # 文本缺失时由数值生成
         if not text and num is not None:
             text = f"{num:+.2f}%"
         if not text:
@@ -181,6 +276,16 @@ def load_premarket_data(path):
 
         result[sym] = {"text": text, "num": num, "last": str(q.get("last", "") or "")}
     return result, meta
+
+
+def _meta_str_date(meta):
+    s = meta.get("updated_at_str")
+    if isinstance(s, str) and len(s) >= 10:
+        try:
+            return datetime.strptime(s[:10], "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    return None
 
 
 def is_meta_today(meta, today):
@@ -191,17 +296,33 @@ def is_meta_today(meta, today):
             return date.fromtimestamp(float(ts)) == today
     except (TypeError, ValueError, OSError, OverflowError):
         pass
-    s = meta.get("updated_at_str")
-    if isinstance(s, str) and len(s) >= 10:
-        try:
-            return datetime.strptime(s[:10], "%Y-%m-%d").date() == today
-        except ValueError:
-            pass
-    return True
+    d = _meta_str_date(meta)
+    return d == today if d is not None else True
+
+
+def is_meta_after_close(meta, session_day):
+    """
+    判断数据是否在 session_day 美东 16:00 收盘之后更新（即能反映盘后财报反应）。
+    无法判断时视为有效（不误伤）。
+    """
+    ts = meta.get("updated_at")
+    try:
+        if ts is not None:
+            ts = float(ts)
+            if US_EASTERN is not None:
+                cutoff = datetime(session_day.year, session_day.month, session_day.day,
+                                  16, 0, tzinfo=US_EASTERN)
+                return datetime.fromtimestamp(ts, tz=US_EASTERN) >= cutoff
+            return date.fromtimestamp(ts) >= session_day
+    except (TypeError, ValueError, OSError, OverflowError):
+        pass
+    d = _meta_str_date(meta)
+    return d >= session_day if d is not None else True
 
 
 def fetch_mnspp_data_from_db(db_path, symbol):
-    with sqlite3.connect(db_path, timeout=60.0) as conn:
+    # 修复：sqlite3 的 with 只管事务不关连接，用 closing 确保关闭
+    with closing(sqlite3.connect(db_path, timeout=60.0)) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?", (symbol,))
         result = cursor.fetchone()
@@ -235,21 +356,28 @@ class MainWindow(QMainWindow):
         self.current_symbol_index = -1
 
         # 记录每个分栏的数量
-        self.count_date2 = 0  # 前天
-        self.count_date1 = 0  # 昨天
+        self.count_date2 = 0  # 前前交易日
+        self.count_date1 = 0  # 上一交易日
         self.count_today = 0  # 今天
 
+        # --- 日期：按交易日计算 ---
         today = date.today()
         self.today = today
+        self.date1_d = prev_trading_day(today)          # 上一个交易日
+        self.date2_d = prev_trading_day(self.date1_d)   # 再往前一个交易日
+        self.date3_d = prev_trading_day(self.date2_d)   # Earning 回溯下限
+
         self.today_str = today.strftime("%Y-%m-%d")
-        self.date1 = (today - timedelta(days=1)).strftime("%Y-%m-%d")
-        self.date2 = (today - timedelta(days=2)).strftime("%Y-%m-%d")
-        self.three_days_ago = (today - timedelta(days=3)).strftime("%Y-%m-%d")
+        self.date1 = self.date1_d.strftime("%Y-%m-%d")
+        self.date2 = self.date2_d.strftime("%Y-%m-%d")
+        self.three_days_ago = self.date3_d.strftime("%Y-%m-%d")  # 沿用原变量名，语义为 date2 的前一交易日
 
         self.symbols_by_date = {self.today_str: [], self.date1: [], self.date2: []}
         self.symbol_to_period = {}
+        self.symbol_note = {}  # 非交易日发布被顺延的提示
 
         if os.path.exists(TXT_PATH):
+            seen = {k: set() for k in self.symbols_by_date}
             with open(TXT_PATH, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
@@ -257,9 +385,22 @@ class MainWindow(QMainWindow):
                     parts = [p.strip() for p in line.split(":")]
                     if len(parts) < 3: continue
                     symbol, period, dt = parts[0], parts[1], parts[2]
-                    if dt in self.symbols_by_date:
-                        self.symbols_by_date[dt].append((symbol, period))
-                        self.symbol_to_period[symbol] = period
+                    try:
+                        d = datetime.strptime(dt, "%Y-%m-%d").date()
+                    except ValueError:
+                        continue
+                    bucket = self._bucket_for(d)
+                    if bucket is None: continue
+                    if symbol in seen[bucket]: continue  # 修复：重复行去重
+                    seen[bucket].add(symbol)
+
+                    eff_period = period
+                    if not is_trading_day(d):
+                        # 周末/假日发布：市场反应在下一交易日开盘，按 BMO 处理
+                        eff_period = "BMO"
+                        self.symbol_note[symbol] = f"原发布日 {fmt_day(d)}（非交易日，按下一交易日盘前处理）"
+                    self.symbols_by_date[bucket].append((symbol, eff_period))
+                    self.symbol_to_period[symbol] = eff_period
 
         desired_order = ['BMO', 'AMC', 'TNS']
         for dt in self.symbols_by_date:
@@ -285,10 +426,11 @@ class MainWindow(QMainWindow):
                         sym, pct = line.split(":", 1)
                         self.polymarket_data[sym.strip().upper()] = pct.strip()
 
-        # 盘前数据（在 refresh_data 中加载，便于以后刷新时同步更新）
+        # 盘前/盘后数据（在 refresh_data 中加载）
         self.premarket_data = {}
         self.premarket_meta = {}
-        self.premarket_is_fresh = True
+        self.premarket_is_fresh = True   # 今天栏（盘前）
+        self.postmarket_is_fresh = True  # 上一交易日栏（盘后）
 
         self.conn = sqlite3.connect(DB_PATH, timeout=60.0)
         self.conn.row_factory = sqlite3.Row
@@ -298,6 +440,16 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence(Qt.Key.Key_Slash), self).activated.connect(self.show_search_dialog)
         self._init_ui()
         self.refresh_data()
+
+    def _bucket_for(self, d):
+        """把发布日期映射到分栏：非交易日归入其后的第一个交易日所在分栏"""
+        if self.date1_d < d <= self.today:
+            return self.today_str
+        if self.date2_d < d <= self.date1_d:
+            return self.date1
+        if self.date3_d < d <= self.date2_d:
+            return self.date2
+        return None
 
     def _init_ui(self):
         cw = QWidget()
@@ -318,9 +470,9 @@ class MainWindow(QMainWindow):
             t.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             t.customContextMenuRequested.connect(self.show_table_context_menu)
 
-        hlay.addWidget(self._create_group(f"日期 {self.date2} (已发布)", self.table2), 5)
-        hlay.addWidget(self._create_group(f"日期 {self.date1} (盘后 AMC)", self.table1), 5)
-        hlay.addWidget(self._create_group(f"日期 {self.today_str} (盘前 BMO)", self.table_today), 4)
+        hlay.addWidget(self._create_group(f"日期 {fmt_day(self.date2_d)} (已发布)", self.table2), 5)
+        hlay.addWidget(self._create_group(f"日期 {fmt_day(self.date1_d)} (盘后 AMC)", self.table1), 5)
+        hlay.addWidget(self._create_group(f"日期 {fmt_day(self.today)} (盘前 BMO)", self.table_today), 4)
 
         self.setCentralWidget(cw)
         self.resize(1500, 1000)
@@ -333,25 +485,31 @@ class MainWindow(QMainWindow):
         return gb
 
     # ------------------------------------------------------------------
-    # 盘前数据相关
+    # 盘前/盘后数据相关
     # ------------------------------------------------------------------
     def _load_premarket(self):
         self.premarket_data, self.premarket_meta = load_premarket_data(FIRSTRADE_JSON_PATH)
         self.premarket_is_fresh = is_meta_today(self.premarket_meta, self.today)
-        self._update_premarket_headers()
+        self.postmarket_is_fresh = is_meta_after_close(self.premarket_meta, self.date1_d)
+        self._update_quote_headers()
 
-    def _update_premarket_headers(self):
+    def _update_quote_headers(self):
         updated = self.premarket_meta.get("updated_at_str", "未知")
-        header_text = "盘前" if self.premarket_is_fresh else "盘前(旧)"
-        tip = f"Firstrade 盘前数据\n更新时间: {updated}\n条数: {len(self.premarket_data)}"
-        if not self.premarket_is_fresh:
-            tip += "\n⚠️ 数据非今日更新，仅供参考"
-        for t in [self.table2, self.table1, self.table_today]:
-            hdr = t.horizontalHeaderItem(COL_PREMARKET)
+        specs = [
+            (self.table1, T1_COL_POST, "盘后", self.postmarket_is_fresh,
+             f"数据非 {self.date1} 收盘后更新，仅供参考"),
+            (self.table_today, T0_COL_PRE, "盘前", self.premarket_is_fresh,
+             "数据非今日更新，仅供参考"),
+        ]
+        for t, col, label, fresh, stale_msg in specs:
+            tip = f"Firstrade {label}数据\n更新时间: {updated}\n条数: {len(self.premarket_data)}"
+            if not fresh:
+                tip += f"\n⚠️ {stale_msg}"
+            hdr = t.horizontalHeaderItem(col)
             if hdr is None:
                 hdr = QTableWidgetItem()
-                t.setHorizontalHeaderItem(COL_PREMARKET, hdr)
-            hdr.setText(header_text)
+                t.setHorizontalHeaderItem(col, hdr)
+            hdr.setText(label if fresh else f"{label}(旧)")
             hdr.setToolTip(tip)
 
     def _lookup_premarket(self, symbol):
@@ -362,22 +520,22 @@ class MainWindow(QMainWindow):
                 return self.premarket_data[k]
         return None
 
-    def _set_premarket_cell(self, table, row, symbol):
+    def _set_quote_cell(self, table, row, col, symbol, is_fresh):
         info = self._lookup_premarket(symbol)
         item = QTableWidgetItem(info["text"] if info else "")
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         item.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         if info:
-            if not self.premarket_is_fresh:
+            if not is_fresh:
                 item.setForeground(QBrush(COLOR_STALE))
             elif info["num"] is not None:
                 item.setForeground(QBrush(pct_color(info["num"])))
             tip = f"最新价: {info['last'] or 'N/A'}\n更新时间: {self.premarket_meta.get('updated_at_str', '未知')}"
-            if not self.premarket_is_fresh:
-                tip += "\n⚠️ 数据非今日更新"
+            if not is_fresh:
+                tip += "\n⚠️ 数据可能已过期"
             item.setToolTip(tip)
-        table.setItem(row, COL_PREMARKET, item)
+        table.setItem(row, col, item)
 
     def _set_pred_cell(self, table, row, symbol):
         pred_val = self.polymarket_data.get(symbol.upper(), "")
@@ -392,6 +550,9 @@ class MainWindow(QMainWindow):
         btn = SymbolButton(symbol)
         btn.setObjectName("SymbolButton")
         btn.setProperty("period", period)
+        note = self.symbol_note.get(symbol)
+        if note:
+            btn.setToolTip(note)
         btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol, idx))
         table.setCellWidget(row, COL_SYMBOL, btn)
         return btn
@@ -429,7 +590,6 @@ class MainWindow(QMainWindow):
 
     def flash_highlight(self, btn):
         """让按钮闪烁几次，提醒用户"""
-        # 修复：连续搜索时避免把"高亮样式"当作原样式保存导致边框残留
         original_style = btn.property("_orig_style")
         if original_style is None:
             original_style = btn.styleSheet()
@@ -439,10 +599,13 @@ class MainWindow(QMainWindow):
         state = {"count": 0, "on": False}
 
         def toggle():
-            if state["count"] >= 6:  # 闪 3 次
-                btn.setStyleSheet(original_style)
-                return
-            btn.setStyleSheet(highlight_style if not state["on"] else original_style)
+            try:
+                if state["count"] >= 6:  # 闪 3 次
+                    btn.setStyleSheet(original_style)
+                    return
+                btn.setStyleSheet(highlight_style if not state["on"] else original_style)
+            except RuntimeError:
+                return  # 修复：按钮已被销毁
             state["on"] = not state["on"]
             state["count"] += 1
             QTimer.singleShot(250, toggle)
@@ -479,7 +642,6 @@ class MainWindow(QMainWindow):
         new_index = self.current_symbol_index
         if new_index < 0 and step == -1:
             new_index = 0
-        # 修复：跳过没有 sector 的 Symbol，避免导航卡死
         for _ in range(total):
             new_index = (new_index + step) % total
             if self.ordered_symbols_on_screen[new_index] in self.symbol_to_sector:
@@ -593,7 +755,7 @@ class MainWindow(QMainWindow):
             table.insertRow(row)
             self._make_symbol_button(table, row, symbol, period, idx)
             self._set_pred_cell(table, row, symbol)
-            self._set_premarket_cell(table, row, symbol)
+            self._set_quote_cell(table, row, T0_COL_PRE, symbol, self.premarket_is_fresh)
 
             tags_to_add.append(get_tags_for_symbol(symbol, self.description_data))
 
@@ -619,7 +781,7 @@ class MainWindow(QMainWindow):
 
             self._make_symbol_button(table, row, symbol, period, idx)
             self._set_pred_cell(table, row, symbol)
-            self._set_premarket_cell(table, row, symbol)
+            self._set_quote_cell(table, row, T1_COL_POST, symbol, self.postmarket_is_fresh)
             table.setItem(row, T1_COL_PCT, self._make_pct_item(pct))
 
             rep_btn = QPushButton("写入")
@@ -672,7 +834,6 @@ class MainWindow(QMainWindow):
 
             self._make_symbol_button(table, row, symbol, period, idx)
             self._set_pred_cell(table, row, symbol)
-            self._set_premarket_cell(table, row, symbol)
 
             table.setItem(row, T2_COL_OLD, self._make_pct_item(old_pct))
             table.setItem(row, T2_COL_NEW, self._make_pct_item(pct_new))
@@ -719,7 +880,6 @@ class MainWindow(QMainWindow):
         btn.setText("已替换")
         btn.setEnabled(False)
 
-        # 修复：按按钮所在行精确定位，并使用列常量（不再硬编码第 2 列）
         for r in range(self.table2.rowCount()):
             if self.table2.cellWidget(r, T2_COL_OP) is btn:
                 item = self.table2.item(r, T2_COL_OLD)
@@ -733,7 +893,6 @@ class MainWindow(QMainWindow):
         row = table.rowAt(pos.y())
         if row == -1: return
 
-        # 向上查找 SymbolButton
         symbol = None
         for r in range(row, -1, -1):
             w = table.cellWidget(r, COL_SYMBOL)
@@ -786,7 +945,6 @@ class MainWindow(QMainWindow):
         self.move(qr.topLeft())
 
     def closeEvent(self, event):
-        # 修复：退出时关闭数据库连接
         try:
             self.conn.close()
         except Exception:

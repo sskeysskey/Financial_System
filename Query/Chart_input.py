@@ -1478,9 +1478,8 @@ class ChartWindow:
             segs = [f"{g}：{'、'.join(v)}" for g, v in by.items() if v]
             sure = bool(by.get(TB.GROUP_SURE))
             self.bl_artist.set_text("⛔ 黑名单 Tag   " + "   ｜   ".join(segs))
-            self.bl_artist.set_color(NORD_THEME['text_bright'] if sure else NORD_THEME['background'])
-            self.bl_artist.get_bbox_patch().set_facecolor(
-                NORD_THEME['accent_red'] if sure else NORD_THEME['accent_orange'])
+            self.bl_artist.set_color('#FFFFFF')                              # 白字
+            self.bl_artist.get_bbox_patch().set_facecolor('#000000')         # 黑底
             self.bl_artist.set_visible(True)
             prefix += f"⛔[{TB.GROUP_SURE}] " if sure else f"⚠[{TB.GROUP_MAYBE}] "
         else:
@@ -1493,8 +1492,8 @@ class ChartWindow:
             segs = [f"{TH.LEVEL_ICONS[lv]} {lv}：{'、'.join(v)}" for lv, v in by.items() if v]
             top = TH.LEVEL_T if by.get(TH.LEVEL_T) else TH.LEVEL_HOT
             self.hot_artist.set_text("热门 Tag   " + "   ｜   ".join(segs))
-            self.hot_artist.set_color(NORD_THEME['background'])
-            self.hot_artist.get_bbox_patch().set_facecolor(TH.LEVEL_COLORS[top])
+            self.hot_artist.set_color('#000000')                             # 黑字
+            self.hot_artist.get_bbox_patch().set_facecolor(NORD_THEME['accent_red'])   # 红底
             self.hot_artist.set_visible(True)
             prefix += f"{TH.LEVEL_ICONS[top]}[{top}] "
         else:
