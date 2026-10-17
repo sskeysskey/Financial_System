@@ -7,15 +7,22 @@
 # ★ 「持仓」分组（放在转折之前）：
 #   - 数据来源 Modules/firstrade_positions.json（Chrome 插件 + bridge_server.py 落盘）
 #   - 三种排序：A-Z｜盈亏%｜成本，同一按钮再点切换升/降序
-#   - 左右键按当前持仓排序浏览；到最后一个顺畅流转到转折/共振
+#   - 左右键按当前持仓排序浏览；到最后一个顺畅流转到转折/ETF/共振
 #   - 按 R 键重新读取 firstrade_positions.json
 #
+# ★ 「ETF」分组（放在转折之后、共振之前）：
+#   - 规则：全局最新交易日，某 ETF（属于 Sectors_All.json 的 ETFs 分组）
+#     同时出现在 ETF_VOLUME_GROUPS（ETF_Volume_low）与 ETF_SHORT_GROUPS（Short / Short_W 任一）中
+#   - Symbol 只取前缀英文代码（BWET甲 / BWET抄底 → BWET）
+#   - 🆕 = 今日首次满足；连N天 = 连续 N 个交易日满足；★ = Short 与 Short_W 同时出现
+#   - 连续天数只统计 ETF_Volume_low 有记录的交易日（缺跑的日子不打断连续）
+#
 # ★ Tag 黑名单（Modules/Tag_Blacklist.json，分「确定」「疑似」两组）—— 按分组独立配置：
-#   - 「转折」「共振 N 组」每个分组都可单独选择屏蔽「确定」/「疑似」；「持仓」始终完整显示
-#   - 默认：确定 → 转折、共振3、共振2；疑似 → 共振2；其他（含以后新出现的共振N）默认不屏蔽
+#   - 「转折」「ETF」「共振 N 组」每个分组都可单独选择屏蔽「确定」/「疑似」；「持仓」始终完整显示
+#   - 默认：确定 → 转折、共振3、共振2；疑似 → 共振2；其他（含 ETF、以后新出现的共振N）默认不屏蔽
 #   - 配置保存在 Modules/Check_Group_Blacklist_Sections.json，启动不再弹窗，沿用上次设定
 #   - 修改方式：① 每个分组标题下的「⛔屏蔽 ☐确定 ☐疑似」即点即生效；② B 键 / ⚙ 按钮打开总表
-#   - 黑名单、description.json、分组配置文件变化 1 秒内自动刷新
+#   - 黑名单、description.json、Earning_History.json、分组配置文件变化 1 秒内自动刷新
 #   - 未被屏蔽但带黑名单 Tag 的卡片：Tag 标 ⛔ 并标红/橙
 
 import sys
@@ -104,6 +111,7 @@ BL_GROUP_MAYBE = TB.GROUP_MAYBE if TB_OK else "疑似"
 BL_GROUPS = tuple(TB.GROUPS) if TB_OK else (BL_GROUP_SURE, BL_GROUP_MAYBE)
 
 SEC_TURNING = "turning"
+SEC_ETF = "etf"
 
 
 def reso_key(n):
@@ -113,10 +121,11 @@ def reso_key(n):
 # 默认：确定 → 转折 / 共振3 / 共振2；疑似 → 共振2
 BL_SECTION_DEFAULTS = {
     SEC_TURNING: {BL_GROUP_SURE},
+    # SEC_ETF: {BL_GROUP_SURE},      # 如需 ETF 分组默认屏蔽「确定」，取消本行注释
     reso_key(3): {BL_GROUP_SURE},
     reso_key(2): {BL_GROUP_SURE, BL_GROUP_MAYBE},
 }
-# 从未配置过的新分组（例如新出现的共振7）默认不屏蔽
+# 从未配置过的新分组（例如新出现的共振7、ETF）默认不屏蔽
 BL_NEW_SECTION_DEFAULT = frozenset()
 
 # ---------- 持仓分组排序配置 ----------
@@ -134,6 +143,15 @@ WEEK52_LOW_SECTORS = {
     "Industrials", "Communication_Services", "Financial_Services",
     "Healthcare"
 }
+
+# ======================================================================
+# ★ ETF 分组配置
+# ======================================================================
+ETF_SECTOR_KEYS = {"etfs", "etf"}               # Sectors_All.json 中 ETF 分组名（不区分大小写）
+ETF_SHORT_GROUPS = ("Short", "Short_W")         # 等价，命中其一即可
+ETF_VOLUME_GROUPS = ("ETF_Volume_low",)         # 必须命中
+ETF_HISTORY_LOOKBACK = 30                       # 计算连续天数 / 近期命中次数的回看交易日数
+ETF_STYLE_NAME = {0: "持续", 1: "值得一看", 2: "较强"}
 
 # ======================================================================
 # 多组共振 —— 信号强度评估配置
@@ -214,13 +232,19 @@ def is_valid_group(name):
 
 
 def build_date_universe(history_data):
-    dates = set()
+    """返回 (规范化日期降序列表, {原始/规范化日期: 交易日序号})
+    ★ 修复：不同分组日期格式不一致（2026-2-6 vs 2026-02-06）时不再被当成两天"""
+    raws = set()
     for g, dm in (history_data or {}).items():
         if not is_valid_group(g) or not isinstance(dm, dict):
             continue
-        dates.update(dm.keys())
-    ordered = sorted(dates, key=norm_date, reverse=True)
-    return ordered, {d: i for i, d in enumerate(ordered)}
+        raws.update(dm.keys())
+    ordered = sorted({norm_date(d) for d in raws}, reverse=True)
+    rank = {d: i for i, d in enumerate(ordered)}
+    pos = dict(rank)
+    for r in raws:
+        pos[r] = rank[norm_date(r)]
+    return ordered, pos
 
 
 def collapse_family(groups):
@@ -331,6 +355,7 @@ def norm_symbol(s):
 
 
 def split_symbol_suffix(raw):
+    raw = str(raw).strip()
     base = clean_ticker(raw)
     suffix = raw[len(base):] if raw.startswith(base) else ""
     return base.upper(), suffix
@@ -399,11 +424,31 @@ def load_text_data(path):
 
 def load_52week_low_symbols(path):
     symbols = set()
-    data = load_json(path)
+    try:
+        data = load_json(path)
+    except Exception as e:
+        print(f"[52周低] 读取 {path} 失败: {e}")
+        return symbols
     for sector in WEEK52_LOW_SECTORS:
-        for sym in data.get(sector, {}).keys():
-            symbols.add(clean_ticker(sym).upper())
+        sec = data.get(sector, {})
+        it = sec.keys() if isinstance(sec, dict) else (sec or [])
+        for sym in it:
+            symbols.add(clean_ticker(str(sym)).upper())
     return symbols
+
+
+def load_etf_universe(sector_data):
+    """Sectors_All.json 中 ETFs 分组的全部 symbol（值可以是 list 或 dict）"""
+    out = set()
+    for name, members in (sector_data or {}).items():
+        if str(name).strip().lower() not in ETF_SECTOR_KEYS:
+            continue
+        it = members.keys() if isinstance(members, dict) else (members or [])
+        for s in it:
+            base = clean_ticker(str(s).strip()).upper()
+            if base:
+                out.add(base)
+    return out
 
 
 def build_tags_index(json_data):
@@ -465,10 +510,12 @@ def execute_external_script(script_type, keyword):
 # ★ 分组级黑名单屏蔽配置
 # ======================================================================
 def normalize_section_key(k):
-    """兼容手动编辑：turning / 转折 / reso:2 / reso_2 / 共振2 / 共振2组"""
+    """兼容手动编辑：turning / 转折 / etf / ETF / reso:2 / reso_2 / 共振2 / 共振2组"""
     s = str(k).strip()
     if s.lower() in ("turning", "转折"):
         return SEC_TURNING
+    if s.lower() in ("etf", "etfs"):
+        return SEC_ETF
     m = re.search(r"(\d+)", s)
     if m and (s.lower().startswith("reso") or s.startswith("共振")):
         return reso_key(int(m.group(1)))
@@ -478,6 +525,8 @@ def normalize_section_key(k):
 def section_label(key):
     if key == SEC_TURNING:
         return "转折"
+    if key == SEC_ETF:
+        return "ETF"
     if key.startswith("reso:"):
         return f"共振{key.split(':', 1)[1]}组"
     return key
@@ -486,6 +535,8 @@ def section_label(key):
 def section_sort_key(key):
     if key == SEC_TURNING:
         return (0, 0)
+    if key == SEC_ETF:
+        return (0, 1)
     try:
         return (1, -int(key.split(":", 1)[1]))
     except Exception:
@@ -497,9 +548,9 @@ def ordered_groups(groups):
 
 
 class SectionFilterConfig:
-    """每个分组（转折 / 共振N）各自屏蔽哪些黑名单类别；持久化到 JSON"""
-    NOTE = ("Check_Group 分组级黑名单屏蔽配置。sections 的键：turning=转折，reso:N=共振N组"
-            "（也接受 转折 / 共振N / reso_N）；值为要屏蔽的黑名单类别数组，可选「确定」「疑似」，"
+    """每个分组（转折 / ETF / 共振N）各自屏蔽哪些黑名单类别；持久化到 JSON"""
+    NOTE = ("Check_Group 分组级黑名单屏蔽配置。sections 的键：turning=转折，etf=ETF，reso:N=共振N组"
+            "（也接受 转折 / ETF / 共振N / reso_N）；值为要屏蔽的黑名单类别数组，可选「确定」「疑似」，"
             "空数组 = 不屏蔽。未列出的分组用程序默认值（确定→转折/共振3/共振2，疑似→共振2，其它不屏蔽）。"
             "保存后约 1 秒内自动生效；程序内修改也会写回本文件。")
 
@@ -540,7 +591,6 @@ class SectionFilterConfig:
             self.sections = out
             self.error = None
         except Exception as e:
-            # 解析失败：沿用上次内容（首次即失败则为默认值）
             self.error = f"{type(e).__name__}: {e}"
             print(f"[分组屏蔽] 解析 {self.path} 失败，沿用上次/默认配置: {e}")
 
@@ -556,14 +606,12 @@ class SectionFilterConfig:
         return list(self.sections.keys())
 
     def update(self, mapping):
-        """mapping: {key: set(groups)}；先改内存再落盘，落盘失败抛异常（内存设置仍生效）"""
         for k, v in mapping.items():
             self.sections[k] = {g for g in v if g in BL_GROUPS}
         self.save()
 
     def save(self):
         if self.error and os.path.exists(self.path):
-            # 文件被手动改坏：先备份，不静默冲掉
             try:
                 bak = self.path + ".corrupt.bak"
                 with open(self.path, "rb") as src, open(bak, "wb") as dst:
@@ -600,7 +648,6 @@ def calculate_frequency_data(history_data, week52_low_symbols=None, verbose=Fals
     global_latest = dates_desc[0]
 
     symbol_groups = defaultdict(set)
-    symbol_detail = defaultdict(list)
     symbols_with_chaodi = set()
 
     for group, date_map in (history_data or {}).items():
@@ -614,10 +661,11 @@ def calculate_frequency_data(history_data, week52_low_symbols=None, verbose=Fals
             continue
         for raw in (date_map.get(latest) or []):
             base, suf = split_symbol_suffix(raw)
-            if "抄底" in raw:
+            if not base:
+                continue
+            if "抄底" in str(raw):
                 symbols_with_chaodi.add(base)
             symbol_groups[base].add(group)
-            symbol_detail[base].append((group, latest, raw))
 
     for sym in list(symbol_groups.keys()):
         if sym in week52_low_symbols:
@@ -647,6 +695,7 @@ def calculate_frequency_data(history_data, week52_low_symbols=None, verbose=Fals
 # Earning_History 索引 & 信号强度评估
 # ======================================================================
 def build_symbol_history_index(history_data):
+    """sym_items: {sym: {规范化日期: [(group, suffix)]}}；sorted_dates 为规范化日期降序"""
     sym_items = defaultdict(dict)
     all_dates = set()
     for group, date_map in (history_data or {}).items():
@@ -655,12 +704,15 @@ def build_symbol_history_index(history_data):
         for date_str, symbols in date_map.items():
             if not isinstance(symbols, list):
                 continue
-            all_dates.add(date_str)
+            day = norm_date(date_str)
+            all_dates.add(day)
             for raw in symbols:
                 sym, suf = split_symbol_suffix(raw)
-                sym_items[sym].setdefault(date_str, []).append((group, suf))
+                if not sym:
+                    continue
+                sym_items[sym].setdefault(day, []).append((group, suf))
     return {'sym_items': sym_items,
-            'sorted_dates': sorted(all_dates, key=norm_date, reverse=True)}
+            'sorted_dates': sorted(all_dates, reverse=True)}
 
 
 def get_today_items(history_data):
@@ -676,7 +728,8 @@ def get_today_items(history_data):
             continue
         for raw in (date_map.get(latest) or []):
             sym, suf = split_symbol_suffix(raw)
-            today_items[sym].append((group, suf))
+            if sym:
+                today_items[sym].append((group, suf))
     return today_items
 
 
@@ -1015,6 +1068,108 @@ def detect_turning_points(index, week52_low_symbols):
 
 
 # ======================================================================
+# ★ ETF 分组检测：最新交易日 Short/Short_W ∩ ETF_Volume_low ∩ ETFs
+# ======================================================================
+def _index_groups_by_day(history_data, groups):
+    """{规范化日期: {sym: {group: [suffix, ...]}}}"""
+    idx = defaultdict(dict)
+    for g in groups:
+        dm = (history_data or {}).get(g)
+        if not isinstance(dm, dict):
+            continue
+        for d, syms in dm.items():
+            if not isinstance(syms, list):
+                continue
+            day = norm_date(d)
+            for raw in syms:
+                base, suf = split_symbol_suffix(raw)
+                if not base:
+                    continue
+                lst = idx[day].setdefault(base, {}).setdefault(g, [])
+                suf = suf.strip()
+                if suf and suf not in lst:
+                    lst.append(suf)
+    return idx
+
+
+def _fmt_group_hits(gmap, sym):
+    if not gmap:
+        return "—"
+    return "；".join(
+        f"{g}：{sym}{('[' + '/'.join(sufs) + ']') if sufs else ''}" for g, sufs in gmap.items())
+
+
+def detect_etf_signals(history_data, etf_universe, index=None):
+    """返回 (结果列表, 最新交易日)"""
+    dates_desc, _ = build_date_universe(history_data)
+    if not dates_desc or not etf_universe:
+        return [], (dates_desc[0] if dates_desc else "")
+    latest = dates_desc[0]
+
+    vol_idx = _index_groups_by_day(history_data, ETF_VOLUME_GROUPS)
+    short_idx = _index_groups_by_day(history_data, ETF_SHORT_GROUPS)
+
+    def hits_on(day):
+        v = vol_idx.get(day, {})
+        s = short_idx.get(day, {})
+        return {sym for sym in v if sym in s and sym in etf_universe}
+
+    today_hits = hits_on(latest)
+    if not today_hits:
+        return [], latest
+
+    # 历史有效交易日：ETF_Volume_low 有记录的日子（缺跑不打断连续）
+    hist_days = [d for d in dates_desc[1:] if d in vol_idx][:ETF_HISTORY_LOOKBACK]
+    hist_hits = [(d, hits_on(d)) for d in hist_days]
+
+    sym_items = (index or {}).get('sym_items', {})
+    results = []
+    for sym in today_hits:
+        streak = 1
+        for _, h in hist_hits:
+            if sym in h:
+                streak += 1
+            else:
+                break
+        recent_n = sum(1 for _, h in hist_hits if sym in h)
+        last_prev = next((d for d, h in hist_hits[streak - 1:] if sym in h), None) \
+            if streak <= len(hist_hits) else None
+
+        vol_map = vol_idx[latest][sym]
+        short_map = short_idx[latest][sym]
+        both_short = sum(1 for g in ETF_SHORT_GROUPS if g in short_map) >= 2
+        is_new = streak == 1
+
+        level = (1 if is_new else 0) + (1 if both_short else 0)
+        badge = ("🆕" if is_new else f"连{streak}天") + (" ★" if both_short else "")
+
+        notes = [f"日期 {latest}",
+                 f"缩量：{_fmt_group_hits(vol_map, sym)}",
+                 f"空头：{_fmt_group_hits(short_map, sym)}"
+                 + ("（Short 与 Short_W 同时出现 ★）" if both_short else "")]
+        if is_new:
+            notes.append("今日首次满足（前一有效交易日未满足）")
+        else:
+            notes.append(f"已连续 {streak} 个有效交易日满足")
+        notes.append(f"近 {len(hist_days)} 个有效交易日（不含今日）命中 {recent_n} 次"
+                     + (f"；上一段命中：{last_prev}" if last_prev and is_new else ""))
+        others = sym_items.get(sym, {}).get(latest, [])
+        if others:
+            notes.append(f"── 当日全部分组 ──\n  {_fmt_day_items(others)}")
+
+        results.append({
+            'symbol': sym, 'date': latest, 'streak': streak, 'recent_n': recent_n,
+            'both_short': both_short, 'is_new': is_new, 'level': level, 'badge': badge,
+            'vol': vol_map, 'short': short_map,
+            'reason': f"【{sym}】ETF 空头 + 缩量  评级：{badge}（{ETF_STYLE_NAME[level]}）\n"
+                      + "\n".join(notes),
+        })
+
+    results.sort(key=lambda r: (-r['level'], r['streak'], r['symbol']))
+    return results, latest
+
+
+# ======================================================================
 # ★ 分组级黑名单设置对话框（B 键 / ⚙ 按钮）
 # ======================================================================
 DIALOG_QSS = """
@@ -1148,7 +1303,7 @@ class GroupWindow(QMainWindow):
         self.sector_data = sector_data
         self.compare_data = compare_data
         self.json_data = json_data
-        self.earning_history_data = earning_history_data
+        self.earning_history_data = earning_history_data or {}
 
         self.symbol_widgets_map = defaultdict(list)
 
@@ -1158,37 +1313,18 @@ class GroupWindow(QMainWindow):
         self.hidden_info = {}          # sym -> {'hits': [(tag, group)], 'sections': [label]}
         self.section_hidden = {}       # section_key -> 隐藏数量
         self.view_turning = []
+        self.view_etf = []
         self.view_resonance = []
         self.turning_hidden = 0
+        self.etf_hidden = 0
 
-        # ===== 共振 =====
-        self.week52_low_symbols = load_52week_low_symbols(CONFIG_PATH)
-        self.resonance_data = calculate_frequency_data(self.earning_history_data, self.week52_low_symbols)
+        # ===== ETF 名单 =====
+        self.etf_universe = load_etf_universe(self.sector_data)
+        if not self.etf_universe:
+            print("[ETF] Sectors_All.json 中未找到 ETFs 分组（或为空），ETF 分组将为空")
 
-        self.history_index = build_symbol_history_index(self.earning_history_data)
-        self.today_items_map = get_today_items(self.earning_history_data)
-        self.latest_date = self.history_index['sorted_dates'][0] if self.history_index['sorted_dates'] else ""
-
-        self.symbol_marks = {}
-        for item in self.resonance_data:
-            for sym in item['symbols']:
-                try:
-                    self.symbol_marks[sym] = evaluate_symbol_signal(
-                        sym, item['count'], self.history_index,
-                        self.today_items_map, self.week52_low_symbols
-                    )
-                except Exception as e:
-                    print(f"评估 {sym} 失败: {e}")
-                    self.symbol_marks[sym] = {'level': 0, 'score': 0.0, 'badge': '', 'reason': ''}
-            item['symbols'] = sorted(item['symbols'],
-                                     key=lambda s: (-self.symbol_marks[s]['score'], s))
-
-        # ===== 转折 =====
-        try:
-            self.turning_data = detect_turning_points(self.history_index, self.week52_low_symbols)
-        except Exception as e:
-            print(f"转折检测失败: {e}")
-            self.turning_data = []
+        # ===== 共振 / 转折 / ETF 信号 =====
+        self._compute_signals()
 
         # ===== 持仓 =====
         self.positions = {}
@@ -1209,10 +1345,56 @@ class GroupWindow(QMainWindow):
         # ===== ★ 文件联动监视 =====
         self._bl_sig = TB.signature() if TB_OK else None
         self._desc_sig = file_mtime(DESCRIPTION_PATH)
+        self._earn_sig = file_mtime(EARNING_HISTORY_PATH)
         self.watch_timer = QTimer(self)
         self.watch_timer.setInterval(WATCH_INTERVAL_MS)
         self.watch_timer.timeout.connect(self._poll_external_changes)
         self.watch_timer.start()
+
+    # ==================================================================
+    # ★ 信号计算（启动 & Earning_History.json 变化时调用）
+    # ==================================================================
+    def _compute_signals(self):
+        hist = self.earning_history_data
+        self.week52_low_symbols = load_52week_low_symbols(CONFIG_PATH)
+
+        try:
+            self.resonance_data = calculate_frequency_data(hist, self.week52_low_symbols)
+        except Exception:
+            traceback.print_exc()
+            self.resonance_data = []
+
+        self.history_index = build_symbol_history_index(hist)
+        self.today_items_map = get_today_items(hist)
+        self.latest_date = self.history_index['sorted_dates'][0] if self.history_index['sorted_dates'] else ""
+
+        self.symbol_marks = {}
+        for item in self.resonance_data:
+            for sym in item['symbols']:
+                try:
+                    self.symbol_marks[sym] = evaluate_symbol_signal(
+                        sym, item['count'], self.history_index,
+                        self.today_items_map, self.week52_low_symbols
+                    )
+                except Exception as e:
+                    print(f"评估 {sym} 失败: {e}")
+                    self.symbol_marks[sym] = {'level': 0, 'score': 0.0, 'badge': '', 'reason': ''}
+            item['symbols'] = sorted(item['symbols'],
+                                     key=lambda s: (-self.symbol_marks[s]['score'], s))
+
+        try:
+            self.turning_data = detect_turning_points(self.history_index, self.week52_low_symbols)
+        except Exception as e:
+            traceback.print_exc()
+            print(f"转折检测失败: {e}")
+            self.turning_data = []
+
+        try:
+            self.etf_data, self.etf_date = detect_etf_signals(hist, self.etf_universe, self.history_index)
+        except Exception as e:
+            traceback.print_exc()
+            print(f"ETF 检测失败: {e}")
+            self.etf_data, self.etf_date = [], self.latest_date
 
     # ==================================================================
     # ★ 黑名单：命中计算 / 过滤（分组级）
@@ -1224,7 +1406,7 @@ class GroupWindow(QMainWindow):
         return TB.blacklisted_tags(tags, groups)
 
     def present_section_keys(self):
-        return [SEC_TURNING] + [reso_key(item['count']) for item in self.resonance_data]
+        return [SEC_TURNING, SEC_ETF] + [reso_key(item['count']) for item in self.resonance_data]
 
     def _compute_views(self):
         self.hidden_info = {}
@@ -1251,6 +1433,8 @@ class GroupWindow(QMainWindow):
 
         self.view_turning = [r for r in self.turning_data if visible(r['symbol'], SEC_TURNING)]
         self.turning_hidden = len(self.turning_data) - len(self.view_turning)
+        self.view_etf = [r for r in self.etf_data if visible(r['symbol'], SEC_ETF)]
+        self.etf_hidden = len(self.etf_data) - len(self.view_etf)
         self.view_resonance = []
         for item in self.resonance_data:
             key = reso_key(item['count'])
@@ -1259,6 +1443,7 @@ class GroupWindow(QMainWindow):
                                         'total': len(item['symbols']),
                                         'hidden': len(item['symbols']) - len(vis)})
         self.list_turning = [r['symbol'] for r in self.view_turning]
+        self.list_etf = [r['symbol'] for r in self.view_etf]
         self.list_resonance = [s for item in self.view_resonance for s in item['symbols']]
 
     def apply_blacklist_filter(self):
@@ -1304,8 +1489,10 @@ class GroupWindow(QMainWindow):
 
     def _dialog_rows(self):
         rows = [(SEC_TURNING,
-                 f"转折（{len(self.turning_data)}只，隐藏 {self.turning_hidden}）", True)]
-        present = {SEC_TURNING}
+                 f"转折（{len(self.turning_data)}只，隐藏 {self.turning_hidden}）", True),
+                (SEC_ETF,
+                 f"ETF（{len(self.etf_data)}只，隐藏 {self.etf_hidden}）", True)]
+        present = {SEC_TURNING, SEC_ETF}
         for item in self.view_resonance:
             rows.append((item['key'],
                          f"共振 {item['count']} 组（{item['total']}只，隐藏 {item['hidden']}）", True))
@@ -1343,14 +1530,28 @@ class GroupWindow(QMainWindow):
 
     def _poll_external_changes(self, force=False):
         changed = False
+        signals_changed = False
         try:
+            # ---- Earning_History.json：信号源 ----
+            esig = file_mtime(EARNING_HISTORY_PATH)
+            if force or esig != self._earn_sig:
+                self._earn_sig = esig
+                try:
+                    new_hist = load_json(EARNING_HISTORY_PATH)
+                except Exception as e:
+                    print(f"[联动] Earning_History.json 读取失败（可能正在写入），等待下次变化: {e}")
+                    new_hist = None
+                if isinstance(new_hist, dict) and new_hist:
+                    self.earning_history_data = new_hist
+                    self._compute_signals()
+                    changed = signals_changed = True
+
             dsig = file_mtime(DESCRIPTION_PATH)
             if force or dsig != self._desc_sig:
                 self._desc_sig = dsig
                 try:
                     new = load_json(DESCRIPTION_PATH)
                 except Exception as e:
-                    # 只报一次；文件写完后签名会变化，届时自动重读
                     print(f"[联动] description.json 读取失败（可能正在写入），等待下次变化: {e}")
                     new = None
                 if isinstance(new, dict) and new:
@@ -1376,19 +1577,22 @@ class GroupWindow(QMainWindow):
             self.apply_blacklist_filter()
             after = set(self.hidden_info)
             add_n, rm_n = len(after - before), len(before - after)
-            msg = "黑名单 / Tag / 分组配置 已更新"
+            msg = ("信号（Earning_History）/ " if signals_changed else "") + "黑名单 / Tag / 分组配置 已更新"
+            if signals_changed:
+                msg += f"：最新交易日 {self.latest_date}，转折 {len(self.turning_data)}，ETF {len(self.etf_data)}"
             if add_n or rm_n:
-                msg += f"：新隐藏 {add_n} 只，恢复显示 {rm_n} 只"
+                msg += f" ｜ 新隐藏 {add_n} 只，恢复显示 {rm_n} 只"
             self.statusBar().showMessage(msg, 6000)
 
     def _update_window_title(self):
+        base = "持仓 / 转折 / ETF / 多组共振"
         if TB_OK:
-            self.setWindowTitle(f"持仓 / 多组共振 / 转折   ｜ 黑名单（按分组）已隐藏 {len(self.hidden_info)} 只")
+            self.setWindowTitle(f"{base}   ｜ 黑名单（按分组）已隐藏 {len(self.hidden_info)} 只")
         else:
-            self.setWindowTitle("持仓 / 多组共振 / 转折")
+            self.setWindowTitle(base)
 
     # ==================================================================
-    # 导航全序列生成
+    # 导航全序列生成：持仓 → 转折 → ETF → 共振
     # ==================================================================
     def _build_full_navigation_list(self):
         items = []
@@ -1396,6 +1600,8 @@ class GroupWindow(QMainWindow):
             items.append((s, 'holdings'))
         for s in self.list_turning:
             items.append((s, 'turning'))
+        for s in self.list_etf:
+            items.append((s, 'etf'))
         for s in self.list_resonance:
             items.append((s, 'resonance'))
         return items
@@ -1454,20 +1660,6 @@ class GroupWindow(QMainWindow):
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
 
-        # legend = QLabel(
-        #     "【持仓】读取 firstrade_positions.json；点上方按钮切换排序（同一按钮再点一次切升/降序），"
-        #     "浏览完持仓最后一项将顺畅进入转折/共振；按 R 键重新读盘。\n"
-        #     "【共振】🔥★★★ 极罕见且信号极强（红框）｜ ★★ 罕见/高质量（黄框）｜ ★ 值得一看（蓝框）｜ 无标记 = 常态（灰框）\n"
-        #     f"【转折】连续 ≥{TURN_MIN_STREAK} 天保持多项关键信号后，突然减项（如 4项→2项 / 2项→1项）；"
-        #     "按钮上的 4→2 表示“平台4项 → 当日2项”，鼠标悬停可看平台期逐日明细。"
-        #     f"  只显示最近 {TURN_RECENT_DAYS} 个交易日内发生的转折。\n"
-        #     "【黑名单】每个分组标题下可单独勾选屏蔽「确定 / 疑似」，即点即生效并自动保存（持仓不受影响）；"
-        #     "B 键打开总表设置。未隐藏卡片里的黑名单 Tag 以 ⛔ 标出（红=确定，橙=疑似）。"
-        # )
-        # legend.setStyleSheet("color:#9AA5B1; font-size:14px; padding:6px 10px;")
-        # legend.setWordWrap(True)
-        # layout.addWidget(legend)
-
         layout.addLayout(self._build_blacklist_bar())
 
         self.scroll_area = QScrollArea()
@@ -1503,20 +1695,20 @@ class GroupWindow(QMainWindow):
         self.bl_info_label.setWordWrap(True)
         bar.addWidget(self.bl_info_label, 1)
 
-        for text, slot, tip in (
-                ("⚙ 分组屏蔽设置 (B)", self.open_blacklist_settings, "按分组勾选要屏蔽的黑名单类别"),
-                ("📝 编辑黑名单 Tag", self.open_blacklist_file, "用文本编辑器打开 Tag_Blacklist.json"),
+        for text, slot, tip, need_tb in (
+                ("⚙ 分组屏蔽设置 (B)", self.open_blacklist_settings, "按分组勾选要屏蔽的黑名单类别", True),
+                ("📝 编辑黑名单 Tag", self.open_blacklist_file, "用文本编辑器打开 Tag_Blacklist.json", True),
                 ("📝 编辑分组配置", self.open_section_config_file,
-                 "用文本编辑器打开 Check_Group_Blacklist_Sections.json"),
+                 "用文本编辑器打开 Check_Group_Blacklist_Sections.json", True),
                 ("↻ 重新读取", lambda: self._poll_external_changes(force=True),
-                 "强制重新读取黑名单、分组配置与 description.json")):
+                 "强制重新读取 Earning_History、黑名单、分组配置与 description.json", False)):
             b = QPushButton(text)
             b.setObjectName("SortBtn")
             b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             b.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             b.setToolTip(tip)
             b.clicked.connect(lambda _=False, f=slot: f())
-            b.setEnabled(TB_OK)
+            b.setEnabled(TB_OK or not need_tb)
             bar.addWidget(b)
         return bar
 
@@ -1568,6 +1760,7 @@ class GroupWindow(QMainWindow):
         main_lay = QHBoxLayout(content)
         self._build_holdings_section(main_lay)
         self._build_turning_section(main_lay)
+        self._build_etf_section(main_lay)
         self._build_resonance_sections(main_lay)
         main_lay.addStretch(1)
 
@@ -1823,6 +2016,45 @@ class GroupWindow(QMainWindow):
 
         self._add_separator(main_lay)
 
+    def _build_etf_section(self, main_lay):
+        col_lay = QHBoxLayout()
+        new_n = sum(1 for r in self.view_etf if r['is_new'])
+        title = f"ETF ({len(self.view_etf)}只 / 🆕{new_n})"
+        if self.etf_hidden:
+            title += f" ⛔{self.etf_hidden}"
+        container = self._create_section_container(title, col_lay, SEC_ETF)
+        container.setToolTip(
+            f"规则：最新交易日 {self.etf_date or '—'}，属于 Sectors_All「ETFs」，"
+            f"且同时出现在 {' / '.join(ETF_SHORT_GROUPS)}（任一）与 {' / '.join(ETF_VOLUME_GROUPS)}\n"
+            f"🆕 今日首次满足 ｜ 连N天 连续满足 ｜ ★ Short 与 Short_W 同时出现")
+        main_lay.addWidget(container)
+
+        if not self.view_etf:
+            if not self.etf_universe:
+                msg = "Sectors_All.json 中\n未找到 ETFs 分组"
+            elif self.etf_hidden:
+                msg = f"今日 {self.etf_hidden} 只 ETF\n均已被黑名单隐藏"
+            else:
+                msg = f"最新交易日 {self.etf_date or '—'}\n无 Short + 缩量 ETF"
+            tip = QLabel(msg)
+            tip.setStyleSheet("color:#888; font-size:16px; padding:12px;")
+            col_lay.addWidget(tip)
+        else:
+            items = self.view_etf
+            for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN]
+                          for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
+                col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
+                for r in chunk:
+                    base_text = self.compare_data.get(r['symbol'], '')
+                    disp = f"{base_text} {r['badge']}".strip()
+                    col.addWidget(self.create_symbol_widget(
+                        r['symbol'], override_text=disp or " ",
+                        force_style=f"ETF_L{r['level']}",
+                        tooltip=r['reason'], source='etf'))
+                col.addStretch(1); col_lay.addLayout(col)
+
+        self._add_separator(main_lay)
+
     def _build_resonance_sections(self, main_lay):
         for item in self.view_resonance:
             count = item['count']
@@ -1836,7 +2068,6 @@ class GroupWindow(QMainWindow):
             main_lay.addWidget(self._create_section_container(title, col_lay, item['key']))
 
             if not symbols:
-                # 整组被屏蔽也保留分组（否则无法在标题下取消屏蔽）
                 tip = QLabel(f"本组 {item['hidden']} 只\n均已被黑名单隐藏")
                 tip.setStyleSheet("color:#888; font-size:16px; padding:12px;")
                 col_lay.addWidget(tip)
@@ -1917,12 +2148,16 @@ class GroupWindow(QMainWindow):
             "Turn_L1":  ("#13251C", "#D8E9DE", "#A3BE8C"),
             "Turn_L2":  ("#241B2C", "#EBD9F2", "#B48EAD"),
             "Turn_L3":  ("#3B171C", "#FFD5D9", "#BF616A"),
+            "ETF_L0":   ("#111A22", "#D8DEE9", "#4C566A"),
+            "ETF_L1":   ("#0E2433", "#D6ECF5", "#5E81AC"),
+            "ETF_L2":   ("#0B2A3A", "#E0F4FF", "#88C0D0"),
             "Hold_Up":  ("#3B171C", "#FFD5D9", "#BF616A"),
             "Hold_Dn":  ("#13251C", "#D8E9DE", "#A3BE8C"),
             "Hold_Flat": ("#111111", "#D8DEE9", "#3A3A3A"),
         }
         strong_set = {"Reso_L1", "Reso_L2", "Reso_L3",
                       "Turn_L1", "Turn_L2", "Turn_L3",
+                      "ETF_L1", "ETF_L2",
                       "Hold_Up", "Hold_Dn"}
         qss = ""
         for name, (bg, fg, border) in button_styles.items():
@@ -2104,6 +2339,11 @@ class GroupWindow(QMainWindow):
                     return (f"转折 {r['from_n']}→{r['to_n']} @{r['date']} {r['badge']} "
                             f"({i + 1}/{len(self.view_turning)})")
 
+        if source == 'etf':
+            for i, r in enumerate(self.view_etf):
+                if r['symbol'] == symbol:
+                    return f"ETF Short+缩量 {r['badge']} ({i + 1}/{len(self.view_etf)})"
+
         if source == 'resonance':
             for item in self.view_resonance:
                 if symbol in item['symbols']:
@@ -2119,6 +2359,9 @@ class GroupWindow(QMainWindow):
         for i, r in enumerate(self.view_turning):
             if r['symbol'] == symbol:
                 return f"转折 {r['from_n']}→{r['to_n']} ({i + 1}/{len(self.view_turning)})"
+        for i, r in enumerate(self.view_etf):
+            if r['symbol'] == symbol:
+                return f"ETF {r['badge']} ({i + 1}/{len(self.view_etf)})"
         for item in self.view_resonance:
             if symbol in item['symbols']:
                 idx = item['symbols'].index(symbol)

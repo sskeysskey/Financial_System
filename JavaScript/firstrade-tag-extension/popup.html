@@ -225,7 +225,7 @@
 
   <hr>
   <!-- ==================== ③ 自选股一键同步 ==================== -->
-  <h1>③ 自选股一键同步（Earning 分组）</h1>
+  <h1>③ 自选股一键同步（Earning 系列分组）</h1>
   <div id="wlStatus">未检测</div>
   <div id="wlMsg"></div>
   <div class="ok" id="agentBox">🤖 远程添加代理：未检测</div>
@@ -243,6 +243,11 @@
     <input type="text" id="wlTarget" value="Earning" placeholder="Earning"
       style="width:96px;font-size:12px;padding:3px;">
     <button id="wlGroupsBtn" style="width:auto;margin-top:0;padding:3px 8px;font-size:12px;">🎯 检测/切换</button>
+  </div>
+  <div class="row">
+    <label for="wlCap"><b>每组上限</b></label>
+    <input type="number" id="wlCap" min="1" max="38" value="35" style="width:52px;">
+    <span class="small">只｜超出写 Earning1/2/3…，不够自动新建，用不上的自动删除（Earning 永久保留）</span>
   </div>
   <div class="row">
     <input type="checkbox" id="wlStrict" style="width:auto;">
@@ -282,7 +287,7 @@
     <input type="checkbox" id="wlClearFirst" style="width:auto;">
     <label for="wlClearFirst">强制<b>全清重建</b>（连相同的也删，通常不需要）</label>
   </div>
-  <button id="wlRunBtn" class="primary">🚀 一键同步（切Earning → 比对 → 删多余 → 补缺失）</button>
+  <button id="wlRunBtn" class="primary">🚀 一键同步（Earning 系列：分配 → 删多余 → 补缺失 → 增删分组）</button>
   <div class="half">
     <button id="wlPauseBtn">⏸ 暂停/继续</button>
     <button id="wlStopBtn" class="danger">⏹ 停止</button>
@@ -294,10 +299,10 @@
 
   <div class="row">
     <label for="wlKeepExtra" class="small">额外保留</label>
-    <input type="text" id="wlKeepExtra" placeholder="除 Earning / Wrong 外还要保留的分组，逗号分隔"
+    <input type="text" id="wlKeepExtra" placeholder="除 Earning 系列 / Wrong 外还要保留的分组，逗号分隔"
       style="flex:1;font-size:12px;padding:3px;">
   </div>
-  <button id="wlClearGroupsBtn" class="danger">🧹 一键清空除 Earning / Wrong 外的所有分组</button>
+  <button id="wlClearGroupsBtn" class="danger">🧹 一键清空除 Earning 系列 / Wrong 外的所有分组</button>
 
   <details>
     <summary>高级 / 排错（平时不用展开）</summary>
@@ -314,6 +319,12 @@
     </div>
     <input type="text" id="wlTestSym" placeholder="自检用 symbol，如 AAPL（试删也用它，留空=删最顶行）"
       style="width:100%;box-sizing:border-box;margin-top:6px;font-size:12px;padding:4px;">
+    <input type="text" id="wlTestGroup" placeholder="测试分组名，如 Earning9（删除只允许 Earning1/2/3… 系列）"
+      style="width:100%;box-sizing:border-box;margin-top:6px;font-size:12px;padding:4px;">
+    <div class="half">
+      <button id="wlGroupCreateBtn">🔬 测试新建分组</button>
+      <button id="wlGroupDeleteBtn" class="danger">🔬 测试删除分組</button>
+    </div>
     <p class="hint" style="margin-top:8px;">桥接不可用时的备用 symbol 清单（逗号/换行分隔，可留空）：</p>
     <textarea id="wlManual" placeholder="AAPL, NVDA, BRK-B ..."></textarea>
     <button id="wlManualSave">保存备用清单</button>
@@ -321,8 +332,8 @@
 
   <hr>
   <!-- ==================== ④ Earning 行情「变更%」 ==================== -->
-  <h1>④ Earning 分组行情「变更%」</h1>
-  <p class="hint">会<b>自动切到目标分组（默认 Earning）</b>再抓取，抓完切回原分组；全量覆盖写入
+  <h1>④ Earning 系列分组行情「变更%」</h1>
+  <p class="hint">会<b>依次切到 Earning / Earning1 / …</b>抓取，抓完切回原分组；全量覆盖写入
     <code>firstrade_watchlist_earning.json</code>。图表在「无持仓」时展示该数值。
   </p>
   <button id="wlQuoteBtn" class="primary">⬇️ 手动抓取全部变更%（自动切 Earning + 滚屏）</button>
@@ -351,10 +362,10 @@
     <input type="checkbox" id="symColor" style="width:auto;">
     <label for="symColor"><b>代码着色</b>（按分组归属 / 持仓）</label>
   </div>
-  <div class="ok">持仓页：<span style="color:#0284c7"><b>Watch</b></span> ·
-    <span style="color:#dc2626"><b>买/买买/买买买</b></span> ·
+  <div class="ok">持仓页：
+    <span style="color:#dc2626"><b>买/买买</b></span> ·
     <span style="color:#16a34a"><b>卖卖卖</b></span> ·
-    <span style="color:#d97706"><b>Earning</b></span>（多分组时优先级：卖 &gt; 买 &gt; Earning &gt; Watch）<br>
+    <span style="color:#d97706"><b>Earning</b></span>（多分组时优先级：卖 &gt; 买 &gt; Earning 系列）<br>
     自选股页：<span style="color:#9333ea"><b>持仓中</b></span> ·
     <span style="color:#ea580c"><b>持仓 + Earning</b></span> ·
     <span style="color:#d97706"><b>仅 Earning</b></span>｜鼠标悬停徽章可看全部分组
@@ -365,9 +376,9 @@
   <hr>
   <!-- ==================== ⑥ 快速交易 ==================== -->
   <h1>⑥ 快速交易（/app/watchlist、/app/positions 点击代码弹出）</h1>
-  <p class="hint">买 / 买买 / 买买买 → <b>买进</b>：金额档 ÷ <b>网页实时价</b> → 四舍五入整数股，以「股数 + 市价」下单；
-    卖卖卖 → <b>卖出整数股</b>（碎股持仓会提示去手机 App）；其它分组 → 让你选。
-    成交后自动从勾选的分组移除（持仓页会排队到自选股页执行；Earning / Wrong 永不自动删）。<b>按住 Alt 再点代码</b> = 网页原生行为。</p>
+  <p class="hint">买 / 买买 → <b>买进</b>：金额档 ÷ <b>网页实时价</b> → 四舍五入整数股，以「股数 + 市价」下单；
+    卖卖卖 → <b>卖出整数股</b>（含碎股的持仓卖整数部分，剩余碎股日后用 App 处理，分组照常移出）；其它分组 → 让你选。
+    成交后自动从勾选的分组移除（持仓页会排队到自选股页执行；Earning 系列 / Wrong 永不自动删）。<b>按住 Alt 再点代码</b> = 网页原生行为。</p>
   <div class="row">
     <input type="checkbox" id="tradeEnabled" style="width:auto;">
     <label for="tradeEnabled"><b>启用</b>：点击股票代码弹出交易层</label>

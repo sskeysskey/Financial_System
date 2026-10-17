@@ -532,14 +532,9 @@ html.ft-trade-on [col-id="symbol"] [data-ref="eValue"] {
 }
 
 /* ==================== v11 代码按分组 / 持仓着色 ====================
- * 持仓页：Watch=天蓝  买*=红  卖卖卖=绿  Earning=琥珀
+ * 持仓页：买*=红  卖卖卖=绿  Earning 系列=琥珀
  * 自选股页：持仓=紫  持仓+Earning=橙  仅 Earning=琥珀（当前不在 Earning 分组时）
  * 400 色阶在深/浅主题下都清晰；红买绿卖与图表 ft_quotes.py 的配色一致 */
-[col-id="symbol"] .ft-sym-watch,
-[col-id="symbol"] .ft-sym-watch * {
-  color: #faf9fb !important;
-  font-weight: 700 !important;
-}
 
 [col-id="symbol"] .ft-sym-buy,
 [col-id="symbol"] .ft-sym-buy * {

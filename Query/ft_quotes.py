@@ -412,9 +412,7 @@ def _group_color(name, theme):
         return theme['accent_green']
     if '买' in n:
         return theme['accent_red']
-    if low == 'watch':
-        return theme['accent_cyan']
-    if n.upper() in ('ALL', 'EARNING'):
+    if n.upper() == 'ALL' or re.match(r'^EARNING\d*$', n.upper()):
         return theme['accent_yellow']
     return theme['accent_orange']
 

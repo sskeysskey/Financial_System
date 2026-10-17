@@ -32,6 +32,12 @@ _TRADE_LOG_LOCK = threading.Lock()
 WL_MEMBERSHIP_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_wl_membership.json")
 LIVE_QUOTES_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_quotes_live.json")   # ★ G 键实时取数
 LIVE_QUOTES_MAX = 600
+LIVE_QUOTES_MAX_AGE_H = float(os.environ.get("FT_LIVE_MAX_AGE_H", "48"))          # 实时取数缓存最长保留
+TRADE_LOG_MAX_BYTES = int(os.environ.get("FT_TRADE_LOG_MAX_BYTES", str(1024 * 1024)))  # 交易日志超过 1MB 就裁剪
+QUOTE_FRESH_MIN = float(os.environ.get("FT_QUOTE_FRESH_MIN", "30"))   # ★ G 键缓存有效期（分钟）
+_LAST_AGENT_VISIBLE = [False]
+_QUOTE_SRC_LABEL = {"positions": "持仓页", "group": "自选分组", "current": "当前分组",
+                    "temp": "临时分组", "earning": "Earning 快照", "live": "实时取数"}
 TEMP_GROUP = os.environ.get("FT_TEMP_GROUP", "temp")
 _LIVE_LOCK = threading.Lock()
 MEMBER_RECENT_MAX = 200
@@ -52,7 +58,7 @@ SECTOR_GROUPS_FOR_WATCHLIST = [
 
 WATCHLIST_URL = "https://invest.firstrade.com/app/watchlist"
 WATCHLIST_URL_MATCH = "invest.firstrade.com/app/watchlist"
-WATCHLIST_GROUPS = ["Earning", "买", "买买", "买买买", "卖卖卖", "Short", "Watch", "Wrong"]
+WATCHLIST_GROUPS = ["Earning", "Earning1", "Earning2", "Earning3", "买", "买买", "卖卖卖", "Wrong"]
 
 TASK_TTL = 600
 TASK_LEASE = 90
@@ -123,6 +129,32 @@ def _file_size(path):
     except Exception:
         return 0
 
+def append_trade_log(rec):
+    """追加交易审计日志；超过 TRADE_LOG_MAX_BYTES 时只保留最近一半体积的行（原子替换）"""
+    os.makedirs(MODULES_DIR, exist_ok=True)
+    line = json.dumps(rec, ensure_ascii=False) + "\n"
+    with _TRADE_LOG_LOCK:
+        with open(TRADE_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(line)
+        if _file_size(TRADE_LOG_PATH) <= TRADE_LOG_MAX_BYTES:
+            return
+        try:
+            with open(TRADE_LOG_PATH, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+            keep, size = [], 0
+            for ln in reversed(lines):
+                size += len(ln.encode("utf-8"))
+                if size > TRADE_LOG_MAX_BYTES // 2:
+                    break
+                keep.append(ln)
+            keep.reverse()
+            tmp = TRADE_LOG_PATH + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.writelines(keep)
+            os.replace(tmp, TRADE_LOG_PATH)
+            _log(f"[交易日志] 已裁剪：{len(lines)} → {len(keep)} 行")
+        except Exception as e:
+            _log(f"[交易日志] 裁剪失败(忽略): {e}")
 
 def _gc_tasks_locked():
     now = time.time()
@@ -705,8 +737,8 @@ def compact_orders(verbose=False):
     }
 
 
-def save_watchlist(incoming, overwrite=True, group=""):
-    """★ v10.1：只存目标分组（Earning）行情；允许空覆盖（分组被清空时）；记录分组名；写前 .bak"""
+def save_watchlist(incoming, overwrite=True, group="", groups=None):
+    """★ v11：Earning 系列行情；每条带 group + updated_at（供 G 键缓存判断新鲜度）；写前 .bak"""
     if not isinstance(incoming, dict):
         return 0, 0, "invalid"
     if not incoming and not overwrite:
@@ -715,13 +747,12 @@ def save_watchlist(incoming, overwrite=True, group=""):
     with _WL_LOCK:
         data = _load_json(WATCHLIST_JSON_PATH)
         quotes = data.get("quotes") if isinstance(data.get("quotes"), dict) else {}
-        old_group = _clean_group((data.get("_meta") or {}).get("group", ""))
-        if not overwrite and group and old_group and group != old_group:
-            return 0, len(quotes), "skip_group_mismatch"
+        meta_old = data.get("_meta") or {}
         mode = "overwrite" if overwrite else "merge"
         base = {} if overwrite else dict(quotes)
         now = time.time()
         n = 0
+        touched = set()
         for key, val in incoming.items():
             if not isinstance(val, dict):
                 continue
@@ -730,16 +761,23 @@ def save_watchlist(incoming, overwrite=True, group=""):
                 continue
             rec = dict(val)
             rec["symbol"] = sym
-            if overwrite:
-                rec.pop("updated_at", None)
-            else:
-                rec["updated_at"] = rec.get("updated_at") or now
+            rec["group"] = _clean_group(rec.get("group") or group)
+            rec["updated_at"] = now
+            for k in [k for k in base if _sym_key(k) == _sym_key(sym)]:
+                base.pop(k, None)
             base[sym] = rec
+            touched.add(rec["group"])
             n += 1
+        gmeta = {} if overwrite else dict(meta_old.get("groups") or {})
+        if overwrite and isinstance(groups, list):
+            touched |= {_clean_group(g) for g in groups if _clean_group(g)}
+        for g in touched:
+            if g:
+                gmeta[g] = {"updated_at": now, "count": sum(1 for r in base.values() if r.get("group") == g)}
         out = {
-            "_meta": {"updated_at": now,
-                      "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
-                      "count": len(base), "mode": mode, "group": group or old_group},
+            "_meta": {"updated_at": now, "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
+                      "count": len(base), "mode": mode,
+                      "group": group or meta_old.get("group", ""), "groups": gmeta},
             "quotes": base,
         }
         _atomic_write(WATCHLIST_JSON_PATH, out, backup=True)
@@ -827,6 +865,15 @@ def save_membership_snapshot(group, symbols, complete=True, source="", page_grou
             if pg and pg != data.get("page_groups"):
                 data["page_groups"] = pg
                 pg_changed = True
+            # ★ 只在「全量扫描」时清理（那时分组列表是刚读的），防止残留 Watch/买买买 等已删除分组
+            if source == "scan_all" and len(pg) >= 2:
+                keep = {x.lower() for x in pg} | {g.lower()}
+                stale = [x for x in list(data["groups"].keys()) if _clean_group(x).lower() not in keep]
+                for x in stale:
+                    data["groups"].pop(x, None)
+                if stale:
+                    pg_changed = True
+                    _log(f"[归属] 网页上已不存在的分组已从本机移除：{stale}")
         if added or removed or complete or pg_changed or "symbols" not in (data["groups"].get(g) or {}):
             _mem_write(data, {"op": mode, "group": g, "count": len(new), "source": source,
                               "added": added[:30], "removed": removed[:30]})
@@ -860,59 +907,151 @@ def apply_membership_event(group, symbol, op, source=""):
 # ---------------------------------------------------------------------------
 # ★ G 键实时取数：保存结果 / 单只 patch 持仓 / 决定取数路径
 # ---------------------------------------------------------------------------
-def save_live_quote(symbol, d):
-    sym = str(symbol or "").strip().upper()
-    if not sym or not isinstance(d, dict):
-        return False
-    rec = {"symbol": sym, "updated_at": time.time()}
-    for k in ("change_pct", "change_pct_num", "last", "source", "group"):
-        v = d.get(k)
-        if v not in (None, ""):
-            rec[k] = v
-    if "change_pct" not in rec and "last" not in rec:
-        return False
+def save_live_quotes(batch, group="", source=""):
+    """★ 批量保存 G 键取数结果（同组/同页的其它股票一起缓存）"""
+    if not isinstance(batch, dict) or not batch:
+        return 0
+    now = time.time()
+    n = 0
     with _LIVE_LOCK:
         data = _load_json(LIVE_QUOTES_JSON_PATH)
         quotes = data.get("quotes") if isinstance(data.get("quotes"), dict) else {}
-        for k in [k for k in quotes if _sym_key(k) == _sym_key(sym)]:
-            quotes.pop(k, None)
-        quotes[sym] = rec
+        for key, d in batch.items():
+            if not isinstance(d, dict):
+                continue
+            sym = str(d.get("symbol") or key or "").strip().upper()
+            if not sym:
+                continue
+            rec = {"symbol": sym, "updated_at": now}
+            for k in ("change_pct", "change_pct_num", "last"):
+                v = d.get(k)
+                if v not in (None, ""):
+                    rec[k] = v
+            if "%" not in str(rec.get("change_pct", "")):
+                continue
+            rec["source"] = d.get("source") or source
+            g = _clean_group(d.get("group") or group)
+            if g:
+                rec["group"] = g
+            for k in [k for k in quotes if _sym_key(k) == _sym_key(sym)]:
+                quotes.pop(k, None)
+            quotes[sym] = rec
+            n += 1
+        if not n:
+            return 0
+        cutoff = now - LIVE_QUOTES_MAX_AGE_H * 3600
+        quotes = {k: v for k, v in quotes.items()
+                  if isinstance(v, dict) and float(v.get("updated_at") or 0) >= cutoff}
         if len(quotes) > LIVE_QUOTES_MAX:
             keep = sorted(quotes.items(), key=lambda kv: float((kv[1] or {}).get("updated_at") or 0),
                           reverse=True)[:LIVE_QUOTES_MAX]
             quotes = dict(keep)
         _atomic_write(LIVE_QUOTES_JSON_PATH, {
-            "_meta": {"updated_at": time.time(), "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "_meta": {"updated_at": now, "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
                       "count": len(quotes)},
             "quotes": quotes})
-    _log(f"[取数] {sym} 变更% {rec.get('change_pct')} 现价 {rec.get('last')} via {rec.get('source')}")
-    return True
+    _log(f"[取数] 缓存 {n} 只行情 via {source or '?'} {group or ''}")
+    return n
 
 
-def patch_position(symbol, rec):
-    """只更新一只持仓的字段；不动 _meta.updated_at（避免掩盖整体快照的过期）、不覆盖 .bak"""
-    if not isinstance(rec, dict):
+def save_live_quote(symbol, d):
+    if not isinstance(d, dict):
         return False
+    return save_live_quotes({str(symbol).upper(): d}, d.get("group", ""), d.get("source", "")) > 0
+
+
+def patch_positions(records):
+    """★ 批量更新持仓字段（打 patched_at 统一时间）；不动 _meta.updated_at、不覆盖 .bak"""
+    if not isinstance(records, dict) or not records:
+        return 0
+    now = time.time()
     with _FILE_LOCK:
         data = _load_json(POSITIONS_JSON_PATH)
         if not data:
-            return False
-        key = next((k for k in data if not str(k).startswith("_") and _sym_key(k) == _sym_key(symbol)), None)
-        if not key:
-            return False
-        slim = _slim_position(key, rec)
-        if len(slim) <= 1:
-            return False
-        merged = dict(data[key]) if isinstance(data[key], dict) else {}
-        merged.update(slim)
-        merged["patched_at"] = time.time()
-        data[key] = merged
-        meta = data.get("_meta") if isinstance(data.get("_meta"), dict) else {}
-        meta["patched_at"] = time.time()
-        meta["patched_symbol"] = key
-        data["_meta"] = meta
-        _atomic_write(POSITIONS_JSON_PATH, data)
-    return True
+            return 0
+        idx = {_sym_key(k): k for k in data if not str(k).startswith("_")}
+        n = 0
+        for sym, rec in records.items():
+            key = idx.get(_sym_key(sym))
+            if not key or not isinstance(rec, dict):
+                continue
+            slim = _slim_position(key, rec)
+            if len(slim) <= 1:
+                continue
+            merged = dict(data[key]) if isinstance(data[key], dict) else {}
+            merged.update(slim)
+            merged["patched_at"] = now
+            data[key] = merged
+            n += 1
+        if n:
+            meta = data.get("_meta") if isinstance(data.get("_meta"), dict) else {}
+            meta["patched_at"] = now
+            meta["patched_count"] = n
+            data["_meta"] = meta
+            _atomic_write(POSITIONS_JSON_PATH, data)
+    return n
+
+
+def patch_position(symbol, rec):
+    return patch_positions({symbol: rec}) > 0
+
+
+def fresh_quote(symbol, max_age):
+    """★ G 键缓存：持仓 / 实时取数 / Earning 快照 里，取 max_age 秒内最新的一条"""
+    if max_age <= 0:
+        return None
+    now = time.time()
+    k = _sym_key(symbol)
+    best = [None]
+
+    def consider(t, src, grp, chg, last):
+        try:
+            t = float(t or 0)
+        except (TypeError, ValueError):
+            t = 0
+        if not t or not chg or "%" not in str(chg) or now - t > max_age:
+            return
+        if best[0] is None or t > best[0]["ts"]:
+            best[0] = {"ts": t, "source": src, "group": grp or "", "change_pct": chg, "last": last or ""}
+
+    pos = _load_json(POSITIONS_JSON_PATH)
+    pmeta = pos.get("_meta") or {}
+    for key, rec in pos.items():
+        if str(key).startswith("_") or not isinstance(rec, dict) or _sym_key(key) != k:
+            continue
+        t = float(rec.get("patched_at") or 0)
+        if pmeta.get("mode") == "overwrite":
+            t = max(t, float(pmeta.get("updated_at") or 0))
+        consider(t, "positions", "", rec.get("day_change"), rec.get("last_price"))
+    for path, src in ((LIVE_QUOTES_JSON_PATH, "live"), (WATCHLIST_JSON_PATH, "earning")):
+        d = _load_json(path)
+        q = d.get("quotes") if isinstance(d.get("quotes"), dict) else {}
+        mt = (d.get("_meta") or {}).get("updated_at")
+        for key, rec in q.items():
+            if not isinstance(rec, dict) or _sym_key(key) != k:
+                continue
+            consider(rec.get("updated_at") or mt, rec.get("source") or src, rec.get("group", ""),
+                     rec.get("change_pct"), rec.get("last"))
+    return best[0]
+
+
+def drop_membership_group(group):
+    g = _clean_group(group)
+    if not g:
+        return {"status": "skip"}
+    with _MEM_LOCK:
+        data = _mem_load()
+        existed = data["groups"].pop(g, None) is not None
+        pg = data.get("page_groups")
+        changed = False
+        if isinstance(pg, list):
+            npg = [x for x in pg if _clean_group(x) != g]
+            changed = len(npg) != len(pg)
+            data["page_groups"] = npg
+        if existed or changed:
+            _mem_write(data, {"op": "drop_group", "group": g})
+    _log(f"[归属] 分组「{g}」已删除，移除本机记录")
+    return {"status": "ok", "group": g, "dropped": existed}
 
 
 def build_quote_plan(symbol):
@@ -1087,7 +1226,8 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 body = self._read_json_body()
                 incoming = body.get("quotes") if isinstance(body.get("quotes"), dict) else body
                 overwrite = bool(body.get("overwrite", True))
-                n, total, mode = save_watchlist(incoming, overwrite=overwrite, group=str(body.get("group", "")))
+                n, total, mode = save_watchlist(incoming, overwrite=overwrite, group=str(body.get("group", "")),
+                                                groups=body.get("groups") if isinstance(body.get("groups"), list) else None)
                 self._reply(200, {"status": "ok", "saved": n, "total": total, "mode": mode})
             except Exception as e:
                 self._reply(500, {"status": "error", "message": str(e)})
@@ -1100,6 +1240,9 @@ class StockRequestHandler(BaseHTTPRequestHandler):
         if path == "/wl_membership":
             try:
                 body = self._read_json_body()
+                if body.get("drop"):
+                    self._reply(200, drop_membership_group(body.get("group")))
+                    return
                 r = save_membership_snapshot(body.get("group"), body.get("symbols") or [],
                                              complete=bool(body.get("complete", True)),
                                              source=str(body.get("source", "")),
@@ -1180,9 +1323,14 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                     sym = str(d.get("symbol") or info[1] or "").upper()
                     if sym:
                         try:
-                            save_live_quote(sym, d)
-                            if d.get("source") == "positions" and isinstance(d.get("record"), dict):
-                                patch_position(sym, d["record"])
+                            batch = dict(d.get("batch") or {}) if isinstance(d.get("batch"), dict) else {}
+                            batch.setdefault(sym, d)
+                            save_live_quotes(batch, d.get("group", ""), d.get("source", ""))
+                            if isinstance(d.get("positions"), dict) and d["positions"]:
+                                n = patch_positions(d["positions"])
+                                _log(f"[取数] 持仓页 {n} 只已整批刷新")
+                            elif d.get("source") == "positions" and isinstance(d.get("record"), dict):
+                                patch_positions({sym: d["record"]})
                         except Exception as e:
                             _log(f"[取数] 保存失败: {e}")
                 ok = finish_task(tid, reported_ok, str(body.get("message", "")), body.get("data"))
@@ -1192,7 +1340,7 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
-        # ★ G 键：取某只股票最新「变更%」（持仓页 → 自选分组 → temp 临时分组）
+        # ★ G 键：先查缓存（默认 30 分钟有效），过期才让浏览器抓（持仓页 → 自选分组 → temp）
         if path == "/ft_quote":
             try:
                 body = self._read_json_body()
@@ -1201,8 +1349,27 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                     self._reply(400, {"status": "error", "ok": False, "message": "no symbol"})
                     return
                 wait = float(body.get("wait", 0) or 0)
+                force = bool(body.get("force", False))
+                try:
+                    max_age = float(body.get("max_age_min", QUOTE_FRESH_MIN)) * 60
+                except (TypeError, ValueError):
+                    max_age = QUOTE_FRESH_MIN * 60
+                if not force:
+                    hit = fresh_quote(symbol, max_age)
+                    if hit:
+                        age = max(0, int((time.time() - hit["ts"]) / 60))
+                        lab = _QUOTE_SRC_LABEL.get(hit["source"], hit["source"]) + (f"「{hit['group']}」" if hit["group"] else "")
+                        msg = (f"{symbol} 变更% {hit['change_pct']}｜现价 {hit['last'] or '--'}"
+                               f"（缓存 {age} 分钟前·{lab}，⇧G 强制刷新）")
+                        _log(f"[取数] {symbol} 命中缓存 {age}min via {lab}")
+                        self._reply(200, {"status": "ok", "ok": True, "cached": True, "action": "quote", "id": "",
+                                          "message": msg, "data": {"symbol": symbol, "source": hit["source"],
+                                                                   "group": hit["group"], "change_pct": hit["change_pct"],
+                                                                   "last": hit["last"], "age_min": age}})
+                        return
                 plan = build_quote_plan(symbol)
-                tab = ensure_watchlist_tab()
+                agent_ok = _LAST_AGENT_VISIBLE[0] and (time.time() - _LAST_AGENT_POLL[0]) < AGENT_ALIVE_SEC
+                tab = "agent_visible" if agent_ok else ensure_watchlist_tab()
                 t = find_active_task("quote", symbol)
                 if t:
                     _log(f"[取数] {symbol} 已有任务 {t['id']}，复用")
@@ -1293,10 +1460,7 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             try:
                 body = self._read_json_body()
                 body["logged_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-                os.makedirs(MODULES_DIR, exist_ok=True)
-                with _TRADE_LOG_LOCK:
-                    with open(TRADE_LOG_PATH, "a", encoding="utf-8") as f:
-                        f.write(json.dumps(body, ensure_ascii=False) + "\n")
+                append_trade_log(body)
                 _log(f"[交易日志] {body.get('mode')} {body.get('side')} {body.get('symbol')} "
                      f"status={body.get('status')} ok={body.get('ok')} 订单号={body.get('orderNo') or '-'}")
                 self._reply(200, {"status": "ok"})
@@ -1339,6 +1503,7 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 "membership_exists": os.path.exists(WL_MEMBERSHIP_JSON_PATH),
                 "membership_bytes": _file_size(WL_MEMBERSHIP_JSON_PATH),
                 "wl_tasks_pending": pending_count(),
+                "quote_fresh_min": QUOTE_FRESH_MIN,
                 "orders_bytes": _file_size(ORDERS_JSON_PATH),
                 "orders_schema_default": "full_v1" if ORDER_VERBOSE_DEFAULT else "lean_v1",
                 "earnings_release": EARNINGS_RELEASE_PATH,
@@ -1359,6 +1524,7 @@ class StockRequestHandler(BaseHTTPRequestHandler):
 
         if path == "/wl_tasks":
             _LAST_AGENT_POLL[0] = time.time()
+            _LAST_AGENT_VISIBLE[0] = qs.get("vis", ["0"])[0] == "1"
             tasks = take_tasks(_qint(qs, "max", 3))
             self._reply(200, {"status": "ok", "tasks": tasks, "server_time": time.time()})
             return

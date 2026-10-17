@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "AMD"
-# TARGET_DATE = "2026-07-29"
+# SYMBOL_TO_TRACE = "USB"
+# TARGET_DATE = "2026-10-07"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -55,6 +55,13 @@ CONFIG = {
     "COND8_ALLOW_UP_PERCENT": 0.005,  # 允许小幅上涨的幅度，0.005 表示 0.5%
     "COND8_EARNINGS_CHECK_DAYS": 2,      # [新增配置] 检查财报日的回溯天数 (填2则检查前2天: T-1, T-2)
     
+    # ========== PE_Volume 回溯保留(窗口版)参数 ==========
+    "RETENTION_WINDOW_TRADING_DAYS": 15,          # 起点之后多少个交易日内可持续捞回
+    "RETENTION_ALLOW_UP_PERCENT": 0.0,            # "下跌"容忍的小幅上涨比例,0=严格下跌(收盘<昨收)
+    "RETENTION_REQUIRE_CLOSE_BELOW_OPEN": False,  # True=还要求收盘<=开盘
+    "RETENTION_REQUIRE_VALID_POOL": False,        # True=还要求当天在验证池(PE_Deep等)里
+    "RETENTION_VOLUME_MAX_DROP": 0.10,            # 当天成交量相对起点日成交量最多允许低多少(0.10=最多低10%, 即 >= 起点量*90%)
+    
     # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
     "COND_UP_HISTORY_LOOKBACK_DAYS": 5,  # 历史记录回溯天数
     "COND_UP_VOL_RANK_MONTHS": 2,        # 放量检查回溯月份
@@ -69,9 +76,30 @@ CONFIG = {
 
     # ========== 策略6 (PE_Hot 白名单/超大市值) 参数 ==========
     "PE_HOT_MIN_MARKET_CAP": 150000000000,         # 超大市值门槛 (默认 1500亿)
+
+    # ========== 动态白名单 参数 ==========
+    "WHITELIST_LOOKBACK_DAYS": 365,   # 回溯自然日天数
+    "WHITELIST_MIN_GROWTH": 1.1,      # (区间最高价 - 区间最低价) / 区间最低价 > 1.1，即涨幅 > 110%，且最高点必须晚于最低点
 }
 
 # --- 2. 辅助与文件操作模块 ---
+def atomic_json_dump(data, path):
+    """原子写入:先写临时文件再替换,避免中途崩溃导致 JSON 被截断。"""
+    tmp_path = path + ".tmp"
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, path)
+
+def load_json_for_update(path):
+    """用于"读-改-写"。文件不存在返回 {};文件损坏则抛出 JSONDecodeError(由调用方中止写入,绝不覆盖)。"""
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+    
 def clean_symbol(symbol_with_suffix):
     """
     更强大的清洗函数：
@@ -156,10 +184,10 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     ]
 
     try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        data = {}
+        data = load_json_for_update(json_path)
+    except json.JSONDecodeError as e:
+        log_detail(f"错误: Panel JSON 已损坏,为避免覆盖丢失数据,放弃写入: {e}")
+        return
 
     all_new_volume_symbols = set(pe_vol_list) | set(pe_vol_up_list) | set(pe_vol_high_list)
     
@@ -213,46 +241,45 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     data['PE_Hot_backup'] = build_group_dict(pe_hot_list, pe_hot_notes)
 
     try:
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        atomic_json_dump(data, json_path)
         log_detail("Panel 文件更新完成 (包含冲突清理及 PE_Hot 写入)。")
     except Exception as e:
         log_detail(f"错误: 写入 Panel JSON 文件失败: {e}")
 
 def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail, base_date_str):
     log_detail(f"\n--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
-    
-    # === 新增判断：如果列表为空，则直接跳过不写入 ===
+
     if not symbols_to_add:
-        log_detail(f" - 列表为空，跳过写入历史记录。")
+        log_detail(f" - 列表为空,跳过写入历史记录。")
         return
-    
-    # 使用传入的基准日期作为记录日期
+
     record_date_str = base_date_str
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        data = {}
+        data = load_json_for_update(file_path)
+    except json.JSONDecodeError as e:
+        log_detail(f"错误: 历史记录文件已损坏,为避免覆盖丢失数据,放弃写入: {e}")
+        return
 
     if group_name not in data:
         data[group_name] = {}
 
     existing_symbols = data[group_name].get(record_date_str, [])
-    combined_symbols = set(existing_symbols) | set(symbols_to_add)
-    updated_symbols = sorted(list(combined_symbols))
-    
-    # 二次保险：如果合并后依然为空，也跳过
+
+    # 按纯净 symbol 去重合并:同一天重跑时,新备注覆盖旧备注,避免 "KKR" 与 "KKR追" 并存
+    merged = {clean_symbol(s): s for s in existing_symbols}
+    for s in symbols_to_add:
+        merged[clean_symbol(s)] = s
+    updated_symbols = sorted(merged.values())
+
     if not updated_symbols:
         return
-    
+
     data[group_name][record_date_str] = updated_symbols
     num_added = len(updated_symbols) - len(existing_symbols)
 
     try:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        atomic_json_dump(data, file_path)
         log_detail(f"成功更新历史记录。日期: {record_date_str}, 分组: '{group_name}'.")
         log_detail(f" - 本次新增 {num_added} 个不重复的 symbol。")
     except Exception as e:
@@ -286,60 +313,138 @@ def check_is_earnings_day(cursor, symbol, target_date_str):
         # 如果表不存在或查询出错，默认不过滤
         return False
 
-# ========== 新增：动态生成白名单 (过去一年涨幅 > 100%) ==========
-def generate_whitelist_symbols(db_path, sectors_json_path, target_date_override, log_detail):
-    log_detail("\n========== 开始动态生成白名单 (过去一年涨幅 > 100%) ==========")
-    
-    if not os.path.exists(sectors_json_path):
-        log_detail(f"错误: {sectors_json_path} 不存在，无法生成白名单。")
+def get_global_trading_dates(cursor, sector_map, end_date_str, limit=10):
+    """
+    获取全市场交易日历 (倒序，含 end_date_str 当天)。
+    优先用流动性极好的大盘股作基准，避免用 JSON 第一个 symbol 时因停牌/退市/缺数据导致日历错位；
+    若都不可用，则退回到板块表的 DISTINCT date。
+    """
+    benchmarks = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "JPM", "XOM"]
+    for sym in benchmarks:
+        sec = sector_map.get(sym)
+        if not sec:
+            continue
+        try:
+            dates = get_trading_dates_list(cursor, sec, sym, end_date_str, limit)
+        except sqlite3.OperationalError:
+            continue
+        if len(dates) >= limit:
+            return dates
+
+    for sec in sorted(set(sector_map.values())):
+        try:
+            cursor.execute(
+                f'SELECT DISTINCT date FROM "{sec}" WHERE date <= ? ORDER BY date DESC LIMIT ?',
+                (end_date_str, limit)
+            )
+            dates = [r[0] for r in cursor.fetchall()]
+            if dates:
+                return dates
+        except sqlite3.OperationalError:
+            continue
+    return []
+
+# ========== 动态生成白名单 (区间最低点 -> 其后的区间最高点 涨幅 > 阈值) ==========
+def generate_whitelist_symbols(db_path, sector_map, base_date_str, symbol_to_trace, log_detail):
+    """
+    规则:
+    - 区间: [base_date - N天, base_date]，N = WHITELIST_LOOKBACK_DAYS
+    - 最低点: 区间内最低收盘价 (多日并列取最早那天)
+    - 最高点: 区间内最高收盘价 (多日并列取最晚那天)
+    - 合格: 最高点日期 严格晚于 最低点日期，且 (最高 - 最低) / 最低 > WHITELIST_MIN_GROWTH
+    性能: 每个板块表只查询一次，在 Python 中单次遍历完成计算。
+    """
+    lookback_days = CONFIG.get("WHITELIST_LOOKBACK_DAYS", 365)
+    min_growth = CONFIG.get("WHITELIST_MIN_GROWTH", 1.1)
+
+    log_detail(f"\n========== 开始动态生成白名单 (近{lookback_days}天: 最低点之后的最高点涨幅 > {min_growth*100:.0f}%) ==========")
+
+    if not sector_map:
+        log_detail("错误: 板块映射为空，无法生成白名单。")
         return []
 
-    with open(sectors_json_path, 'r', encoding='utf-8') as f:
-        sectors_data = json.load(f)
+    try:
+        base_dt = datetime.datetime.strptime(base_date_str, '%Y-%m-%d')
+    except ValueError:
+        log_detail(f"错误: 基准日期格式不正确: {base_date_str}")
+        return []
+    start_date_str = (base_dt - datetime.timedelta(days=lookback_days)).strftime('%Y-%m-%d')
+    log_detail(f"白名单区间: {start_date_str} ~ {base_date_str}")
 
-    conn = sqlite3.connect(db_path, timeout=60.0)
-    cursor = conn.cursor()
-
-    # 确定基准日期和一年前的日期
-    base_date_str = target_date_override if target_date_override else datetime.date.today().isoformat()
-    base_date = datetime.datetime.strptime(base_date_str, '%Y-%m-%d')
-    one_year_ago = base_date - datetime.timedelta(days=365)
-    one_year_ago_str = one_year_ago.strftime('%Y-%m-%d')
+    # 按板块归类 symbol
+    sector_to_symbols = {}
+    for sym, sec in sector_map.items():
+        sector_to_symbols.setdefault(sec, set()).add(sym)
 
     final_symbols = []
-    target_sectors = CONFIG["TARGET_SECTORS"]
+    trace_found = False
 
-    for sector, symbols in sectors_data.items():
-        if sector not in target_sectors:
-            continue
-        
-        for symbol in symbols:
-            query = f"""
-                SELECT 
-                    (SELECT price FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1) as latest_price,
-                    (SELECT MIN(price) FROM "{sector}" WHERE name = ? AND date >= ? AND date <= ?) as min_price
-            """
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    try:
+        cursor = conn.cursor()
+        for sector in sorted(sector_to_symbols):
+            wanted = sector_to_symbols[sector]
             try:
-                cursor.execute(query, (symbol, base_date_str, symbol, one_year_ago_str, base_date_str))
-                row = cursor.fetchone()
-                
-                if row and row[0] is not None and row[1] is not None:
-                    latest_p, min_p = row
-                    if min_p > 0:
-                        growth = (latest_p - min_p) / min_p
-                        if growth > 1.0:  # 原来是 1.5，现在改为 1.0 (即 100%)
-                            final_symbols.append(symbol)
-            except sqlite3.OperationalError:
+                cursor.execute(
+                    f'SELECT name, date, price FROM "{sector}" '
+                    f'WHERE date >= ? AND date <= ? AND price IS NOT NULL AND price > 0 '
+                    f'ORDER BY date ASC',
+                    (start_date_str, base_date_str)
+                )
+                rows = cursor.fetchall()
+            except sqlite3.OperationalError as e:
+                log_detail(f"警告: 读取板块表 {sector} 失败，跳过: {e}")
                 continue
 
-    conn.close()
+            # name -> [run_min_p, run_min_d, best_growth, best_low_p, best_low_d, best_high_p, best_high_d]
+            # run_min: 截至当前遍历位置的"历史最低点"
+            # best_*:  所有 "(某日价 - 其之前的最低价)/其之前的最低价" 中最大的一组
+            stats = {}
+            for name, d, p in rows:          # rows 已按 date ASC 排序
+                if name not in wanted:
+                    continue
+                s = stats.get(name)
+                if s is None:
+                    stats[name] = [p, d, 0.0, p, d, p, d]
+                    continue
+
+                # 先用"此前的最低点"计算今天的涨幅 (保证高点严格晚于低点)
+                g = (p - s[0]) / s[0]
+                if g > s[2]:
+                    s[2] = g
+                    s[3], s[4] = s[0], s[1]   # 对应低点
+                    s[5], s[6] = p, d         # 对应高点
+
+                # 再更新滚动最低点 (严格小于, 并列保留最早)
+                if p < s[0]:
+                    s[0], s[1] = p, d
+
+            for name in sorted(stats):
+                _, _, growth, low_p, low_d, high_p, high_d = stats[name]
+                order_ok = high_d > low_d
+                passed = order_ok and growth > min_growth
+                if passed:
+                    final_symbols.append(name)
+
+                if symbol_to_trace and name == symbol_to_trace:
+                    trace_found = True
+                    log_detail(f"    - [白名单追踪] {name}: 最佳低点 {low_p:.2f} ({low_d}) -> 其后高点 {high_p:.2f} ({high_d}), "
+                               f"涨幅 {growth*100:.1f}% (阈值 >{min_growth*100:.0f}%), 高点晚于低点: {order_ok} "
+                               f"-> {'✅ 入选' if passed else '❌ 未入选'}")
+    finally:
+        conn.close()
+
+    if symbol_to_trace and not trace_found:
+        log_detail(f"    - [白名单追踪] {symbol_to_trace}: 区间内无有效价格数据或不在目标板块中 -> ❌ 未入选")
+
+    final_symbols = sorted(set(final_symbols))
     log_detail(f"动态白名单生成完成，共命中 {len(final_symbols)} 个 Symbol。")
     return final_symbols
 
-# --- 策略1: PE_Volume (T, T-1, T-2, T-3 放量下跌) ---
+# --- 策略1: PE_Volume (T, T-1, T-2, T-3... 放量下跌) ---
 def pe_volume(db_path, history_json_path, sector_map, target_date_override, symbol_to_trace, log_detail):
     """
-    执行条件8策略：PE_Volume (修改版：T-1, T-2, T-3 检查是否放量且下跌，使用成交额 Price * Volume 进行排名)
+    执行条件8策略：PE_Volume (修改版：T-1, T-2, T-3... 检查是否放量且下跌，使用成交额 Price * Volume 进行排名)
     """
     log_detail("\n========== 开始执行 条件8 (PE_Volume - 放量下跌) 策略 ==========")
     
@@ -373,13 +478,9 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
 
     target_groups = CONFIG["TARGET_GROUPS"]
     
-    # 获取大盘基准日期 T-1, T-2, T-3
-    sample_symbol = list(sector_map.keys())[0] if sector_map else "AAPL"
-    sample_sector = sector_map.get(sample_symbol, "Technology")
-    
-    # 获取最近 5 天日期，算出 T-1, T-2, T-3
+    # 获取大盘基准日期 (使用稳定基准，避免日历错位)
     # global_dates[0] = Today, global_dates[1] = T-1 (上一个有效交易日)
-    global_dates = get_trading_dates_list(cursor, sample_sector, sample_symbol, base_date, limit=5)
+    global_dates = get_global_trading_dates(cursor, sector_map, base_date, limit=5)
     
     if len(global_dates) < 4:
         log_detail("错误: 无法获取足够的交易日历数据。")
@@ -406,6 +507,9 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
 
     # ===== 新增：追踪 symbol 在策略1中的详细状态 =====
     trace_found_in_any_task = False
+
+    symbol_dates_cache = {}     # symbol -> 交易日列表 (所有任务共用同一个 base_date，可缓存)
+    evaluated_symbols = set()   # 已完整评估过的 symbol (后续判断只取决于今日数据，结果相同，无需重复计算)
     
     for hist_date, date_idx, task_name in tasks:
         # 1. 从历史文件中提取该日期的所有 symbol
@@ -435,9 +539,9 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
                 if is_tracing: log_detail(f"    x [失败] 未找到 {symbol} 的板块映射。")
                 continue
             
-            # 获取该股的具体交易日历
-            # 获取 5 天: Today(0), T-1(1), T-2(2), T-3(3)
-            dates = get_trading_dates_list(cursor, sector, symbol, base_date, limit=5)
+            if symbol not in symbol_dates_cache:
+                symbol_dates_cache[symbol] = get_trading_dates_list(cursor, sector, symbol, base_date, limit=5)
+            dates = symbol_dates_cache[symbol]
             
             if len(dates) < 4:
                 if is_tracing: log_detail(f"    x [失败] 交易日数据不足4天。")
@@ -445,6 +549,11 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
             if dates[date_idx] != hist_date:
                 if is_tracing: log_detail(f"    x [失败] 日期对齐不匹配: dates[{date_idx}]={dates[date_idx]} != {hist_date}。")
                 continue
+
+            if symbol in evaluated_symbols:
+                if is_tracing: log_detail(f"    --- {symbol} 已在之前任务中完成评估 (判定只依赖今日数据，结果相同)，跳过重复计算。")
+                continue
+            evaluated_symbols.add(symbol)
             
             query = f'SELECT price, volume, open FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol, dates[0]))
@@ -542,164 +651,198 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
 
 def check_pe_volume_retention(db_path, history_json_path, panel_json_path, current_pe_volume, sector_map, target_date_override, symbol_to_trace, log_detail):
     """
-    回溯逻辑：检查前一天的 PE_Volume 成员。
-    如果满足：
-    1. 不在今天的 current_pe_volume 中
-    2. 收盘价下降 且 收盘价低于开盘价 (无论量级涨跌)
-    3. 存在于今天的 [扩展后的深跌池] 中
-    则将其捞回。
+    窗口版回溯保留机制:
+    - 起点(anchor): 历史 PE_Volume 中不带"追"的记录(真正新触发的),窗口内取最近一个。
+    - 窗口: 起点之后第 1 ~ RETENTION_WINDOW_TRADING_DAYS 个交易日(按全市场交易日历)。
+    - 条件: 今日下跌(收盘 < 昨收*(1+容忍)) 且 今日收盘 < 起点日收盘;
+            且 今日不是新触发、数据未过期、近N天无财报日;
+            (可选) 收盘<=开盘、在验证池。
+    返回: dict {symbol: 追字个数}。追字个数 = 起点之后满足"下跌且低于起点收盘"的天数(含今日)。
     """
-    log_detail("\n========== 执行 PE_Volume 回溯保留机制 (Retention Check) ==========")
-    
-    # 1. 确定日期
+    log_detail("\n========== 执行 PE_Volume 回溯保留机制 (窗口版 Retention Check) ==========")
+
+    window = CONFIG.get("RETENTION_WINDOW_TRADING_DAYS", 15)
+    allow_up_pct = CONFIG.get("RETENTION_ALLOW_UP_PERCENT", 0.0)
+    require_below_open = CONFIG.get("RETENTION_REQUIRE_CLOSE_BELOW_OPEN", False)
+    require_pool = CONFIG.get("RETENTION_REQUIRE_VALID_POOL", False)
+    earnings_days = CONFIG.get("COND8_EARNINGS_CHECK_DAYS", 2)
+
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
-    
-    # 2. 加载历史记录，找到"前一天"的 PE_Volume 列表
+    log_detail(f"    配置: 窗口={window}个交易日, 容忍上涨={allow_up_pct*100:.2f}%, "
+               f"要求收盘<=开盘={require_below_open}, 要求在验证池={require_pool}, 财报过滤前{earnings_days}天")
+
+    # 1. 读取历史
     try:
         with open(history_json_path, 'r', encoding='utf-8') as f:
             history_data = json.load(f)
-        
-        hist_pe_vol = history_data.get("PE_Volume", {})
-        if not hist_pe_vol:
-            log_detail("    x 历史记录中无 PE_Volume 数据，跳过回溯。")
-            if symbol_to_trace:
-                log_detail(f"📌 [回溯总结] {symbol_to_trace}: ❌ 无历史数据可回溯。")
-            return []
-            
-        sorted_dates = sorted(hist_pe_vol.keys())
-        
-        prev_date = None
-        for d in reversed(sorted_dates):
-            if d < base_date:
-                prev_date = d
-                break
-        
-        if not prev_date:
-            log_detail(f"    x 无法找到 {base_date} 之前的历史记录，跳过回溯。")
-            if symbol_to_trace:
-                log_detail(f"📌 [回溯总结] {symbol_to_trace}: ❌ 无前期历史记录。")
-            return []
-            
-        prev_symbols_raw = hist_pe_vol[prev_date]
-        prev_symbols = set([clean_symbol(s) for s in prev_symbols_raw])
-        sorted_prev_symbols = sorted(list(prev_symbols))
-        log_detail(f"    -> 找到上一期 ({prev_date}) PE_Volume 记录: {len(prev_symbols)} 个: {sorted_prev_symbols}")
-        
     except Exception as e:
         log_detail(f"    x 读取历史文件失败: {e}")
-        return []
+        return {}
 
-    # ================= 修改核心区域 =================
-    # 3. 动态加载验证池 (优先读取 History 以支持回测，降级读取 Panel)
+    hist_pe_vol = history_data.get("PE_Volume", {})
+    if not hist_pe_vol:
+        log_detail("    x 历史记录中无 PE_Volume 数据,跳过回溯。")
+        if symbol_to_trace:
+            log_detail(f"📌 [回溯总结] {symbol_to_trace}: ❌ 无历史数据可回溯。")
+        return {}
+
+    # 2. (可选)加载验证池
     valid_pool = set()
-    target_pool_names = [
-        "PE_Deep", "PE_Deeper", "OverSell_W", "PE_W", 
-        "PE_valid", "PE_invalid", "season"
-    ]
-    
-    try:
-        # 优先从 History 中读取 base_date 当天的跌幅池数据
-        for name in target_pool_names:
-            group_history = history_data.get(name, {})
-            if base_date in group_history:
-                # 清洗 symbol 后加入
-                clean_syms = [clean_symbol(s) for s in group_history[base_date]]
-                valid_pool.update(clean_syms)
-        
-        # 如果在 history 中没有找到当天的任何数据（可能是实盘当天还没写入 history），则降级从 Panel 读取
-        if not valid_pool and not target_date_override:
-            with open(panel_json_path, 'r', encoding='utf-8') as f:
-                panel_data = json.load(f)
+    if require_pool:
+        target_pool_names = ["PE_Deep", "PE_Deeper", "OverSell_W", "PE_W", "PE_valid", "PE_invalid", "season"]
+        try:
+            for name in target_pool_names:
+                group_history = history_data.get(name, {})
+                if base_date in group_history:
+                    valid_pool.update(clean_symbol(s) for s in group_history[base_date])
+            if not valid_pool and not target_date_override:
+                with open(panel_json_path, 'r', encoding='utf-8') as f:
+                    panel_data = json.load(f)
                 for name in target_pool_names:
                     group_data = panel_data.get(name, {})
                     if isinstance(group_data, dict):
                         valid_pool.update(group_data.keys())
-                        
-        log_detail(f"    -> 已加载扩展后的验证池 ({'/'.join(target_pool_names)}) (日期: {base_date}): 共 {len(valid_pool)} 个 unique symbol")
-    except Exception as e:
-        log_detail(f"    x 读取验证池数据失败: {e}")
-        return []
+            log_detail(f"    -> 已加载验证池,共 {len(valid_pool)} 个 unique symbol")
+        except Exception as e:
+            log_detail(f"    x 读取验证池数据失败: {e}")
+            return {}
 
-    # ===== 新增：追踪 symbol 是否在上期列表中 =====
-    if symbol_to_trace:
-        if symbol_to_trace in prev_symbols:
-            log_detail(f"    !!! 目标 {symbol_to_trace} 在上期 PE_Volume 列表中，开始逐条件检查...")
-        else:
-            log_detail(f"    --- 目标 {symbol_to_trace} 不在上期 PE_Volume 列表中，无需回溯。")
-
-    # 4. 遍历筛选
-    retention_list = []
+    result = {}
     conn = sqlite3.connect(db_path, timeout=60.0)
-    cursor = conn.cursor()
-    current_set = set(current_pe_volume)
+    try:
+        cursor = conn.cursor()
 
-    for symbol in prev_symbols:
-        is_tracing = (symbol == symbol_to_trace)
-        
-        # 条件1: 不在今天写入的最新的 pe_volume 里
-        if symbol in current_set:
-            if is_tracing: log_detail(f"    --- [回溯] {symbol}: 已在今日 PE_Volume 中，无需捞回，跳过。")
-            continue
-            
-        # 条件3: 必须在扩展后的深跌池/验证池里
-        if symbol not in valid_pool:
-            if is_tracing: log_detail(f"    x [回溯] {symbol}: 不在验证池 ({'/'.join(target_pool_names)}) 中，无法捞回。")
-            continue
+        # 3. 全市场交易日历: [T, T-1, ..., T-window]
+        global_dates = get_global_trading_dates(cursor, sector_map, base_date, limit=window + 1)
+        if len(global_dates) < 2:
+            log_detail("    x 无法获取足够的交易日历,跳过回溯。")
+            return {}
+        today_trading = global_dates[0]
+        log_detail(f"    -> 最新交易日 T={today_trading}, 窗口最早可用起点日期 > {global_dates[-1]}")
 
-        sector = sector_map.get(symbol)
-        if not sector:
-            if is_tracing: log_detail(f"    x [回溯] {symbol}: 未找到板块映射，跳过。")
-            continue
+        # 4. 收集窗口内的起点: sym -> 最近一次"新触发"(不带追)的日期
+        anchors = {}
+        for d, raw_list in hist_pe_vol.items():
+            if not isinstance(d, str) or d >= base_date:
+                continue
+            # 起点之后已经过了几个交易日(含今天)。要求 1 <= elapsed <= window
+            elapsed = sum(1 for c in global_dates if c > d)
+            if elapsed < 1 or elapsed > window:
+                continue
+            for raw in raw_list:
+                if "追" in raw:
+                    continue
+                sym = clean_symbol(raw)
+                if sym not in anchors or d > anchors[sym]:
+                    anchors[sym] = d
 
-        query = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
-        cursor.execute(query, (symbol, base_date))
-        rows = cursor.fetchall()
+        log_detail(f"    -> 窗口内共找到 {len(anchors)} 个有效起点 symbol。")
+        if symbol_to_trace:
+            if symbol_to_trace in anchors:
+                log_detail(f"    !!! 目标 {symbol_to_trace} 起点日期: {anchors[symbol_to_trace]},开始逐条件检查...")
+            else:
+                log_detail(f"    --- 目标 {symbol_to_trace} 在窗口内没有新触发的 PE_Volume 起点,无需回溯。")
 
-        if len(rows) < 2:
-            if is_tracing: log_detail(f"    x [回溯] {symbol}: 交易数据不足2天，跳过。")
-            continue
-        
-        date_curr, price_curr, vol_curr, open_curr = rows[0]
-        date_prev, price_prev, vol_prev, _ = rows[1]
+        current_set = set(current_pe_volume)
 
-        if None in [price_curr, vol_curr, price_prev, vol_prev, open_curr]:
-            if is_tracing: log_detail(f"    x [回溯] {symbol}: 价格/成交量数据存在 None，跳过。")
-            continue
+        # 5. 逐个检查
+        for sym in sorted(anchors):
+            is_tracing = (sym == symbol_to_trace)
+            anchor_date = anchors[sym]
 
-        # 获取允许上涨的幅度
-        allow_up_pct = CONFIG.get("COND8_ALLOW_UP_PERCENT", 0.005)
+            if sym in current_set:
+                if is_tracing: log_detail(f"    --- [回溯] {sym}: 今日已是新触发,无需捞回。")
+                continue
+            if require_pool and sym not in valid_pool:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 不在验证池中,无法捞回。")
+                continue
+            sector = sector_map.get(sym)
+            if not sector:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 未找到板块映射。")
+                continue
 
-        # 条件2: 收盘价降低 或 小幅上涨 (不超过允许幅度) 且 收盘价低于或等于开盘价
-        # 只要收盘价 <= 昨收 * (1 + 允许幅度) 即可视为满足条件
-        cond_price_ok = price_curr <= price_prev * (1 + allow_up_pct)
-        cond_close_below_open = price_curr <= open_curr
-        
-        if is_tracing:
-            log_detail(f"    - [回溯] {symbol} 条件检查:")
-            log_detail(f"      收盘价下跌: {price_prev:.2f} -> {price_curr:.2f} = {cond_price_ok}")
-            log_detail(f"      收盘<=开盘: {price_curr:.2f} <= {open_curr:.2f} = {cond_close_below_open}")
-        
-        if cond_price_ok and cond_close_below_open:
-            retention_list.append(symbol)
-            log_detail(f"    + [捞回] {symbol}: 上期存在且继续下跌 (Price: {price_prev}->{price_curr}, Open: {open_curr})")
-        else:
+            # 起点日(或其前最近一个交易日)的收盘价、成交量
+            cursor.execute(
+                f'SELECT date, price, open, volume FROM "{sector}" WHERE name = ? AND date <= ? AND price IS NOT NULL '
+                f'ORDER BY date DESC LIMIT 1', (sym, anchor_date))
+            anchor_row = cursor.fetchone()
+            if not anchor_row:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 找不到起点日 {anchor_date} 的价格。")
+                continue
+            anchor_close = anchor_row[1]
+            anchor_volume = anchor_row[3]
+            if anchor_volume is None or anchor_volume <= 0:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 起点日 {anchor_row[0]} 成交量缺失，无法比较。")
+                continue
+
+            # 起点之后到今天的全部行情(升序)
+            cursor.execute(
+                f'SELECT date, price, open, volume FROM "{sector}" WHERE name = ? AND date > ? AND date <= ? '
+                f'AND price IS NOT NULL ORDER BY date ASC', (sym, anchor_row[0], base_date))
+            after_rows = cursor.fetchall()
+            seq = [anchor_row] + after_rows
+            if len(seq) < 2:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 起点之后无行情数据。")
+                continue
+
+            # 数据过期校验(停牌/缺数据时不能拿陈旧数据判断)
+            if seq[-1][0] != today_trading:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 最新数据日期 {seq[-1][0]} != 最新交易日 {today_trading},跳过。")
+                continue
+
+            vol_max_drop = CONFIG.get("RETENTION_VOLUME_MAX_DROP", 0.10)
+
+            def is_qualifying(prev_row, cur_row):
+                """某一天是否满足: 下跌 且 低于起点收盘 且 成交量不低于起点成交量的(1-容忍比例) (且可选: 收盘<=开盘)"""
+                _, p_prev = prev_row[0], prev_row[1]
+                _, p_cur, o_cur, v_cur = cur_row
+                if not (p_cur < p_prev * (1 + allow_up_pct)):
+                    return False
+                if not (p_cur < anchor_close):
+                    return False
+                if require_below_open and (o_cur is None or p_cur > o_cur):
+                    return False
+                # 新增: 成交量不能比起点日低超过 vol_max_drop
+                if v_cur is None or v_cur < anchor_volume * (1 - vol_max_drop):
+                    return False
+                return True
+
+            today_ok = is_qualifying(seq[-2], seq[-1])
             if is_tracing:
-                log_detail(f"    x [回溯] {symbol}: 未满足下跌条件，未捞回。")
+                log_detail(f"    - [回溯] {sym}: 起点 {anchor_date} 收盘 {anchor_close:.2f} 成交量 {anchor_volume:,.0f}; "
+                           f"今日({seq[-1][0]}) 收盘 {seq[-1][1]:.2f}, 昨收 {seq[-2][1]:.2f}, 今开 {seq[-1][2]}, "
+                           f"成交量 {seq[-1][3]:,.0f} (下限 {anchor_volume * (1 - vol_max_drop):,.0f})")
+                log_detail(f"      下跌且低于起点收盘且成交量达标: {today_ok}")
+            if not today_ok:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 今日未满足 下跌 且 低于起点收盘 且 成交量达标,未捞回。")
+                continue
 
-    conn.close()
+            # 财报日过滤(与策略1一致)
+            recent_dates = [r[0] for r in after_rows][-(earnings_days + 1):]
+            hit_er = next((d for d in recent_dates if check_is_earnings_day(cursor, sym, d)), None)
+            if hit_er:
+                if is_tracing: log_detail(f"    🛑 [回溯过滤] {sym}: {hit_er} 为财报日(前{earnings_days}天内),不捞回。")
+                continue
 
-    # ===== 新增：回溯追踪总结 =====
+            # "追"字个数 = 起点之后所有满足条件的天数(含今日)
+            chase_n = sum(1 for i in range(1, len(seq)) if is_qualifying(seq[i - 1], seq[i]))
+            result[sym] = chase_n
+            log_detail(f"    + [捞回] {sym}: 起点 {anchor_date}(收盘{anchor_close}) -> 今日收盘 {seq[-1][1]} (追×{chase_n})")
+
+    finally:
+        conn.close()
+
     if symbol_to_trace:
-        if symbol_to_trace not in prev_symbols:
-            log_detail(f"📌 [回溯总结] {symbol_to_trace}: ❌ 不在上期列表中，无需回溯。")
-        elif symbol_to_trace in retention_list:
-            log_detail(f"📌 [回溯总结] {symbol_to_trace}: ✅ 被捞回")
+        if symbol_to_trace in result:
+            log_detail(f"📌 [回溯总结] {symbol_to_trace}: ✅ 被捞回 (追×{result[symbol_to_trace]})")
+        elif symbol_to_trace in anchors:
+            log_detail(f"📌 [回溯总结] {symbol_to_trace}: ❌ 在窗口内但未满足捞回条件(见上方详细日志)。")
         else:
-            log_detail(f"📌 [回溯总结] {symbol_to_trace}: ❌ 在上期列表中但未满足捞回条件（见上方详细日志）。")
+            log_detail(f"📌 [回溯总结] {symbol_to_trace}: ❌ 窗口内无起点,无需回溯。")
 
-    return retention_list
+    return result
 
-# --- 策略2: PE_Volume_up (T, T-1, T-2 活跃且今日上涨) ---
+# --- 策略2: PE_Volume_up (T, T-1, T-2 ...活跃且今日上涨) ---
 def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_override, symbol_to_trace, log_detail):
     log_detail("\n========== 开始执行 策略2 (PE_Volume_up) ==========")
     
@@ -709,7 +852,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
     vol_rank_months = CONFIG.get("COND_UP_VOL_RANK_MONTHS", 2)
     vol_rank_threshold = CONFIG.get("COND_UP_VOL_RANK_THRESHOLD", 4)
     
-    log_detail(f"配置: 历史池扫描范围=近3天(T, T-1, T-2), 放量标准=近{vol_rank_months}个月前{vol_rank_threshold}名")
+    log_detail(f"配置: 历史池扫描范围=近N天(T, T-1, T-2...), 放量标准=近{vol_rank_months}个月前{vol_rank_threshold}名")
 
     # 【回测逻辑】这里处理回测日期
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
@@ -718,20 +861,17 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     
-    sample_symbol = list(sector_map.keys())[0] if sector_map else "AAPL"
-    sample_sector = sector_map.get(sample_symbol, "Technology")
-
-    # 获取最近3个交易日 (T, T-1, T-2)
-    global_dates = get_trading_dates_list(cursor, sample_sector, sample_symbol, base_date, limit=lookback_days)
+    # 获取最近 lookback_days 个交易日 (使用稳定基准，避免日历错位)
+    global_dates = get_global_trading_dates(cursor, sector_map, base_date, limit=lookback_days)
     
     if len(global_dates) < 2: # 至少需要 T 和 T-1
         log_detail("错误: 交易日数据不足，无法执行策略2。")
         conn.close()
         return [], []
     
-    log_detail(f"扫描历史日期范围 (T, T-1, T-2): {global_dates}")
+    log_detail(f"扫描历史日期范围 (T, T-1, T-2...): {global_dates}")
 
-    # 2. 从History中收集候选股 (仅限 T, T-1, T-2)
+    # 2. 从History中收集候选股 (仅限 T, T-1, T-2...)
     try:
         with open(history_json_path, 'r', encoding='utf-8') as f:
             history_data = json.load(f)
@@ -752,7 +892,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
                 candidate_symbols.update(cleaned_syms)
     
     candidate_symbols = sorted(list(candidate_symbols))
-    log_detail(f"在 T, T-1, T-2 的历史记录中共扫描到 {len(candidate_symbols)} 个候选 Symbol。")
+    log_detail(f"在 T, T-1, T-2... 的历史记录中共扫描到 {len(candidate_symbols)} 个候选 Symbol。")
 
     # ===== 新增：追踪 symbol 候选池检查 =====
     if symbol_to_trace:
@@ -835,13 +975,13 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
                 if is_tracing: log_detail(f"    x 放量但未满足3个月Top{vol_rank_threshold}。")
         else:
             # === 分支 B: 缩量上涨 ===
-            # 修改点: 检查 T, T-1, T-2 中是否有任意一天是"3个月内前3名"
+            # 修改点: 检查 T, T-1, T-2... 中是否有任意一天是"3个月内前3名"
             # 已经满足: 量缩 (vol_curr < vol_prev) 且 价涨 (price_curr > price_prev)
             
-            # 检查列表中的每一天 (T, T-1, T-2)
+            # 检查列表中的每一天 (T, T-1, T-2)...
             has_high_volume_history = False
             
-            # 检查 T, T-1, T-2
+            # 检查 T, T-1, T-2...
             for i in range(min(3, len(rows))):
                 d_date, d_price, d_vol, _ = rows[i]
                 if d_vol is None or d_price is None: continue
@@ -990,11 +1130,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             log_detail(f"    - Tags: {sorted(list(s_tags))}")
             log_detail(f"    - 命中 HOT_TAGS: {has_hot_tag}, 命中 HOT_TAGS_T: {has_hot_tag_t}")
         
-        # 1. 财报数据检查
-        if target_date_override:
-            cursor.execute("SELECT date, price FROM Earning WHERE name = ? AND date <= ? ORDER BY date ASC", (symbol, target_date_override))
-        else:
-            cursor.execute("SELECT date, price FROM Earning WHERE name = ? ORDER BY date ASC", (symbol,))
+        # 实盘/回测统一按 base_date 截止，避免读到未来排期的财报日或与回调池日期错位
+        cursor.execute("SELECT date, price FROM Earning WHERE name = ? AND date <= ? ORDER BY date ASC", (symbol, base_date))
         
         er_rows = cursor.fetchall()
         
@@ -1042,13 +1179,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         if is_tracing:
             log_detail(f"    - 条件B (财报涨跌幅>0): {latest_er_pct} > 0 = {cond_er_pct_positive}")
         
-        # 4. 获取最新交易数据
-        if target_date_override:
-            query = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
-            cursor.execute(query, (symbol, target_date_override))
-        else:
-            query = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT 2'
-            cursor.execute(query, (symbol,))
+        query = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
+        cursor.execute(query, (symbol, base_date))
         
         rows = cursor.fetchall()
         
@@ -1597,9 +1729,10 @@ def run_pe_volume_logic(log_detail):
 
     # ================= 新增：动态生成白名单 =================
     whitelist_symbols = generate_whitelist_symbols(
-        DB_FILE, 
-        SECTORS_JSON_FILE, 
-        TARGET_DATE, 
+        DB_FILE,
+        symbol_to_sector_map,   # 复用已加载的映射，不再重复读 JSON
+        base_date_str,          # 与其他策略统一：实盘=昨天，回测=TARGET_DATE
+        SYMBOL_TO_TRACE,
         log_detail
     )
 
@@ -1616,16 +1749,17 @@ def run_pe_volume_logic(log_detail):
     final_pe_volume = sorted(list(set(raw_pe_volume)))
 
     # 执行回溯保留逻辑 (Retention Check)
-    retention_symbols = check_pe_volume_retention(
+    retention_info = check_pe_volume_retention(
         DB_FILE,
         EARNING_HISTORY_JSON_FILE,
         PANEL_JSON_FILE,
-        final_pe_volume,       # 传入当前的列表，避免重复添加
+        final_pe_volume,
         symbol_to_sector_map,
         TARGET_DATE,
         SYMBOL_TO_TRACE,
         log_detail
     )
+    retention_symbols = sorted(retention_info.keys())
     
     # 将捞回的 symbol 合并进 final_pe_volume
     if retention_symbols:
@@ -1699,7 +1833,9 @@ def run_pe_volume_logic(log_detail):
         for sym in symbols:
             orig_note = ""
             if existing_notes and sym in existing_notes:
-                orig_note = existing_notes[sym].replace(sym, "")
+                n = existing_notes[sym]
+                orig_note = n[len(sym):] if n.startswith(sym) else n.replace(sym, "")
+                orig_note = orig_note.replace("追", "")   # "追"字统一由捞回逻辑重新计算
             
             new_suffix = orig_note
             
@@ -1723,20 +1859,26 @@ def run_pe_volume_logic(log_detail):
             with open(EARNING_HISTORY_JSON_FILE, 'r', encoding='utf-8') as f:
                 hist_data = json.load(f)
                 for group_name, group_content in hist_data.items():
+                    if group_name != "PE_Volume":   # 只取本策略自己的备注
+                        continue
                     if base_date_str in group_content:
                         for sym_with_note in group_content[base_date_str]:
                             sym = clean_symbol(sym_with_note)
-                            if len(sym_with_note) > len(all_existing_notes.get(sym, "")):
-                                all_existing_notes[sym] = sym_with_note
+                            note_clean = sym_with_note.replace("追", "")
+                            if len(note_clean) > len(all_existing_notes.get(sym, "")):
+                                all_existing_notes[sym] = note_clean
         else:
             # 实盘模式：从 Panel 中获取最新备注
             with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
                 p_data = json.load(f)
                 for group_name, group_content in p_data.items():
+                    if group_name != "PE_Volume":   # 只取本策略自己的备注
+                        continue
                     if isinstance(group_content, dict):
                         for s, n in group_content.items():
-                            if len(n) > len(all_existing_notes.get(s, "")):
-                                all_existing_notes[s] = n
+                            n_clean = n.replace("追", "")
+                            if len(n_clean) > len(all_existing_notes.get(s, "")):
+                                all_existing_notes[s] = n_clean
     except Exception as e:
         log_detail(f"提示: 读取现有备注时出错: {e}")
 
@@ -1747,12 +1889,9 @@ def run_pe_volume_logic(log_detail):
         existing_notes=all_existing_notes
     )
 
-    # 第二步：为回溯捞回的 symbol 追加“追”字
-    # 修改说明：移除 if "追" not in ... 的判断，改为直接追加，实现“追追”、“追追追”的效果
-    for sym in retention_symbols:
+    for sym, chase_n in retention_info.items():
         if sym in pe_volume_notes:
-            # 直接追加“追”字，不再检查是否已经存在
-            pe_volume_notes[sym] += "追"
+            pe_volume_notes[sym] += "追" * chase_n
                 
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
     
@@ -1854,6 +1993,7 @@ def run_pe_volume_logic(log_detail):
         else:
             log_detail(f"  策略3 PE_Volume_high (财报突破):❌ 未命中")
         
+        log_detail(f"  动态白名单 (低点后涨幅>{CONFIG.get('WHITELIST_MIN_GROWTH', 1.1)*100:.0f}%): {'✅ 在白名单' if SYMBOL_TO_TRACE in whitelist_symbols else '❌ 不在白名单'}")
         log_detail(f"  策略6 PE_Hot (白名单/超大市值):   {'✅ 命中' if SYMBOL_TO_TRACE in pe_hot_list else '❌ 未命中'}")
         log_detail(f"{'='*60}")
 

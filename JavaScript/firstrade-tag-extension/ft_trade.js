@@ -14,9 +14,8 @@
   window.__FT_TRADE_V4__ = true;
 
   const LOG = '[FT-TRADE]';
-  const BUY_GROUPS = ['买', '买买', '买买买'];
+  const BUY_GROUPS = ['买', '买买'];
   const SELL_GROUPS = ['卖卖卖'];
-  const PROTECTED = ['Earning', 'Wrong'];
   const HIDDEN_GROUPS = ['temp'];
   const ROW_EXCLUDE = '.ag-floating-top, .ag-floating-bottom, #app-quote-bar, header, #app-header';
   const MODES = ['dry', 'confirm', 'live'];
@@ -27,7 +26,7 @@
   const MAX_SHARES = 100000;
   const POS_STALE_H = 20;
   const PRICE_DRIFT_WARN = 0.03;
-  const FRACTION_MSG = '该持仓含碎股（小数股），网页端只能卖整数股：请到 Firstrade 手机 App 卖出';
+  const FRACTION_MSG = '持仓不足 1 股（全是碎股），网页端无法卖出：请到 Firstrade 手机 App 处理';
   const RECENT_RE = /最近搜寻|最近搜索|最近查询|搜寻记录|搜索记录|Recent/i;
 
   const S = { enabled: true, mode: 'dry', removeAfter: true, presets: [1000, 2000, 3000], debug: false };
@@ -50,6 +49,8 @@
   const normKey = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const normName = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
   const normGroup = (s) => String(s || '').replace(/[（(][^）)]*[）)]\s*$/g, '').replace(/\s+/g, '').toUpperCase();
+  const isProtected = (g) => /^(EARNING\d*|WRONG)$/.test(normGroup(g));   // Earning 系列 + Wrong 永不自动删
+  const wholeOf = (n) => (Number.isFinite(n) && n > 0) ? Math.floor(n + 1e-6) : 0;   // 碎股取整数部分
   const cleanGroupName = (s) => String(s || '').replace(/\u00a0/g, ' ').replace(/[（(]\s*\d+\s*[）)]\s*$/, '').trim();
   const inList = (g, list) => list.some(x => normGroup(x) === normGroup(g));
   const $id = (id) => document.getElementById(id);
@@ -666,7 +667,7 @@
     let qty = (o.qty === undefined || o.qty === null || o.qty === '') ? NaN : parseNum(o.qty);
     const budget = (side === 'buy' && !(qty > 0)) ? parseNum(o.amount) : NaN;
     const groups = (Array.isArray(o.removeGroups) ? o.removeGroups : [])
-      .filter(g => !inList(g, PROTECTED) && !inList(g, HIDDEN_GROUPS));
+      .filter(g => !isProtected(g) && !inList(g, HIDDEN_GROUPS));
     const mode = o.dry ? 'dry' : (MODES.includes(S.mode) ? S.mode : 'dry');
     const page = pageKind();
     const say = (t) => { log(t); if (typeof o.onLog === 'function') { try { o.onLog(t); } catch (e) { } } };
@@ -854,7 +855,7 @@
       !s.some(g => normGroup(g) === normGroup(c.current))) s.unshift(c.current);
     return s;
   }
-  const removable = (groups) => groups.filter(g => !inList(g, PROTECTED) && !inList(g, HIDDEN_GROUPS));
+  const removable = (groups) => groups.filter(g => !isProtected(g) && !inList(g, HIDDEN_GROUPS));
   function positionQtyStr(p) {
     if (!p) return '';
     const raw = String(p.quantity === undefined || p.quantity === null ? '' : p.quantity).replace(/,/g, '').trim();
@@ -925,6 +926,7 @@
     const qStr = heldQtyStr(c);
     const held = qStr ? parseFloat(qStr) : 0;
     const frac = held > 0 && !isWhole(held);
+    const whole = wholeOf(held);
     const modeCls = S.mode === 'live' ? 'live' : (S.mode === 'confirm' ? 'confirm' : 'dry');
     const gs = allGroups(c);
     const badge = (g) => `<span class="ftt-badge ${inList(g, BUY_GROUPS) ? 'b' : (inList(g, SELL_GROUPS) ? 's' : '')}">${esc(g)}</span>`;
@@ -954,7 +956,7 @@
     } else {
       h += `<div class="ftt-line ftt-dim">${c.posOk ? '无持仓记录（不能一键全卖）' : '⚠ 读不到持仓 JSON（bridge_server.py 是否在运行？）'}</div>`;
     }
-    if (frac) h += `<div class="ftt-frac">⛔ 持仓 ${esc(qStr)} 股含碎股：网页端只能卖整数股，<b>请到 Firstrade 手机 App 卖出</b></div>`;
+    if (frac) h += `<div class="ftt-frac">ℹ 持仓 ${esc(qStr)} 股含碎股：网页端卖出<b>整数部分 ${whole} 股</b>，剩余 ${esc((held - whole).toFixed(4))} 股日后用手机 App 处理；成交后分组照常移出</div>`;
     if (!c.memOk) h += `<div class="ftt-warn">⚠ 读不到分组归属，仅按当前分组判断</div>`;
     if (S.mode === 'live') h += `<div class="ftt-warn">⚡ 实盘模式：点击金额档 / 全卖 会<b>立即真实下单</b></div>`;
 
@@ -971,11 +973,10 @@
       }).join('')}</div>
         <div class="ftt-row"><input data-in="amt" type="number" min="1" step="1" placeholder="自定义金额 $"><button class="ftt-btn" data-act="buy-custom">买进</button></div>
         <div class="ftt-dim">金额 ÷ 网页实时价 → 四舍五入整数股，以「股数 + 市价」下单</div>`;
-    } else if (frac) {
-      h += `<div class="ftt-warn">碎股持仓不支持网页卖出，请用手机 App</div>`;
     } else {
-      if (qStr) h += `<button class="ftt-btn sell wide" data-act="sell-all">一键全卖 ${esc(String(Math.round(held)))} 股</button>`;
-      h += `<div class="ftt-row"><input data-in="qty" type="number" min="1" step="1" placeholder="自定义整数股数${qStr ? '（≤ ' + esc(String(Math.round(held))) + '）' : ''}"><button class="ftt-btn sell" data-act="sell-custom">卖出</button></div>`;
+      if (qStr && whole >= 1) h += `<button class="ftt-btn sell wide" data-act="sell-all">一键全卖 ${whole} 股${frac ? '（整数部分）' : ''}</button>`;
+      else if (qStr) h += `<div class="ftt-warn">${esc(FRACTION_MSG)}</div>`;
+      h += `<div class="ftt-row"><input data-in="qty" type="number" min="1" step="1" placeholder="自定义整数股数${whole >= 1 ? '（≤ ' + whole + '）' : ''}"><button class="ftt-btn sell" data-act="sell-custom">卖出</button></div>`;
     }
     const rm = removable(gs);
     if (rm.length) {
@@ -983,7 +984,7 @@
         `<label><input type="checkbox" data-rm="${esc(g)}" ${view.rmSel.has(g) ? 'checked' : ''}> ${esc(g)}</label>`).join('')}` +
         (c.page === 'positions' ? `<div class="ftt-dim">（持仓页：移出任务会排队到 /app/watchlist 页执行）</div>` : '') + `</div>`;
     } else if (gs.length) {
-      h += `<div class="ftt-rm ftt-dim">所在分组均为保护分组（Earning / Wrong），成交后不移除</div>`;
+      h += `<div class="ftt-rm ftt-dim">所在分组均为保护分组（Earning 系列 / Wrong），成交后不移除</div>`;
     }
     if (confirmWaiter) {
       h += `<div class="ftt-confirm">
@@ -1038,14 +1039,9 @@
       }
     } else {
       const held = heldQty(c);
-      if (held > 0 && !isWhole(held)) {
-        addLog('⛔ ' + FRACTION_MSG);
-        toast(`⛔ ${c.symbol}：${FRACTION_MSG}`);
-        return { ok: false, status: 'fractional', message: `${c.symbol} ${FRACTION_MSG}` };
-      }
       qty = parseNum(val);
-      if (!isWhole(qty)) { addLog('❌ 卖出股数必须是正整数（网页端不支持碎股）'); return { ok: false, message: '股数无效' }; }
-      if (held > 0 && qty > held + 1e-6) { addLog(`❌ 卖出股数 ${qty} 超过持仓 ${held}`); return { ok: false, message: '超过持仓' }; }
+      if (!isWhole(qty)) { addLog('❌ 卖出股数必须是正整数（网页端只能卖整数股）'); return { ok: false, message: '股数无效' }; }
+      if (held > 0 && qty > wholeOf(held)) { addLog(`❌ 卖出股数 ${qty} 超过可卖整数股 ${wholeOf(held)}`); return { ok: false, message: '超过持仓' }; }
     }
     view.side = sd; view.logs = []; view.result = null;
     layer.classList.remove('ftt-docked');
@@ -1059,6 +1055,10 @@
     });
     if (layer) layer.classList.remove('ftt-running');
     if (view && res.price) view.ctx.price = res.price;
+    if (sd === 'sell' && res.ok) {
+      const held = heldQty(c), left = held - (res.qty || 0);
+      if (held > 0 && left > 1e-6 && left < 1) res.message += `｜剩余碎股 ${left.toFixed(4)} 股未卖（网页端限制，日后用手机 App 处理）`;
+    }
     const text = resultSummary(c.symbol, res);
     const clean = res.ok && !(res.removeFailed && res.removeFailed.length);
     if (clean) {
@@ -1095,7 +1095,7 @@
     if (act === 'side') { view.side = b.dataset.side; view.result = null; render(); return; }
     if (act === 'buy') { runTrade('buy', b.dataset.amt); return; }
     if (act === 'buy-custom') { const i = layer.querySelector('input[data-in="amt"]'); runTrade('buy', i ? i.value : ''); return; }
-    if (act === 'sell-all') { runTrade('sell', String(Math.round(heldQty(view.ctx)))); return; }
+    if (act === 'sell-all') { runTrade('sell', String(wholeOf(heldQty(view.ctx)))); return; }
     if (act === 'sell-custom') { const i = layer.querySelector('input[data-in="qty"]'); runTrade('sell', i ? i.value : ''); return; }
   }
 
@@ -1186,13 +1186,13 @@
     const c = await loadContext(sym, inCur);
     const rm = p.remove === false ? [] : removable(allGroups(c));
     if (side === 'sell') {
-      const held = heldQty(c);
-      if (held > 0 && !isWhole(held)) return { ok: false, status: 'fractional', message: `${sym} ${FRACTION_MSG}` };
       let val = p.qty;
       if (val === undefined || val === null || val === '' || String(val).toLowerCase() === 'all') {
         val = heldQtyStr(c);
         if (!val) return { ok: false, message: `${sym} 无持仓记录，无法全卖` };
-        val = String(Math.round(parseFloat(val)));
+        const w = wholeOf(parseFloat(val));
+        if (w < 1) return { ok: false, status: 'fractional', message: `${sym} 持仓 ${val} 股：${FRACTION_MSG}` };
+        val = String(w);
       }
       openLayer(c, 'sell', { remote: true, rmSel: rm });
       return runTrade('sell', val, { dry: !!p.dry, source: 'remote', allowSwitch: true });

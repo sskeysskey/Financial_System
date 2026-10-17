@@ -6,7 +6,7 @@ ft_trade_client.py —— 从 Mac 的 Python 端驱动 Firstrade 网页「快速
 链路: 本脚本 → bridge_server.py /wl_trade → Chrome watchlist 页 wl_agent.js → ft_trade.js → 交易面板
 
 用法:
-  python ft_trade_client.py plan [--amount 1000] [--buy-groups 买,买买,买买买] [--sell-groups 卖卖卖]
+  python ft_trade_client.py plan [--amount 1000] [--buy-groups 买,买买] [--sell-groups 卖卖卖]
   python ft_trade_client.py run  [同上] [--dry] [--keep-going] [--gap 4] [--scan] [--keep]
   python ft_trade_client.py buy  AAPL 2000 [--dry] [--keep]
   python ft_trade_client.py sell AAPL [股数|all] [--dry] [--keep]
@@ -18,6 +18,7 @@ ft_trade_client.py —— 从 Mac 的 Python 端驱动 Firstrade 网页「快速
 """
 import os
 import re
+import math
 import sys
 import json
 import time
@@ -29,7 +30,7 @@ MODULES_DIR = os.path.join(os.path.expanduser("~"), "Coding", "Financial_System"
 POSITIONS_FILE = os.path.join(MODULES_DIR, "firstrade_positions.json")
 MEMBERSHIP_FILE = os.path.join(MODULES_DIR, "firstrade_wl_membership.json")
 
-BUY_GROUPS = ["买", "买买", "买买买"]
+BUY_GROUPS = ["买", "买买"]
 SELL_GROUPS = ["卖卖卖"]
 
 
@@ -121,10 +122,12 @@ def build_plan(amount, buy_groups, sell_groups):
                 skipped.append((s, g, "无持仓，无法卖出"))
                 continue
             qf = float(q)
-            if abs(qf - round(qf)) > 1e-6:
-                skipped.append((s, g, f"碎股 {q} 股：网页端只能卖整数股，请用手机 App"))
+            qi = int(math.floor(qf + 1e-6))
+            if qi < 1:
+                skipped.append((s, g, f"仅 {q} 股碎股（不足 1 股）：网页端无法卖出，请用手机 App"))
                 continue
-            plan.append({"symbol": s, "side": "sell", "qty": str(int(round(qf))), "group": g})
+            note = f"，碎股 {qf - qi:.4f} 股留存" if qf - qi > 1e-6 else ""
+            plan.append({"symbol": s, "side": "sell", "qty": str(qi), "group": g, "note": note})
     for gname in buy_groups:
         g = find(gname)
         if not g:
@@ -150,7 +153,7 @@ def _print_plan(plan, skipped, incomplete, meta):
         print(f"⚠ 这些分组的归属数据不完整（建议先 --scan）：{', '.join(incomplete)}")
     for i, p in enumerate(plan, 1):
         what = (f"买进 ≈${p['amount']:.0f}（按网页现价换算整数股）" if p["side"] == "buy"
-                else f"卖出 {p['qty']} 股（全卖）")
+                else f"卖出 {p['qty']} 股（全卖{p.get('note', '')}）")
         print(f"  {i:>3}. [{p['group']}] {p['symbol']:<8} {what}")
     for s, g, why in skipped:
         print(f"  跳过 [{g}] {s}: {why}")

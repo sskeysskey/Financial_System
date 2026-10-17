@@ -62,6 +62,9 @@ FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
 DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
 NEWS_DIR = os.path.join(BASE_CODING_DIR, "News")
 
+# 配置区
+SLIDER_GUARD_STATE = os.path.join(NEWS_DIR, "slider_guard_mw.json")
+
 DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 SECTORS_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_empty.json")
 SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping.json")
@@ -868,11 +871,20 @@ class CaptchaAutoSolver:
                 sys.path.insert(0, SLIDER_MODULE_DIR)
             with tqdm.external_write_mode():
                 import Slider_Verify as sv
+                GuardPolicy = getattr(sv, "GuardPolicy", None)   # 兼容旧版
+                guard = GuardPolicy(
+                    max_consecutive_failures=2, cooldown_minutes=30,
+                    max_per_hour=30, max_per_day=100,
+                    min_interval_seconds=0,                      # MW 场景下关闭"过密"判断
+                    state_path=SLIDER_GUARD_STATE,
+                ) if GuardPolicy else None
+
                 cfg = sv.SliderConfig(
                     template=SLIDER_TEMPLATE, threshold=SLIDER_THRESHOLD,
                     distance=SLIDER_DISTANCE, overshoot=SLIDER_OVERSHOOT,
                     overshoot_jitter=SLIDER_OVERSHOOT_JITTER, grab_offset=SLIDER_GRAB_OFFSET,
                     max_attempts=SLIDER_ATTEMPTS_PER_ROUND, debug_dir=SLIDER_DEBUG_DIR,
+                    **({"guard": guard} if GuardPolicy else {}),
                 )
                 solver = sv.SliderSolver(cfg)
             if not solver.available:
@@ -986,6 +998,13 @@ class CaptchaAutoSolver:
               "not_found" 屏幕上未找到滑块 / "failed" 拖拽未通过 / "aborted" 用户接管 / "unavailable"
         """
         solver = self._get_solver()
+        guard = getattr(solver, "guard", None)
+        if guard is not None:
+            allowed, reason = guard.allow()
+            if not allowed:
+                tqdm.write(f"   ⏸️ 自动拖拽被保护器暂停：{reason}，转手动处理")
+                self.enabled = False          # 本轮后续验证码直接走手动
+                return "blocked"
         if solver is None:
             return "unavailable"
 
@@ -1036,6 +1055,12 @@ class CaptchaAutoSolver:
             self.stats["failed"] += 1
             return "failed"
 
+        if res.status == self._sv.STATUS_NOT_FOUND:
+            tqdm.write(f"   ℹ️ {res.message}")
+            if not is_captcha_fn():
+                self.restore_terminal()
+                return "passed"
+            return "solved"      # 滑块已没了但页面还没跳转，交给外层的等待/刷新逻辑
         if res.solved:
             self.stats["solved"] += 1
             tqdm.write(f"   ✅ 滑块验证已通过（拖拽 {res.attempts} 次）")
@@ -1225,7 +1250,7 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=Non
                     refreshed = False
                 elif result in ("not_found", "failed"):
                     time.sleep(1.5)
-                elif result in ("aborted", "unavailable"):
+                elif result in ("aborted", "unavailable", "blocked"):
                     pass  # enabled 已被置 False，下一轮进入手动模式
                 continue
             elif not manual_mode:

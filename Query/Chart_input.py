@@ -2215,8 +2215,8 @@ class ChartWindow:
             pass
         return "临时分组 temp"
 
-    def _refresh_ft_quote(self):
-        """G 键：让浏览器抓该 symbol 最新「变更%」，完成后自动重画副标题"""
+    def _refresh_ft_quote(self, force=False):
+        """G 键：优先用 bridge 缓存（默认 30 分钟），⇧G 强制让浏览器重抓"""
         if not FT_WL_ADD_OK or not self.name:
             return
         sym = str(self.name).upper()
@@ -2225,13 +2225,14 @@ class ChartWindow:
             return
         self._quote_pending.add(sym)
         src = self._quote_source_hint(sym)
-        self._show_wl_status(f"⏳ 正在从{src}抓取 {sym} 最新「变更%」…（浏览器后台执行）",
+        tip = "强制重新抓取" if force else "检查缓存 / 抓取"
+        self._show_wl_status(f"⏳ {tip} {sym} 最新「变更%」（{src}）…",
                              NORD_THEME['accent_yellow'], ttl=150)
-        quote_symbol_async(sym, on_done=lambda res: self._wl_results.append(res), wait=120)
+        quote_symbol_async(sym, on_done=lambda res: self._wl_results.append(res), wait=120, force=force)
 
-    def _g_refresh(self):
+    def _g_refresh(self, force=False):
         self.refresh_description_data_and_redraw()
-        self._refresh_ft_quote()
+        self._refresh_ft_quote(force=force)
 
     def _handle_ft_action(self, action):
         if not action:
@@ -2376,6 +2377,7 @@ class ChartWindow:
                        'i': self.toggle_buy_markers,
                        'u': self.toggle_sell_markers,
                        'g': self._g_refresh,
+                       'G': lambda: self._g_refresh(force=True),
                        'n': lambda: execute_external_script('earning_input', self.name),
                        'e': lambda: execute_external_script('earning_edit', self.name),
                        't': lambda: execute_external_script('tags_edit', self.name),

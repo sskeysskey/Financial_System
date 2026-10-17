@@ -38,6 +38,7 @@ TIMESTAMP_BACKUP_SOURCES = [
     os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_panel.json'), # 触发 Intro_Symbol
     os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_All.json'),
     os.path.join(USER_HOME, 'Coding/Financial_System/Modules/description.json'),
+    os.path.join(USER_HOME, 'Coding/Financial_System/Modules/firstrade_orders.json'),
     os.path.join(USER_HOME, 'Coding/News/CompareStock.txt'),
     os.path.join(USER_HOME, 'Coding/News/CompareETFs.txt'),
     os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt'), # 触发 Intro_Symbol
@@ -52,7 +53,7 @@ TIMESTAMP_BACKUP_SOURCES = [
 INTRO_SYMBOL_TRIGGERS = {
     os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_panel.json'),
     os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt'),
-    os.path.join(USER_HOME, 'Coding/News/Options_History.csv')
+    os.path.join(USER_HOME, 'Coding/Database/Options_History.csv')
 }
 
 def is_file_modified(source_path, destination_path):

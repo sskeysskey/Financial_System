@@ -265,6 +265,45 @@
     return rec;
   }
 
+  /* ★ G 键：读持仓页全部行（白名单字段），只保留「日涨跌」已带 % 的记录 */
+  async function collectPositionRows(scroll) {
+    const out = Object.create(null);
+    const grab = () => document.querySelectorAll('[row-id]').forEach((row) => {
+      if (row.closest('.ag-floating-top, .ag-floating-bottom')) return;
+      if (/\bag-row-level-[1-9]/.test(String(row.className || ''))) return;
+      const s = symbolFromRowId(row.getAttribute('row-id'));
+      if (!s) return;
+      const rec = out[s] || (out[s] = { symbol: s });
+      row.querySelectorAll('[col-id]').forEach((cell) => {
+        const col = cell.getAttribute('col-id');
+        if (!col || col === 'symbol' || POSITION_COL_BLACKLIST.has(col)) return;
+        const alias = COL_ALIAS[col];
+        if (!alias) return;
+        const txt = cleanText(cell);
+        if (!txt || txt === '--' || txt.length > MAX_CELL_LEN) return;
+        rec[alias] = txt;
+      });
+    });
+    grab();
+    const vp = document.querySelector('.ag-body-viewport');
+    if (scroll && vp && vp.scrollHeight > vp.clientHeight + 4) {
+      const original = vp.scrollTop;
+      const step = Math.max(150, vp.clientHeight - 60);
+      vp.scrollTop = 0; await sleep(200); grab();
+      let guard = 0;
+      while (guard++ < 200 && vp.scrollTop + vp.clientHeight < vp.scrollHeight - 2) {
+        vp.scrollTop += step; await sleep(180); grab();
+      }
+      vp.scrollTop = original;
+    }
+    Object.keys(out).forEach(k => {
+      const r = out[k];
+      if (!/%/.test(r.day_change || '')) { delete out[k]; return; }
+      positionCache[k] = Object.assign({}, positionCache[k] || {}, r);
+    });
+    return out;
+  }
+
   function signature() {
     return Object.keys(positionCache).sort()
       .map(k => `${k}:${posSig(positionCache[k])}`).join(';');
@@ -585,12 +624,12 @@
   }
 
   /* ==================== 6b. ★ 代码着色（分组归属 / 持仓） ====================
-   * 持仓页：卖卖卖 > 买/买买/买买买 > Earning > Watch > 原色
+   * 持仓页：卖卖卖 > 买/买买 > Earning > 原色
    * 自选股页：持仓且在 Earning > 持仓 > 在 Earning（当前不在 Earning 分组时）> 原色
    * ======================================================================== */
   let SYM_COLOR = true;
-  const SYM_CLS = ['ft-sym-watch', 'ft-sym-buy', 'ft-sym-sell', 'ft-sym-earn', 'ft-sym-held', 'ft-sym-held-earn'];
-  const COLOR_BUY = ['买', '买买', '买买买'];
+  const SYM_CLS = ['ft-sym-buy', 'ft-sym-sell', 'ft-sym-earn', 'ft-sym-held', 'ft-sym-held-earn'];
+  const COLOR_BUY = ['买', '买买'];
   const COLOR_SELL = ['卖卖卖'];
   const normG = (s) => String(s || '').replace(/[（(][^）)]*[）)]\s*$/, '').replace(/\s+/g, '').toUpperCase();
   const nk = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -637,14 +676,14 @@
   function groupsOf(sym) { return ATTR.mem[nk(sym)] || []; }
   const inAny = (gs, list) => gs.some(g => list.some(x => normG(x) === normG(g)));
 
+  const isEarnFamily = (g) => /^EARNING\d*$/.test(normG(g));
   function symClass(sym) {
     const gs = groupsOf(sym);
-    const inEarn = inAny(gs, ['Earning']);
+    const inEarn = gs.some(isEarnFamily);
     if (PAGE === 'positions') {
       if (inAny(gs, COLOR_SELL)) return 'ft-sym-sell';
       if (inAny(gs, COLOR_BUY)) return 'ft-sym-buy';
       if (inEarn) return 'ft-sym-earn';
-      if (inAny(gs, ['Watch'])) return 'ft-sym-watch';
       return '';
     }
     if (PAGE === 'watchlist') {
@@ -679,7 +718,7 @@
     const busy = automationBusy();            // 自动化进行中：不插入 DOM，只纠正颜色（行复用时防串色）
     if (PAGE === 'watchlist') {
       const api = window.__FT_WL_API__;
-      COLOR_CTX.onEarn = !!(api && normG(api.groupName()) === 'EARNING');
+      COLOR_CTX.onEarn = !!(api && /^EARNING\d*$/.test(normG(api.groupName())));
     }
     document.querySelectorAll('[col-id="symbol"]').forEach((cell) => {
       if (cell.closest('.ag-header') || cell.closest('#ft-trade-layer')) return;
@@ -809,7 +848,8 @@
         }
         if (!q) { sendResponse({ ok: true, found: false, hidden: document.hidden }); return; }
         const rec = scrapeOneRow(q.symbol) || {};
-        sendResponse({ ok: true, found: true, hidden: document.hidden, symbol: q.symbol, quote: q, record: rec });
+        const records = msg.all ? await collectPositionRows(!!msg.scroll) : null;
+        sendResponse({ ok: true, found: true, hidden: document.hidden, symbol: q.symbol, quote: q, record: rec, records });
       })();
       return true;
     }

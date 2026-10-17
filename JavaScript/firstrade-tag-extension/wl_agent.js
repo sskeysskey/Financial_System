@@ -294,15 +294,44 @@
     return q;
   }
 
+  function visibleBatch() {
+    const a = api(), out = {};
+    visibleSyms().forEach(s => {
+      const q = a.rowQuote(s);
+      if (quoteReady(q)) out[s] = { change_pct: q.change_pct, change_pct_num: q.change_pct_num, last: q.last || '' };
+    });
+    return out;
+  }
+
+  /* ★ 读整个分组 → 同组所有股票一起缓存，半小时内不用重复抓 */
   async function quoteInGroup(sym, grp) {
     const a = api();
     const sr = await switchGroup(grp);
     if (!sr.ok) throw new Error(sr.error || '切换失败');
     await waitGridSettled(4000);
+    const k = a.normKey(sym);
+    const batch = {};
+    let seen = false;
+    for (let i = 0; i < 4; i++) {
+      a.clearStopFlags();
+      const buf = await a.collectWatchlist();
+      Object.keys(buf).forEach(s => {
+        const r = buf[s];
+        if (/%/.test(r.change_pct || '')) batch[s] = { change_pct: r.change_pct, change_pct_num: r.change_pct_num, last: r.last || '' };
+      });
+      const hit = Object.keys(buf).find(s => a.normKey(s) === k);
+      if (hit) seen = true;
+      if (hit && batch[hit]) {
+        const n = parseFloat(String(batch[hit].last || '').replace(/[^0-9.\-]/g, ''));
+        return { q: Object.assign({ symbol: hit, price: n > 0 ? n : null }, batch[hit]), batch };
+      }
+      if (!seen && i >= 1) break;
+      await sleep(900);
+    }
     let q = await a.findRowQuote(sym, true);
     if (!q) throw new Error(`「${grp}」里没找到 ${sym}`);
     if (!quoteReady(q)) q = (await waitQuote(sym, 3000)) || q;
-    return q;
+    return { q, batch };
   }
 
   async function quoteViaTemp(sym, grp, say) {
@@ -358,25 +387,28 @@
       if (typeof a.findRowQuote !== 'function') throw new Error('watchlist.js 版本过旧（缺少 findRowQuote），请刷新页面');
       a.clearStopFlags(); a.cleanNavSearch();
       for (const step of plan) {
-        let q = null, err = '';
+        let q = null, err = '', batch = null, positions = null;
         const label = step.src === 'group' ? `自选「${step.group}」` : (SRC_TXT[step.src] || step.src);
         try {
           if (step.src === 'positions') {
-            say('从持仓页读取…');
+            say('从持仓页读取（整页持仓一起缓存）…');
             const r = await bg({ action: 'FT_POS_QUOTE', symbol: sym });
             if (r && r.ok && r.found) {
               q = Object.assign({}, r.quote || {}, { record: r.record || null });
               if (!q.change_pct && r.record && r.record.day_change) q.change_pct = r.record.day_change;
+              positions = r.records || null;
             } else err = (r && r.error) || '持仓页没有这只股票';
           } else if (step.src === 'current') {
             if (sameGroup(currentGroup(), TEMP_GROUP)) continue;
             q = a.rowQuote(sym);
             if (q && !quoteReady(q)) q = await waitQuote(sym, 1500);
-            if (!q) continue;                               // 不在当前视图，静默跳过
+            if (!q) continue;
             step.group = (window.__FT_WL_MEMBER__ ? window.__FT_WL_MEMBER__.cleanGroup(currentGroup()) : currentGroup());
+            batch = visibleBatch();
           } else if (step.src === 'group') {
-            say(`切到「${step.group}」读取…`);
-            q = await quoteInGroup(sym, step.group);
+            say(`切到「${step.group}」读取（整组一起缓存）…`);
+            const res = await quoteInGroup(sym, step.group);
+            q = res.q; batch = res.batch;
           } else if (step.src === 'temp') {
             q = await quoteViaTemp(sym, step.group || TEMP_GROUP, say);
           }
@@ -386,7 +418,8 @@
           data = {
             symbol: sym, source: step.src, group: step.group || '',
             change_pct: q.change_pct, change_pct_num: q.change_pct_num,
-            last: q.last || '', price: q.price || null, record: q.record || null
+            last: q.last || '', price: q.price || null, record: q.record || null,
+            batch: batch || null, positions: positions || null
           };
           break;
         }
@@ -446,7 +479,7 @@
     if (a.isBusy() || window.__FT_TRADE_BUSY__) return;
     busy = true;                                   // ★ 先占锁，防止 focus+interval 并发领两次
     try {
-      const r = await bg({ action: 'FT_WL_TASKS', max: 3 });
+      const r = await bg({ action: 'FT_WL_TASKS', max: 3, vis: !document.hidden });
       if (!r.ok) return;
       const tasks = (r.data && r.data.tasks) || [];
       if (!tasks.length) return;

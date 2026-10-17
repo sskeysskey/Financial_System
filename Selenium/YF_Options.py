@@ -41,8 +41,8 @@ ANALYSE_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Analyse_Optio
 
 # 5. 浏览器与驱动路径 (跨平台适配)
 if platform.system() == 'Darwin':
-    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
-    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
+    CHROME_BINARY_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver")
 elif platform.system() == 'Windows':
     # Windows 路径优化
     CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -266,6 +266,43 @@ def run_analysis_program():
     print("="*50 + "\n")
 
 # ================= 4. 爬虫核心逻辑 =================
+DEAD_SESSION_KEYWORDS = (
+    "invalid session id", "session deleted", "tab crashed",
+    "chrome not reachable", "disconnected", "no such window",
+    "target window already closed", "session not created",
+)
+
+def is_session_dead(e):
+    msg = str(e).lower()
+    return any(k in msg for k in DEAD_SESSION_KEYWORDS)
+
+def build_driver():
+    options = webdriver.ChromeOptions()
+    if os.path.exists(CHROME_BINARY_PATH):
+        options.binary_location = CHROME_BINARY_PATH
+    else:
+        tqdm.write(f"警告：未找到指定 Chrome 路径 {CHROME_BINARY_PATH}，尝试使用系统默认...")
+
+    options.add_argument('--headless=new')
+    options.add_argument('--window-size=1920,1080')
+
+    # UA 写死 Chrome/122 会和真实内核版本不一致，建议直接删掉，使用浏览器默认 UA
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--blink-settings=imagesEnabled=false")
+    options.add_argument("--disable-images")
+    options.page_load_strategy = 'eager'
+
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+    driver = webdriver.Chrome(service=service, options=options)
+    driver.set_page_load_timeout(30)
+    return driver
 
 def scrape_options():
     # --- 1. 获取目标 Symbols (合并模式) ---
@@ -507,48 +544,20 @@ def scrape_options():
         tqdm.write(f"文件已存在，将以追加模式运行: {OUTPUT_FILE}")
 
     # 3. 初始化 Selenium
-    options = webdriver.ChromeOptions()
-    if os.path.exists(CHROME_BINARY_PATH):
-        options.binary_location = CHROME_BINARY_PATH
-    else:
-        tqdm.write(f"警告：未找到指定 Chrome 路径 {CHROME_BINARY_PATH}，尝试使用系统默认...")
-
-    # --- Headless模式相关设置 ---
-    options.add_argument('--headless=new') # 推荐使用新的 headless 模式
-    options.add_argument('--window-size=1920,1080')
-
-    # --- 伪装设置 ---
-    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    options.add_argument(f'user-agent={user_agent}')
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-    
-    # --- 性能优化 ---
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
-    options.add_argument("--disable-images")
-    options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
-
-    # 检查驱动是否存在
     if not os.path.exists(CHROME_DRIVER_PATH):
         tqdm.write(f"错误：未找到驱动文件: {CHROME_DRIVER_PATH}")
         exit()
 
-    service = Service(executable_path=CHROME_DRIVER_PATH)
     try:
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = build_driver()
     except Exception as e:
         tqdm.write(f"Selenium 启动失败: {e}")
         return False
 
-    # 设置页面加载超时，防止卡死
-    driver.set_page_load_timeout(30) 
-    
-    wait = WebDriverWait(driver, 5) # 稍微增加默认等待时间
+    wait = WebDriverWait(driver, 5)
+
+    RESTART_EVERY = 40   # 每处理 40 个 symbol 主动重启一次（期权每个 symbol 要翻很多页，比 Today 频繁，所以数字调小）
+    processed = 0
 
     try:
         # === 注意：不再初始化内存列表 skipped_zero_symbols，完全依赖 JSON ===
@@ -558,6 +567,12 @@ def scrape_options():
         
         # --- 修改点 4: 循环解包 ---
         for symbol_data in symbol_pbar:
+            processed += 1
+            if processed % RESTART_EVERY == 0:
+                try: driver.quit()
+                except Exception: pass
+                driver = build_driver()
+                wait = WebDriverWait(driver, 5)
             # 解包 Symbol 和 市值
             symbol, market_cap = symbol_data
             
@@ -637,8 +652,21 @@ def scrape_options():
                     else:
                         raise Exception("找到菜单元素但未提取到有效日期")
                 except Exception as e:
+                    if is_session_dead(e):
+                        first_line = str(e).splitlines()[0] if str(e) else type(e).__name__
+                        tqdm.write(f"♻️ [{symbol}] 浏览器会话失效 ({first_line})，正在重启 Chrome...")
+                        try: driver.quit()
+                        except Exception: pass
+                        try:
+                            driver = build_driver()
+                            wait = WebDriverWait(driver, 5)
+                        except Exception as e2:
+                            tqdm.write(f"❌ 重启 Chrome 失败: {e2}")
+                            time.sleep(5)
+                        continue
+
                     tqdm.write(f"[{symbol}] 获取日期列表失败 (尝试 {date_attempt + 1}/{max_date_retries}): {str(e)[:100]}")
-                    time.sleep(random.uniform(2, 4)) # 失败后等待几秒再重试
+                    time.sleep(random.uniform(2, 4))
 
             # --- 检查是否获取到日期 ---
             if not date_map:
@@ -677,7 +705,8 @@ def scrape_options():
                 tqdm.write(f"[{symbol}] 日期过滤出错: {e}，将使用所有获取到的日期")
 
             # 1. 暂存当前 symbol 所有日期的数据
-            symbol_all_data = [] 
+            symbol_all_data = []
+            date_failed = False   # 新增：只要有任一日期最终失败，就不写入该 symbol 
             
             # === 内层进度条：遍历日期 ===
             date_pbar = tqdm(date_map, desc=f"  {symbol} 日期", position=1, leave=False)
@@ -688,6 +717,7 @@ def scrape_options():
 
                 # === 重试机制 (针对具体日期的数据抓取) ===
                 MAX_PAGE_RETRIES = 3
+                page_ok = False
                 for attempt in range(MAX_PAGE_RETRIES):
                     try:
                         # [核心修复]：在请求新 URL 前，强制删除旧表格
@@ -762,17 +792,36 @@ def scrape_options():
                         if data_buffer:
                             symbol_all_data.extend(data_buffer)
                         
+                        page_ok = True               # 新增
                         break # 成功则跳出重试循环
                     except Exception as e:
+                        # 会话死掉：重建浏览器后再重试
+                        if is_session_dead(e):
+                            first_line = str(e).splitlines()[0] if str(e) else type(e).__name__
+                            tqdm.write(f"♻️ [{symbol}] 浏览器会话失效 ({first_line})，正在重启 Chrome...")
+                            try: driver.quit()
+                            except Exception: pass
+                            try:
+                                driver = build_driver()
+                                wait = WebDriverWait(driver, 5)
+                            except Exception as e2:
+                                tqdm.write(f"❌ 重启 Chrome 失败: {e2}")
+                                time.sleep(5)
+                            continue
+
                         if attempt < MAX_PAGE_RETRIES - 1:
                             time.sleep(2)
-                        else:
-                            pass
+
+                if not page_ok:                      # 新增：3 次都没成功
+                    date_failed = True
+                    tqdm.write(f"⚠️ [{symbol}] {formatted_date} 抓取失败")
             
             # [核心修改]
             # 当该 Symbol 的所有日期循环结束后，进行数据检查和写入
-            if symbol_all_data:
-                # ================= 新增：检查 Open Interest 0 值比例 =================
+            if date_failed:
+                tqdm.write(f"⚠️ [{symbol}] 有日期抓取失败，本次不写入 CSV，下次运行会重新抓取该 Symbol。")
+            elif symbol_all_data:
+                # ================= 检查 Open Interest 0 值比例 =================
                 try:
                     total_rows = len(symbol_all_data)
                     # 统计 Open Interest (index 4) 为 0 的行数

@@ -17,6 +17,7 @@ from tqdm import tqdm
 import platform
 import urllib.parse
 import pandas_market_calendars as mcal
+from selenium.common.exceptions import WebDriverException
 
 # ================= 配置区域 =================
 USER_HOME = os.path.expanduser("~")
@@ -35,8 +36,8 @@ CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check
 
 # 浏览器与驱动路径 (跨平台适配)
 if platform.system() == 'Darwin':
-    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
-    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
+    CHROME_BINARY_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver")
 elif platform.system() == 'Windows':
     CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     if not os.path.exists(CHROME_BINARY_PATH):
@@ -323,6 +324,36 @@ def extract_data_via_js(driver, symbol):
         formatted_data.append((row[0], symbol, row[1], row[2], row[3], row[4], row[5]))
     return formatted_data
 
+DEAD_SESSION_KEYWORDS = (
+    "invalid session id", "session deleted", "tab crashed",
+    "chrome not reachable", "disconnected", "no such window",
+    "target window already closed", "session not created",
+)
+
+def is_session_dead(e):
+    msg = str(e).lower()
+    return any(k in msg for k in DEAD_SESSION_KEYWORDS)
+
+def build_driver():
+    options = webdriver.ChromeOptions()
+    if os.path.exists(CHROME_BINARY_PATH):
+        options.binary_location = CHROME_BINARY_PATH
+    options.add_argument('--headless=new')
+    options.add_argument('--window-size=1920,1080')
+    # UA 不要再写死 Chrome/122，和真实的 155 内核不一致反而容易被识别；直接删掉这行最好
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--blink-settings=imagesEnabled=false")
+    options.page_load_strategy = 'eager'
+
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+
+    driver = webdriver.Chrome(service=service, options=options)
+    driver.set_page_load_timeout(30)
+    return driver
+
 def scrape_history():
     # 1. 加载任务和映射表
     tasks_dict = load_tasks_from_json(SECTORS_JSON_PATH)
@@ -350,35 +381,26 @@ def scrape_history():
     tqdm.write(f"共加载 {len(task_list)} 个待抓取任务。")
 
     # 2. 初始化 Selenium
-    options = webdriver.ChromeOptions()
-    if os.path.exists(CHROME_BINARY_PATH):
-        options.binary_location = CHROME_BINARY_PATH
-
-    options.add_argument('--headless=new')
-    options.add_argument('--window-size=1920,1080')
-    options.add_argument('user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-gpu")
-    
-    # --- 性能优化参数 ---
-    options.add_argument("--disable-images")
-    options.add_argument("--blink-settings=imagesEnabled=false")
-    options.page_load_strategy = 'eager'
-
-    service = Service(executable_path=CHROME_DRIVER_PATH)
     try:
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = build_driver()
     except Exception as e:
         tqdm.write(f"❌ Selenium 启动失败: {e}")
         return
+    wait = WebDriverWait(driver, 8)
 
-    driver.set_page_load_timeout(30)
-    wait = WebDriverWait(driver, 8) # 设置 8 秒超时
+    RESTART_EVERY = 150   # 每处理 150 个 symbol 主动重启一次浏览器，防止内存越积越多
+    processed = 0
 
     try:
         pbar = tqdm(task_list, desc="总体进度", position=0)
         for symbol, group in pbar:
+            # 定期主动重启
+            processed += 1
+            if processed % RESTART_EVERY == 0:
+                try: driver.quit()
+                except Exception: pass
+                driver = build_driver()
+                wait = WebDriverWait(driver, 8)
             # 获取当前分组的表类型
             table_type = get_table_type(group)
             
@@ -479,13 +501,30 @@ def scrape_history():
                 except Exception as e:
                     if skip_symbol:
                         break
+
+                    # 会话死掉：重建浏览器后再重试
+                    if is_session_dead(e):
+                        first_line = str(e).splitlines()[0] if str(e) else type(e).__name__
+                        tqdm.write(f"♻️ [{symbol}] 浏览器会话失效 ({first_line})，正在重启 Chrome...")
+                        try: driver.quit()
+                        except Exception: pass
+                        try:
+                            driver = build_driver()
+                            wait = WebDriverWait(driver, 8)
+                        except Exception as e2:
+                            tqdm.write(f"❌ 重启 Chrome 失败: {e2}")
+                            time.sleep(5)
+                        continue
+
                     if attempt < max_retries - 1:
                         time.sleep(2)
                     else:
-                        tqdm.write(f"❌ [{symbol}] 抓取失败 (已重试 {max_retries} 次): {str(e)[:100]}")
-            
+                        tqdm.write(f"❌ [{symbol}] 抓取失败 (已重试 {max_retries} 次): {str(e)[:300]}")
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except Exception:
+            pass
         tqdm.write("🎉 所有任务执行完毕。")
 
     # 9. 检查 JSON 是否为空，如果为空则调用子脚本 Check_yesterday

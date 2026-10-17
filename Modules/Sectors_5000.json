@@ -22,7 +22,8 @@
     ],
     "Healthcare": [
         "LLY",
-        "JNJ"
+        "JNJ",
+        "ABBV"
     ],
     "Industrials": [
         "SPCX"
@@ -37,8 +38,7 @@
         "ASML",
         "MU",
         "AMD",
-        "SKHY",
-        "INTC"
+        "SKHY"
     ],
     "Utilities": []
 }

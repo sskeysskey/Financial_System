@@ -65,16 +65,18 @@ function fmtOrders(r) {
 }
 function fmtQuotes(r) {
   const d = (r.server && r.server.data) || {};
-  if (r.empty) return `✅ ${r.message || `分组「${r.group || '?'}」为空，已清空本机 JSON`}`;
-  return `✅ 分组「${r.group || '?'}」抓到 ${r.count} 只\n本机写入：${d.saved ?? '?'} 条（模式 ${d.mode || '?'}，文件累计 ${d.total ?? '?'}）`;
+  if (r.empty) return `✅ ${r.message || '分组为空，已清空本机 JSON'}`;
+  const gs = (r.groups || []).map(g => `${g.group} ${g.count}`).join(' / ');
+  return `✅ 共抓到 ${r.count} 只（${gs || r.group || '?'}）\n本机写入：${d.saved ?? '?'} 条（模式 ${d.mode || '?'}，文件累计 ${d.total ?? '?'}）`;
 }
 function fmtMember(r) {
   return '✅ ' + (r.message || '') + '\n' +
     (r.results || []).map(x => `${x.group}: ${x.ok ? x.count + ' 只' : '❌ ' + (x.error || '')}`).join('\n');
 }
 function fmtStart(r) {
-  return `✅ 已启动：目标分组「${r.targetGroup}」（当前「${r.group}」）\n` +
-    `阶段0 切分组 → 阶段1 比对 → 阶段2 删多余${r.strictSync ? '' : '(已关闭)'} → 阶段3 补缺失 → 阶段4 复核\n` +
+  if (r.clearOnly) return `🧹 已启动只清空：「${r.targetGroup}」`;
+  return `✅ 已启动：「${r.targetGroup}」系列（每组 ≤ ${r.cap}，当前「${r.group}」）\n` +
+    `读取各系列分组 → 分配 → 新建缺少的分组 → 逐组删多余${r.strictSync ? '' : '(已关闭)'}/补缺失/复核 → 删除用不上的分组\n` +
     `进度看网页右下角面板；任务期间尽量让该标签页保持在前台。`;
 }
 function fmtClearOnly(r) { return `🧹 已启动只清空：目标分组「${r.targetGroup}」`; }
@@ -84,9 +86,10 @@ function fmtClearGroups(r) {
     `每组删前自动备份（「复制删除前备份」可取回）；进度看网页右下角面板，可随时停止。`;
 }
 function fmtDiff(r) {
-  return `分组：${r.group}${r.onTarget ? ' ✅' : ` (目标「${r.targetGroup}」)`}\n` +
-    `来源：${r.srcFrom}（${r.srcCount} 只）\n自选股已有：${r.haveCount} 只\n` +
-    `★ 待添加：${r.missing} 只｜★ 多余(严格同步会删)：${r.extraCount} 只\n` +
+  return `目标：「${r.targetGroup}」系列（每组 ≤ ${r.cap}）\n来源：${r.srcFrom}（${r.srcCount} 只）\n系列现有：${r.haveCount} 只\n` +
+    `★ 待添加 ${r.missing}｜★ 待删除 ${r.extraCount}` + ((r.surplus && r.surplus.length) ? `｜删除分组 ${r.surplus.join('/')}` : '') + '\n' +
+    `分配：${r.planText || '-'}\n` +
+    (r.overflow ? `⚠ ${r.overflow} 只超出分组数量上限\n` : '') +
     (r.srcCount === 0 ? '⚠ 数据源目标日期无数据（不回退）\n' : '') +
     (r.sample && r.sample.length ? `待加示例：${r.sample.join(', ')}\n` : '') +
     (r.extraSample && r.extraSample.length ? `多余示例：${r.extraSample.join(', ')}` : '');
@@ -121,13 +124,17 @@ const stepLines = (steps) => (steps || []).map(s => `${s.ok ? '✅' : '❌'} ${s
 const OPS = {
   positions: { label: '抓取全部持仓', page: 'positions', area: 'bridge', fmt: fmtPositions },
   orders: { label: '抓取订单记录', page: 'orders', area: 'bridge', fmt: fmtOrders },
-  wl_quotes: { label: '抓取 Earning 变更%', page: 'watchlist', area: 'bridge', fmt: fmtQuotes },
+  wl_quotes: { label: '抓取 Earning系列 变更%', page: 'watchlist', area: 'bridge', fmt: fmtQuotes },
   wl_member: { label: '扫描全部分组归属', page: 'watchlist', area: 'wl', fmt: fmtMember },
   wl_start: { label: '一键同步', page: 'watchlist', area: 'wl', fmt: fmtStart },
   wl_clear_only: { label: '只清空目标分组', page: 'watchlist', area: 'wl', fmt: fmtClearOnly },
   wl_clear_groups: { label: '清空非保留分组', page: 'watchlist', area: 'wl', fmt: fmtClearGroups },
   wl_diff: { label: '比对差集', page: 'watchlist', area: 'wl', fmt: fmtDiff },
   wl_groups: { label: '检测/切换分组', page: 'watchlist', area: 'wl', fmt: fmtGroups },
+  wl_group_op: {
+    label: '分组新建/删除测试', page: 'watchlist', area: 'wl',
+    fmt: r => `${r.op === 'create' ? '新建' : '删除'}「${r.name}」：${r.ok ? '✅ ' + (r.existed ? '已存在' : r.missing ? '本就不存在' : '成功') : '❌ ' + (r.error || '')}`
+  },
   wl_probe: { label: '探测添加弹层', page: 'watchlist', area: 'wl', fmt: fmtProbe },
   wl_probe_del: { label: '探测删除菜单', page: 'watchlist', area: 'wl', fmt: fmtProbeDel },
   wl_test_add: { label: '试添加', page: 'watchlist', area: 'wl', fmt: r => '测试结果：' + JSON.stringify(r.result) },
@@ -248,7 +255,7 @@ chrome.storage.local.get(
   ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
     'ftAutoScrape', 'ftWlManualList', 'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
     'ftWlClearFirst', 'ftWlAgent', 'ftWlRestoreGroup', 'ftWlTargetGroup', 'ftWlStrictSync',
-    'ftWlMemberPassive', 'ftLastOp', 'ftWlKeepExtra', 'ftTradeMode', 'ftSymColor',
+    'ftWlMemberPassive', 'ftLastOp', 'ftWlKeepExtra', 'ftTradeMode', 'ftSymColor', 'ftWlGroupCap',
     'ftTradeEnabled', 'ftTradeDryRun', 'ftTradeRemoveAfter', 'ftTradePresets'],
   (res) => {
     if (res.maxTags) $('maxTags').value = res.maxTags;
@@ -265,6 +272,7 @@ chrome.storage.local.get(
     let tg = (res.ftWlTargetGroup && String(res.ftWlTargetGroup).trim()) || DEFAULT_GROUP;
     if (tg.toUpperCase() === 'ALL') { tg = DEFAULT_GROUP; chrome.storage.local.set({ ftWlTargetGroup: tg }); }
     $('wlTarget').value = tg;
+    $('wlCap').value = parseInt(res.ftWlGroupCap, 10) > 0 ? res.ftWlGroupCap : 35;
     $('wlSrc').value = res.ftWlSource || 'earnings';
     $('wlBack').value = (res.ftWlBack === undefined ? 1 : res.ftWlBack);
     $('wlAhead').value = (res.ftWlAhead === undefined ? 0 : res.ftWlAhead);
@@ -741,7 +749,7 @@ $('tradeMode').addEventListener('change', () => {
   const txt = {
     dry: '🧪 预演：只自动填表，不点「下单」，也不会移出分组',
     confirm: '✋ 下单前暂停：表单填好后，交易层出现「确认下单」，点了才真正下单（120 秒不点自动取消）',
-    live: '⚠️ 实盘：点金额档（按网页现价换算整数股）/ 一键全卖 会立即真实下单！'
+    live: '⚠️ 实盘：点金额档（按网页现价换算整数股）/ 一键全卖（碎股持仓卖整数部分）会立即真实下单！'
   };
   chrome.storage.local.set({ ftTradeMode: v }, () => setTrade(txt[v], v === 'live'));
 });
@@ -760,4 +768,26 @@ $('symColor').addEventListener('change', () => {
   const v = $('symColor').checked;
   chrome.storage.local.set({ ftSymColor: v }, () =>
     setStatus(v ? '✅ 已开启代码着色（持仓页按分组、自选股页按持仓/Earning）' : '已关闭代码着色，恢复原色'));
+});
+$('wlCap').addEventListener('change', () => {
+  const v = Math.max(1, Math.min(38, parseInt($('wlCap').value, 10) || 35));
+  $('wlCap').value = v;
+  chrome.storage.local.set({ ftWlGroupCap: v }, () =>
+    setWl(`每组上限已设为 ${v} 只：超出依次写 Earning1/2/3…（Firstrade 单组实测上限 38）`));
+});
+$('wlGroupCreateBtn').addEventListener('click', () => {
+  const name = ($('wlTestGroup').value || '').trim();
+  if (!name) { setWl('请先填写测试分组名', true); return; }
+  runOp('wl_group_op', { action: 'FT_WL_GROUP_OP', op: 'create', name }, { restore: false });
+});
+$('wlGroupDeleteBtn').addEventListener('click', () => {
+  const btn = $('wlGroupDeleteBtn');
+  const name = ($('wlTestGroup').value || '').trim();
+  if (!name) { setWl('请先填写测试分组名', true); return; }
+  if (needConfirm(btn, `⚠️ 再点一次：删除分组「${name}」`)) {
+    setWl('⚠️ 会真实删除该分组（只允许 Earning1/2/3… 系列）。8 秒内再点一次确认。');
+    return;
+  }
+  disarm();
+  runOp('wl_group_op', { action: 'FT_WL_GROUP_OP', op: 'delete', name }, { restore: false });
 });

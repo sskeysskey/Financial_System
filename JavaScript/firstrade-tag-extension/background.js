@@ -235,13 +235,13 @@ async function posQuote(symbol) {
   try {
     const tab = await findPageTab('positions');
     if (tab) {
-      const r = await tabMsg(tab.id, { action: 'FT_POS_ROW', symbol: sym, scroll: false });
+      const r = await tabMsg(tab.id, { action: 'FT_POS_ROW', symbol: sym, scroll: false, all: true });
       // 只有页面处于可见状态时，表格数据才保证是最新的
       if (r && r.ok && r.found && !r.hidden) return Object.assign({ how: 'visible' }, r);
     }
     const ex = await execOnPage({
       page: 'positions', kind: 'pos_quote', activate: true, focusWindow: false, readyTimeout: 30000,
-      msg: { action: 'FT_POS_ROW', symbol: sym, scroll: true, settle: true }
+      msg: { action: 'FT_POS_ROW', symbol: sym, scroll: true, settle: true, all: true }
     });
     if (ex.originTabId) await restoreTabQuiet(ex.originTabId);
     if (!ex.resp || !ex.resp.ok) return { ok: false, error: ex.error || '持仓页读取失败' };
@@ -279,10 +279,10 @@ const COMBOS = {
         { page: 'positions', label: '① 抓取全部持仓', msg: { action: 'FT_SYNC_ALL' }, fmt: fmtPos },
         { page: 'orders', label: '② 抓取订单记录', msg: { action: 'FT_SCAN_ORDERS' }, fmt: fmtOrd },
         {
-          page: 'watchlist', label: `③ 一键同步「${tg}」`, waitJob: true,
+          page: 'watchlist', label: `③ 一键同步「${tg}」系列分组`, waitJob: true,
           msg: { action: 'FT_WL_START', clearFirst: false, strictSync: o.strictSync !== false, targetGroup: tg, skipQuotes: true }
         },
-        { page: 'watchlist', label: '④ 抓取全部变更%', msg: { action: 'FT_WL_SCAN_QUOTES' }, fmt: fmtQuotes },
+        { page: 'watchlist', label: '④ 抓取 Earning 系列变更%', msg: { action: 'FT_WL_SCAN_QUOTES' }, fmt: fmtQuotes },
         { page: 'watchlist', label: '⑤ 扫描全部分组归属', msg: { action: 'FT_MEMBER_SCAN' }, fmt: r => r.message || 'OK' }
       ];
     }
@@ -366,9 +366,9 @@ async function syncOrders(orders, verbose = false) {
   return postJson('/sync_orders', { orders, verbose: !!verbose });
 }
 const compactOrders = (verbose = false) => postJson('/compact_orders', { verbose: !!verbose });
-async function syncWatchlist(quotes, overwrite = true, group = '') {
+async function syncWatchlist(quotes, overwrite = true, group = '', groups = null) {
   if (!quotes || (!Object.keys(quotes).length && !overwrite)) return { status: 'skip', reason: 'empty' };
-  return postJson('/sync_watchlist', { quotes: quotes || {}, overwrite: !!overwrite, group: group || '' });
+  return postJson('/sync_watchlist', { quotes: quotes || {}, overwrite: !!overwrite, group: group || '', groups: groups || null });
 }
 const plotWithPositions = (symbol, positions) => postJson('/plot', { symbol, positions: positions || {} });
 const ping = () => jsonFetch(`${BRIDGE_BASE}/ping`, { method: 'GET' });
@@ -385,7 +385,7 @@ async function fetchWlSource(src, back, ahead) {
   q.set('fallback', '0');
   return jsonFetch(`${BRIDGE_BASE}/wl_source?${q.toString()}`, { method: 'GET' });
 }
-const fetchWlTasks = (max) => jsonFetch(`${BRIDGE_BASE}/wl_tasks?max=${max || 3}`, { method: 'GET' });
+const fetchWlTasks = (max, vis) => jsonFetch(`${BRIDGE_BASE}/wl_tasks?max=${max || 3}&vis=${vis ? 1 : 0}`, { method: 'GET' });
 const postWlTaskResult = (p) => postJson('/wl_task_result', p);
 const fetchWlGroups = () => jsonFetch(`${BRIDGE_BASE}/wl_groups`, { method: 'GET' });
 const postMembership = (p) => postJson('/wl_membership', p);
@@ -397,7 +397,7 @@ const postTradeLog = (p) => postJson('/trade_log', p);
 function migrateFlags() {
   chrome.storage.local.get(
     ['ftAutoScrape', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
-      'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
+      'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead', 'ftWlGroupCap',
       'ftWlAgent', 'ftWlRestoreGroup', 'ftWlRestoreTab', 'ftSymColor',
       'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive',
       'ftTradeEnabled', 'ftTradeMode', 'ftTradeRemoveAfter', 'ftTradePresets'],     // ★ 补上 ftTradeMode
@@ -411,6 +411,7 @@ function migrateFlags() {
       if (res.ftWlBack === undefined) patch.ftWlBack = 1;
       if (res.ftWlAhead === undefined) patch.ftWlAhead = 0;
       if (res.ftWlAgent === undefined) patch.ftWlAgent = true;
+      if (!(parseInt(res.ftWlGroupCap, 10) > 0)) patch.ftWlGroupCap = 35;
       const tg = String(res.ftWlTargetGroup || '').trim();
       if (!tg || tg.toUpperCase() === 'ALL') patch.ftWlTargetGroup = DEFAULT_GROUP;
       if (res.ftWlStrictSync === undefined) patch.ftWlStrictSync = true;
@@ -451,7 +452,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'FT_SYNC': return done(syncPositions(msg.payload, msg.overwrite));
     case 'FT_SYNC_ORDERS': return done(syncOrders(msg.payload, msg.verbose));
     case 'FT_COMPACT_ORDERS': return done(compactOrders(msg.verbose));
-    case 'FT_SYNC_WATCHLIST': return done(syncWatchlist(msg.payload, msg.overwrite, msg.group));
+    case 'FT_SYNC_WATCHLIST': return done(syncWatchlist(msg.payload, msg.overwrite, msg.group, msg.groups));
     case 'FT_PLOT': return done(plotWithPositions(msg.symbol, msg.payload));
     case 'FT_PING': return done(ping());
     case 'FT_SERVER_POSITIONS': return done(fetchServerPositions());
@@ -459,7 +460,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'FT_SERVER_WATCHLIST': return done(fetchServerWatchlist());
     case 'FT_SECTORS': return done(fetchSectors());
     case 'FT_WL_SOURCE': return done(fetchWlSource(msg.src, msg.back, msg.ahead));
-    case 'FT_WL_TASKS': return done(fetchWlTasks(msg.max));
+    case 'FT_WL_TASKS': return done(fetchWlTasks(msg.max, msg.vis));
     case 'FT_WL_TASK_RESULT': return done(postWlTaskResult(msg.payload));
     case 'FT_WL_GROUPS': return done(fetchWlGroups());
     case 'FT_WL_MEMBERSHIP': return done(postMembership(msg.payload));
