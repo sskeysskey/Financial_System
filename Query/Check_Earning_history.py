@@ -27,10 +27,18 @@ WEEK52_LOW_SECTORS = {
 # =========================================================
 # 规则参数（集中管理，便于调整）
 # =========================================================
+# =========================================================
+# 显示开关（False = 屏蔽，True = 显示）
+# =========================================================
+SHOW_JIA_LOOKBACK_MARK = False     # ★Volume_High(甲)：日期下方的紫色行
+SHOW_SUPPORT_PE_VOLUME_MARK = False  # SupportLevel 行上的 ★PE_Volume
+SHOW_SUPPORT_SHORT_MARK = False      # SupportLevel 行上的 ★Short / ★Short_W
+SHOW_SHORT_PREV_JIA_TAG = False      # Short 行上的 [ + ★Volume_High'甲'] 标签
+
 # SupportLevel 回看 PE_Volume 的交易日窗口
 SUPPORT_PE_VOLUME_LOOKBACK = 15
 # SupportLevel 回看 Short 的交易日窗口
-SUPPORT_SHORT_LOOKBACK = 7
+SUPPORT_SHORT_LOOKBACK = 20
 # SupportLevel 回看时视为 "Short 信号" 的分类（与代码其他处 Short/Short_W 同组处理保持一致）
 SUPPORT_SHORT_CATEGORIES = ("Short", "Short_W")
 
@@ -39,6 +47,16 @@ STREAK_IGNORED_CATEGORIES = {"Short", "Short_W"}
 
 # Short 前一周出现 PE_Volume_high(甲) 时的标记文本（渲染与判定共用，避免文本不一致）
 SHORT_PREV_JIA_TAG = "[ + ★Volume_High'甲']"
+
+# 当天项目数达到该值才参与判定
+JIA_MARK_MIN_ITEMS = 3
+# 回看 PE_Volume_high(甲) 的交易日窗口
+JIA_MARK_LOOKBACK = 15          # 原有规则
+JIA_MARK_LOOKBACK_EXT = 30      # 新增：扩展规则（用于本次需求）
+
+# 当 PE_Deep / PE_Deeper 连续出现达到该天数时，其第一天被视为新的连续段起点
+DEEP_RESET_MIN_DAYS = 3
+DEEP_CATEGORIES = {"PE_Deep", "PE_Deeper"}
 
 
 def load_52week_low_symbols():
@@ -244,7 +262,7 @@ def build_overlap_marker(category, d_str, suf,
             overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='15个交易日内重复触发 PE_Volume_high(甲)'>[ x 2]</span>"
 
     # Short 往前推一周（5个交易日）检查是否出现过 PE_Volume_high 且后缀含 '甲'
-    if category == "Short":
+    if category == "Short" and SHOW_SHORT_PREV_JIA_TAG:
         prev_5_dates = get_prev_dates(d_str, 5, sorted_trading_dates)
         jia_dates = {
             record_d for record_d, record_suf in category_data.get("PE_Volume_high", [])
@@ -260,7 +278,7 @@ def build_overlap_marker(category, d_str, suf,
         pe_vol_hits = find_prev_hit_dates(
             d_str, ("PE_Volume",), SUPPORT_PE_VOLUME_LOOKBACK,
             category_dates, sorted_trading_dates
-        )
+        ) if SHOW_SUPPORT_PE_VOLUME_MARK else [] 
         if pe_vol_hits:
             dates_str = ", ".join(d for d, _ in pe_vol_hits)
             overlap_marker += (
@@ -272,7 +290,7 @@ def build_overlap_marker(category, d_str, suf,
         short_hits = find_prev_hit_dates(
             d_str, SUPPORT_SHORT_CATEGORIES, SUPPORT_SHORT_LOOKBACK,
             category_dates, sorted_trading_dates
-        )
+        ) if SHOW_SUPPORT_SHORT_MARK else [] 
         if short_hits:
             labels = []
             for d, cats in short_hits:
@@ -333,6 +351,37 @@ def build_overlap_marker(category, d_str, suf,
     except ValueError:
         pass
     return overlap_marker
+
+def build_jia_lookback_marker(d_str, items_today, category_data, sorted_trading_dates,
+                              lookback=JIA_MARK_LOOKBACK):
+    """
+    当天项目数 >= JIA_MARK_MIN_ITEMS，且往前 JIA_MARK_LOOKBACK 个交易日内
+    出现过 PE_Volume_high(甲) 时，返回紫色五角星标识（按日期级别显示一次）。
+    """
+    if not SHOW_JIA_LOOKBACK_MARK:      # 新增
+        return ""
+    
+    if len(items_today) < JIA_MARK_MIN_ITEMS:
+        return ""
+
+    prev_dates = set(get_prev_dates(d_str, lookback, sorted_trading_dates))
+    jia_hits = sorted(
+        {
+            rec_d for rec_d, rec_suf in category_data.get("PE_Volume_high", [])
+            if rec_d in prev_dates and rec_suf and '甲' in rec_suf
+        },
+        reverse=True
+    )
+    if not jia_hits:
+        return ""
+
+    purple = NORD_THEME['accent_purple']
+    dates_str = ", ".join(jia_hits)
+    return (
+        f" <span style='color:{purple}; font-weight:bold;' "
+        f"title='当天至少{JIA_MARK_MIN_ITEMS}个项目，且{lookback}个交易日内曾触发 PE_Volume_high(甲)'>"
+        f"★Volume_High(甲): {dates_str}</span>"
+    )
 
 # =========================================================
 # 视图 1：按分组 (Category) 渲染
@@ -414,18 +463,39 @@ def search_history_by_date(symbol):
     MIN_STREAK_ITEMS = 2
     # 允许的最大连续空窗交易日数量（在此范围内且标的完全无信号时允许桥接）
     MAX_EMPTY_GAP_DAYS = 5
+    # ---------- 预计算：达到阈值的 Deep 连续段的起点 ----------
+    trading_index = {d: i for i, d in enumerate(sorted_trading_dates)}  # 降序列表：索引越大越早
+
+    def compute_deep_run_starts():
+        starts = set()
+        run = []
+        prev_idx = None
+        # 按时间从早到晚遍历有记录的日期
+        for d in reversed(hit_dates_sorted):
+            is_deep = any(cat in DEEP_CATEGORIES for cat, _ in date_items[d])
+            if not is_deep:
+                # 有记录但不含 Deep -> 打断 Deep 连续段
+                if len(run) >= DEEP_RESET_MIN_DAYS:
+                    starts.add(run[0])
+                run, prev_idx = [], None
+                continue
+
+            idx = trading_index[d]
+            # 两个 Deep 日之间的空窗交易日超限 -> 也打断
+            if run and prev_idx is not None and (prev_idx - idx - 1) > MAX_EMPTY_GAP_DAYS:
+                if len(run) >= DEEP_RESET_MIN_DAYS:
+                    starts.add(run[0])
+                run = []
+            run.append(d)
+            prev_idx = idx
+
+        if len(run) >= DEEP_RESET_MIN_DAYS:
+            starts.add(run[0])
+        return starts
+
+    deep_run_starts = compute_deep_run_starts()
 
     def get_streak_position(d_str):
-        """
-        返回该日期在“核心特征保持/只增不减”连续段里的位置（最早那天=1）。
-        规则：
-        1. 核心特征 = 当天全部分类经归一化后，剔除 STREAK_IGNORED_CATEGORIES（Short/Short_W）。
-        2. 当天核心特征数需达到 MIN_STREAK_ITEMS。
-        3. 沿时序往前（更早交易日）回溯：
-           - 若前序交易日该标的完全无记录（空窗日），在不超过 MAX_EMPTY_GAP_DAYS 容纳内允许跳过空窗桥接。
-           - 若遇到有记录交易日，要求较新交易日核心特征集必须包含较早交易日（chain_sig >= older_sig，只增不减）。
-           - 若中间出现破坏性记录（有指标但核心特征不合规，包括仅有 Short 的日子）或空窗超限，则连续性终止。
-        """
         if d_str not in sorted_trading_dates:
             return 1
 
@@ -433,15 +503,18 @@ def search_history_by_date(symbol):
         if not curr_sig or len(curr_sig) < MIN_STREAK_ITEMS:
             return 1
 
+        # ★ Deep 连续段（>=阈值）的第一天：视为新阶段起点，不显示连续标记
+        if d_str in deep_run_starts:
+            return 1
+
         idx = sorted_trading_dates.index(d_str)
         count = 1
-        chain_sig = curr_sig  # 状态锚点
-        empty_gap = 0         # 连续无信号空窗计数器
+        chain_sig = curr_sig
+        empty_gap = 0
 
-        j = idx + 1  # 降序列表中，索引递增 = 更早的交易日
+        j = idx + 1
         while j < len(sorted_trading_dates):
             older_date = sorted_trading_dates[j]
-            # 判定中间交易日该股票是否完全无任何记录
             is_empty_day = (older_date not in date_items)
 
             if is_empty_day:
@@ -459,6 +532,9 @@ def search_history_by_date(symbol):
                 count += 1
                 chain_sig = older_sig
                 empty_gap = 0
+                # ★ 回溯到 Deep 段起点后，不再继续往更早的日子走
+                if older_date in deep_run_starts:
+                    break
                 j += 1
             else:
                 break
@@ -497,6 +573,13 @@ def search_history_by_date(symbol):
 
         # 财报日标识
         earning_marker = build_earning_marker(d_str, items_today, earning_dates)
+        # 甲标识：当天项目数 >= 3 且前15个交易日内有 PE_Volume_high(甲)
+        # 注意：不再拼到日期标题上，而是放到项目列表的最后一行
+        jia_marker = build_jia_lookback_marker(
+            d_str, items_today, category_data, sorted_trading_dates,
+            lookback=JIA_MARK_LOOKBACK_EXT
+        )
+        jia_line = f"&nbsp;&nbsp;{jia_marker.strip()}" if jia_marker else ""
 
         rendered_items = []
         for category, suf in items_today:
@@ -515,7 +598,7 @@ def search_history_by_date(symbol):
                     target_color = COLOR_MEDIUM
                 elif category in high_weight_categories:
                     target_color = COLOR_HIGH
-                elif category == "PE_Volume_high" and suf and '甲' in suf:
+                elif category == "PE_Volume_high" and suf and ('甲' in suf or '抄底' in suf):
                     target_color = COLOR_HIGH
                 else:
                     target_color = COLOR_MEDIUM
@@ -542,9 +625,16 @@ def search_history_by_date(symbol):
             )
 
         if has_group_a:
-            html_parts.append(make_header(d_str + streak_marker + earning_marker, NORD_THEME['success_green']))
+            # 标题只保留日期 + 连续标记 + 财报标记
+            html_parts.append(make_header(
+                d_str + streak_marker + earning_marker,
+                NORD_THEME['success_green']
+            ))
             for item in rendered_items:
                 html_parts.append(f"&nbsp;&nbsp;{item}<br>")
+            # 甲标记放在最后一个项目之后，单独一行
+            if jia_line:
+                html_parts.append(f"{jia_line}<br>")
         else:
             date_html = (
                 f"<span style='color:{NORD_THEME['success_green']}; "
@@ -554,7 +644,9 @@ def search_history_by_date(symbol):
             html_parts.append(
                 f"<div style='padding-left: 4px; line-height: 1.8; "
                 f"margin-top:2px; margin-bottom:2px;'>"
-                f"{date_html}{streak_marker}{earning_marker}&nbsp;&nbsp;&nbsp;&nbsp;{joined}"
+                f"{date_html}{streak_marker}{earning_marker}"
+                f"&nbsp;&nbsp;&nbsp;&nbsp;{joined}"
+                f"{('<br>' + jia_line) if jia_line else ''}"
                 f"</div>"
             )
 

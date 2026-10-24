@@ -144,6 +144,26 @@
         "message": "正在执行 split_TXT..."
     },
     {
+        "key": "g",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_AutoScroll_Then_Engine.scpt\")",
+        "message": "正在执行 AutoScroll → News（连续）..."
+    },
+    {
+        "key": "g",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/Selenium_News/News_AutoScroll.py'",
+        "message": "正在执行 News_AutoScroll.py…"
+    },
+    {
         "key": "k",
         "modifiers": [
             "control",
@@ -228,6 +248,16 @@
             "control"
         ],
         "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Add_article_failure_keep.scpt",
+        "message": "正在 Add_article_failure_keep..."
+    },
+    {
+        "key": "r",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
         "target": "/Users/yanzhang/Coding/ScriptEditor/Add_article_failure.scpt",
         "message": "正在 Add_article_failure..."
     },
@@ -296,7 +326,7 @@
             "option"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_gdefud.py' open",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_sxkljc.py' open",
         "message": "正在执行 Crawl_gdefud (open)..."
     },
     {

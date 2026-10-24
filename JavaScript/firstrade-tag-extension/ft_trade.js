@@ -14,7 +14,7 @@
   window.__FT_TRADE_V4__ = true;
 
   const LOG = '[FT-TRADE]';
-  const BUY_GROUPS = ['买', '买买'];
+  const BUY_GROUPS = ['买', '买买', 'Must'];
   const SELL_GROUPS = ['卖卖卖'];
   const HIDDEN_GROUPS = ['temp'];
   const ROW_EXCLUDE = '.ag-floating-top, .ag-floating-bottom, #app-quote-bar, header, #app-header';

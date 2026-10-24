@@ -30,7 +30,7 @@ MODULES_DIR = os.path.join(os.path.expanduser("~"), "Coding", "Financial_System"
 POSITIONS_FILE = os.path.join(MODULES_DIR, "firstrade_positions.json")
 MEMBERSHIP_FILE = os.path.join(MODULES_DIR, "firstrade_wl_membership.json")
 
-BUY_GROUPS = ["买", "买买"]
+BUY_GROUPS = ["买", "买买", "Must"]
 SELL_GROUPS = ["卖卖卖"]
 
 

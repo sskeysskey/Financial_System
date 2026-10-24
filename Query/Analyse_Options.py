@@ -203,6 +203,21 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     df_old.columns = df_old.columns.str.strip()
     df_new.columns = df_new.columns.str.strip()
     
+    def normalize_strike(val):
+        """
+        统一行权价写法，保证新旧 CSV 能正确对齐：
+        '78.00' -> '78'，'77.50' -> '77.5'，'78' -> '78'
+        无法解析时原样返回（去掉首尾空格）。
+        """
+        if pd.isna(val):
+            return ''
+        s = str(val).replace(',', '').strip()
+        try:
+            f = float(s)
+        except ValueError:
+            return s
+        return ('%.4f' % f).rstrip('0').rstrip('.')
+    
     # --- 推荐的清洗方式 ---
     def clean_numeric(val):
         if pd.isna(val): return 0.0
@@ -223,6 +238,10 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
         else:
             df_temp['Last Price'] = df_temp['Last Price'].apply(clean_numeric)
 
+    # 统一两边的 Strike 写法，作为合并主键前必须做的规范化
+    for df_temp in [df_old, df_new]:
+        df_temp['Strike'] = df_temp['Strike'].apply(normalize_strike)
+
     # 过滤全新日期
     print("正在过滤全新出现的 Expiry Date ...")
     valid_old_dates = set(zip(df_old['Symbol'], df_old['Expiry Date']))
@@ -237,6 +256,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     # 合并 (Last Price 会变成 Last Price_new)
     key_columns = ['Symbol', 'Expiry Date', 'Type', 'Strike']
     merged = pd.merge(df_old, df_new, on=key_columns, how='outer', suffixes=('_old', '_new'), indicator=True)
+    print("合并统计:", merged['_merge'].value_counts().to_dict())
     
     # 过滤逻辑
     merged = merged[merged['_merge'] != 'left_only'].copy()

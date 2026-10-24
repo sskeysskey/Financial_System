@@ -74,7 +74,6 @@
     "Brazil",
     "Nikkei",
     "Russell",
-    "Russia",
     "S&P500",
     "India",
     "Korea",
@@ -442,7 +441,9 @@
     "LGDS",
     "JSML",
     "ARKG",
-    "FTMH"
+    "FTMH",
+    "SH",
+    "PSQ"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1315,7 +1316,9 @@
     "GRAL",
     "KOD",
     "IOVA",
-    "HAE"
+    "HAE",
+    "CON",
+    "BLTE"
   ],
   "Industrials": [
     "GE",
@@ -1890,7 +1893,8 @@
     "PAY",
     "RNG",
     "IQMX",
-    "MAAS"
+    "MAAS",
+    "BRZE"
   ],
   "Utilities": [
     "NEE",

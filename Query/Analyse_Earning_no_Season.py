@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "ROK"
-# TARGET_DATE = "2026-09-17"
+# SYMBOL_TO_TRACE = "ROL"
+# TARGET_DATE = "2026-09-25"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -1771,25 +1771,19 @@ def run_processing_logic(log_detail):
 
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
 
-    try:
-        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
+    def to_write(syms):
+        # 只去掉 Tag 黑名单 和 newlow 黑名单
+        return sorted(set(filter_tags(syms)) - blacklist)
 
-    exist_Strategy34 = set(panel_data.get('Strategy34', {}).keys())
-    exist_Strategy12 = set(panel_data.get('Strategy12', {}).keys())
-    exist_must = set(panel_data.get('Must', {}).keys())
-    already_in_panels = exist_Strategy34 | exist_Strategy12 | exist_must
-
-    final_pe_valid_to_write = sorted(list(set(filter_tags(raw_pe_valid)) - blacklist - already_in_panels))
-    final_pe_invalid_to_write = sorted(list(set(filter_tags(raw_pe_invalid)) - blacklist - already_in_panels))
-    final_oversell_w_to_write = sorted(list(set(filter_tags(raw_oversell_w))))
-    final_pe_deeper_to_write = sorted(list(set(filter_tags(raw_pe_deeper))))
-    final_pe_w_to_write = sorted(list(set(filter_tags(raw_pe_w))))
-    final_pe_deep_to_write = sorted(list(set(filter_tags(raw_pe_deep)) - already_in_panels))
-
-    final_pe_low_to_write = sorted(list(set(filter_tags(raw_pe_low)) - already_in_panels))
-    final_pe_lower_to_write = sorted(list(set(filter_tags(raw_pe_lower)) - already_in_panels))
-    final_pe_lowest_to_write = sorted(list(set(filter_tags(raw_pe_lowest)) - already_in_panels))
+    final_pe_valid_to_write   = to_write(raw_pe_valid)
+    final_pe_invalid_to_write = to_write(raw_pe_invalid)
+    final_oversell_w_to_write = to_write(raw_oversell_w)
+    final_pe_deeper_to_write  = to_write(raw_pe_deeper)
+    final_pe_w_to_write       = to_write(raw_pe_w)
+    final_pe_deep_to_write    = to_write(raw_pe_deep)
+    final_pe_low_to_write     = to_write(raw_pe_low)
+    final_pe_lower_to_write   = to_write(raw_pe_lower)
+    final_pe_lowest_to_write  = to_write(raw_pe_lowest)
 
     if SYMBOL_TO_TRACE:
         raw_sets = [
@@ -1798,30 +1792,17 @@ def run_processing_logic(log_detail):
             (set(raw_pe_deeper), "PE_Deeper"),
             (set(raw_pe_low), "PE_low"), (set(raw_pe_lower), "PE_lower"), (set(raw_pe_lowest), "PE_lowest")
         ]
+        is_tag_blocked = bool(set(symbol_to_tags_map.get(SYMBOL_TO_TRACE, [])).intersection(tag_blacklist))
+        is_newlow = SYMBOL_TO_TRACE in blacklist
         for s_set, name in raw_sets:
-            if SYMBOL_TO_TRACE in s_set:
-                is_tag_blocked = bool(set(symbol_to_tags_map.get(SYMBOL_TO_TRACE, [])).intersection(tag_blacklist))
-                if name in ["PE_valid", "PE_invalid"]:
-                    if SYMBOL_TO_TRACE in blacklist:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但在 'newlow' 黑名单中 -> 不写Panel。")
-                    elif SYMBOL_TO_TRACE in already_in_panels:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但已在其他 Panel 中 -> 不写Panel。")
-                    elif is_tag_blocked:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
-                    else:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' 将写入 ({name})。")
-                elif name in ["PE_low", "PE_lower", "PE_lowest", "PE_Deep"]:
-                    if is_tag_blocked:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
-                    elif SYMBOL_TO_TRACE in already_in_panels:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但已在其他 Panel(Strategy/Must) 中 -> 不写Panel。")
-                    else:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' 将写入 ({name})。")
-                else:
-                    if is_tag_blocked:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
-                    else:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' 将写入 ({name})。")
+            if SYMBOL_TO_TRACE not in s_set:
+                continue
+            if is_tag_blocked:
+                log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
+            elif is_newlow:
+                log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但在 'newlow' 黑名单中 -> 不写Panel。")
+            else:
+                log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' 将写入 ({name})。")
 
     hot_tags = set(CONFIG.get("HOT_TAGS", set()))
 

@@ -19,7 +19,7 @@ MODULES_DIR = os.path.join(USER_HOME, "Coding", "Financial_System", "Modules")
 GROUPS_FILE = os.path.join(MODULES_DIR, "ft_watchlist_groups.json")
 LAST_FILE = os.path.join(MODULES_DIR, "ft_watchlist_last_group.txt")
 
-DEFAULT_GROUPS = ["买", "买买", "卖卖卖", "Earning", "Earning1", "Earning2", "Earning3"]
+DEFAULT_GROUPS = ["买", "买买", "Must", "卖卖卖", "Earning", "Earning1", "Earning2", "Earning3"]
 
 
 def watchlist_groups():

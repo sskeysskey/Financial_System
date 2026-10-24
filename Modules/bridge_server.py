@@ -58,7 +58,7 @@ SECTOR_GROUPS_FOR_WATCHLIST = [
 
 WATCHLIST_URL = "https://invest.firstrade.com/app/watchlist"
 WATCHLIST_URL_MATCH = "invest.firstrade.com/app/watchlist"
-WATCHLIST_GROUPS = ["Earning", "Earning1", "Earning2", "Earning3", "买", "买买", "卖卖卖", "Wrong"]
+WATCHLIST_GROUPS = ["Earning", "Earning1", "Earning2", "Earning3", "买", "买买", "Must", "卖卖卖", "Wrong"]
 
 TASK_TTL = 600
 TASK_LEASE = 90

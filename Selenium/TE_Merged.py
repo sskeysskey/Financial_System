@@ -43,8 +43,8 @@ CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check
 
 # 4. 浏览器与驱动路径 (跨平台适配)
 if platform.system() == 'Darwin':
-    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
-    CHROME_DRIVER_PATH = os.path.join(DOWNLOAD_DIR, "backup", "chromedriver_beta")
+    CHROME_BINARY_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOAD_DIR, "backup", "chromedriver")
 elif platform.system() == 'Windows':
     # Windows 路径优化
     CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -833,13 +833,13 @@ def main():
     except Exception as e: 
         logging.error(f"Main Loop - Bonds Error: {e}")
     
-    wait_between_tasks("Bonds")
-    try: 
-        run_indices()
-    except Exception as e: 
-        logging.error(f"Main Loop - Indices Error: {e}")
+    # wait_between_tasks("Bonds")
+    # try: 
+    #     run_indices()
+    # except Exception as e: 
+    #     logging.error(f"Main Loop - Indices Error: {e}")
         
-    wait_between_tasks("Indices")
+    # wait_between_tasks("Indices")
     
     # --- 新增的 Yahoo Indices 任务 ---
     try: 

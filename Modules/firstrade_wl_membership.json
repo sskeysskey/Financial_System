@@ -2,34 +2,31 @@
  "groups": {
   "买": {
    "complete": true,
-   "scanned_at": 1792228780.630192,
-   "symbols": [
-    "ERIC",
-    "TSM"
-   ],
-   "count": 2,
-   "source": "passive",
-   "updated_at": 1792228780.630192
+   "scanned_at": 1792816586.5949702,
+   "symbols": [],
+   "count": 0,
+   "source": "scan_all",
+   "updated_at": 1792816586.5949702
   },
   "买买": {
    "complete": true,
-   "scanned_at": 1792218431.413012,
+   "scanned_at": 1792816590.341501,
    "symbols": [],
    "count": 0,
    "source": "scan_all",
-   "updated_at": 1792218431.413012
+   "updated_at": 1792816590.341501
   },
   "卖卖卖": {
    "complete": true,
-   "scanned_at": 1792218434.753679,
+   "scanned_at": 1792816593.883594,
    "symbols": [],
    "count": 0,
    "source": "scan_all",
-   "updated_at": 1792218434.753679
+   "updated_at": 1792816593.883594
   },
   "Wrong": {
    "complete": true,
-   "scanned_at": 1792218424.521166,
+   "scanned_at": 1792816582.849578,
    "symbols": [
     "EMA",
     "FEP",
@@ -38,1046 +35,776 @@
    ],
    "count": 4,
    "source": "scan_all",
-   "updated_at": 1792218424.521166
+   "updated_at": 1792816582.849578
   },
   "Earning": {
    "complete": true,
-   "scanned_at": 1792225142.630202,
-   "symbols": [],
-   "count": 0,
-   "source": "passive_empty",
-   "updated_at": 1792225142.630202
-  },
-  "temp": {
-   "complete": true,
-   "scanned_at": 1792218420.753092,
+   "scanned_at": 1792816569.776246,
    "symbols": [],
    "count": 0,
    "source": "scan_all",
-   "updated_at": 1792218420.753092
+   "updated_at": 1792816569.776246
+  },
+  "temp": {
+   "complete": true,
+   "scanned_at": 1792816578.873363,
+   "symbols": [],
+   "count": 0,
+   "source": "scan_all",
+   "updated_at": 1792816578.873363
+  },
+  "Must": {
+   "complete": true,
+   "scanned_at": 1792816575.333355,
+   "symbols": [],
+   "count": 0,
+   "source": "scan_all",
+   "updated_at": 1792816575.333355
   }
  },
  "recent": [
   {
-   "op": "add",
+   "op": "remove",
    "group": "买",
-   "symbol": "ACMR",
-   "source": "agent_add",
-   "ts": 1792146555.35666
+   "symbol": "BABA",
+   "source": "trade_remove",
+   "ts": 1792676266.351212
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 37,
+   "count": 10,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792146558.810789
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "NPO",
-   "source": "agent_add",
-   "ts": 1792146565.178418
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 38,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792146568.810198
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "SQM",
-   "source": "agent_add",
-   "ts": 1792146585.8216581
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 39,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792146589.812792
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "RKLB",
-   "source": "agent_add",
-   "ts": 1792146673.387423
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 40,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792146677.8122969
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "EWT",
-   "source": "agent_add",
-   "ts": 1792147333.5674329
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 41,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792147337.8178828
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "LRCX",
-   "source": "agent_add",
-   "ts": 1792147543.904046
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 42,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792147547.8115761
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "NET",
-   "source": "agent_add",
-   "ts": 1792147703.4222589
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 43,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792147707.8119192
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "VSEC",
-   "source": "agent_add",
-   "ts": 1792148285.4924538
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 44,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792148289.810855
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "CRWD",
-   "source": "agent_add",
-   "ts": 1792148325.511174
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 45,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792148329.812332
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "EME",
-   "source": "agent_add",
-   "ts": 1792148337.593003
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 46,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792148341.8127701
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "NVT",
-   "source": "agent_add",
-   "ts": 1792148495.54532
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 47,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792148499.810576
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "ETN",
-   "source": "agent_add",
-   "ts": 1792148807.55563
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 48,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792148811.812989
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "CIBR",
-   "source": "agent_add",
-   "ts": 1792148859.491461
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 49,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792148863.8126342
+   "ts": 1792676270.2265139
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "CIBR",
-   "source": "agent_remove",
-   "ts": 1792148869.0674539
-  },
-  {
-   "op": "add",
-   "group": "买买",
-   "symbol": "CIBR",
-   "source": "agent_add",
-   "ts": 1792148874.9151082
+   "symbol": "DAR",
+   "source": "trade_remove",
+   "ts": 1792676289.022028
   },
   {
    "op": "snapshot",
-   "group": "买买",
-   "count": 6,
+   "group": "买",
+   "count": 9,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792148878.812583
+   "ts": 1792676292.217886
   },
   {
-   "op": "add",
-   "group": "卖卖卖",
-   "symbol": "PAG",
-   "source": "agent_add",
-   "ts": 1792149043.2357912
+   "op": "remove",
+   "group": "买",
+   "symbol": "DXCM",
+   "source": "trade_remove",
+   "ts": 1792676307.710773
   },
   {
    "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 18,
+   "group": "买",
+   "count": 8,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792149046.8135302
+   "ts": 1792676311.214009
+  },
+  {
+   "op": "remove",
+   "group": "买",
+   "symbol": "EAT",
+   "source": "trade_remove",
+   "ts": 1792676325.945368
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 7,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792676329.2187462
+  },
+  {
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "passive_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792676353.2166789
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning",
+   "count": 35,
+   "source": "collect",
+   "added": [],
+   "removed": [],
+   "ts": 1792735519.460945
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning1",
+   "count": 35,
+   "source": "collect",
+   "added": [],
+   "removed": [],
+   "ts": 1792735523.006436
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning2",
+   "count": 7,
+   "source": "collect",
+   "added": [],
+   "removed": [],
+   "ts": 1792735526.196265
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning3",
+   "count": 0,
+   "source": "collect_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792735529.121974
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning",
+   "count": 0,
+   "source": "collect_empty",
+   "added": [],
+   "removed": [
+    "CACI",
+    "CCI",
+    "CSX",
+    "ELS",
+    "EPRT",
+    "FAF",
+    "FR",
+    "GGG",
+    "GL",
+    "HXL",
+    "IBM",
+    "KNX",
+    "LBRT",
+    "LRCX",
+    "LUV",
+    "LVS",
+    "MEDP",
+    "MOH",
+    "PKG",
+    "PNFP",
+    "QS",
+    "RHI",
+    "RS",
+    "SAP",
+    "SEIC",
+    "SIGI",
+    "SLG",
+    "SON",
+    "SSB",
+    "TER"
+   ],
+   "ts": 1792735728.614771
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning",
+   "count": 30,
+   "source": "collect",
+   "added": [
+    "ABCB",
+    "ALV",
+    "APPF",
+    "ASB",
+    "AXP",
+    "BAH",
+    "BYD",
+    "COLB",
+    "CORZ",
+    "DECK",
+    "EBC",
+    "ENVA",
+    "FCNCA",
+    "FFIN",
+    "FIX",
+    "FLG",
+    "GBCI",
+    "GNTX",
+    "INFY",
+    "ITW",
+    "KNSL",
+    "KRC",
+    "MXL",
+    "NEM",
+    "REXR",
+    "SLB",
+    "SLM",
+    "SSNC",
+    "VRSN",
+    "WDC"
+   ],
+   "removed": [],
+   "ts": 1792735812.146687
+  },
+  {
+   "op": "drop_group",
+   "group": "Earning1",
+   "ts": 1792735816.780679
+  },
+  {
+   "op": "drop_group",
+   "group": "Earning2",
+   "ts": 1792735821.173258
+  },
+  {
+   "op": "drop_group",
+   "group": "Earning3",
+   "ts": 1792735825.563688
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning2",
+   "count": 0,
+   "source": "collect_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792735835.7372081
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning",
+   "count": 30,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735846.461101
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning2",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735849.810942
+  },
+  {
+   "op": "snapshot",
+   "group": "Earning3",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735853.148063
+  },
+  {
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "collect_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792735856.496753
+  },
+  {
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735856.50449
+  },
+  {
+   "op": "snapshot",
+   "group": "temp",
+   "count": 0,
+   "source": "collect_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792735859.841686
+  },
+  {
+   "op": "snapshot",
+   "group": "temp",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735859.8486998
+  },
+  {
+   "op": "snapshot",
+   "group": "Wrong",
+   "count": 4,
+   "source": "collect",
+   "added": [],
+   "removed": [],
+   "ts": 1792735863.1899068
+  },
+  {
+   "op": "snapshot",
+   "group": "Wrong",
+   "count": 4,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735863.1949031
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 7,
+   "source": "collect",
+   "added": [],
+   "removed": [],
+   "ts": 1792735866.748705
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 7,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735866.7533948
   },
   {
    "op": "snapshot",
    "group": "买买",
    "count": 0,
-   "source": "passive_empty",
+   "source": "collect_empty",
    "added": [],
-   "removed": [
-    "AAOI",
-    "ANET",
-    "APO",
-    "CIBR",
-    "SBIO",
-    "SMTC"
-   ],
-   "ts": 1792151116.813168
+   "removed": [],
+   "ts": 1792735870.093714
+  },
+  {
+   "op": "snapshot",
+   "group": "买买",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735870.098787
   },
   {
    "op": "snapshot",
    "group": "卖卖卖",
-   "count": 18,
+   "count": 0,
+   "source": "collect_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792735877.4314291
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792735877.437354
+  },
+  {
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "passive_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792751225.606977
+  },
+  {
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "passive_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792751248.213675
+  },
+  {
+   "op": "add",
+   "group": "买买",
+   "symbol": "LRCX",
+   "source": "agent_add",
+   "ts": 1792751287.519243
+  },
+  {
+   "op": "snapshot",
+   "group": "买买",
+   "count": 1,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792151146.423496
+   "ts": 1792751291.2155
+  },
+  {
+   "op": "snapshot",
+   "group": "买买",
+   "count": 1,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792756521.354218
+  },
+  {
+   "op": "add",
+   "group": "卖卖卖",
+   "symbol": "CRS",
+   "source": "agent_add",
+   "ts": 1792758265.907085
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 1,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792758269.3554182
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 48,
+   "count": 7,
+   "source": "collect",
+   "added": [],
+   "removed": [],
+   "ts": 1792759092.8598652
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "PG",
+   "source": "agent_add",
+   "ts": 1792759095.810776
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 8,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792151153.42419
+   "ts": 1792759099.353631
   },
   {
    "op": "snapshot",
    "group": "Earning",
-   "count": 8,
-   "source": "passive",
+   "count": 30,
+   "source": "collect",
    "added": [],
    "removed": [],
-   "ts": 1792151161.424412
+   "ts": 1792759302.945107
   },
   {
-   "op": "snapshot",
-   "group": "买买",
-   "count": 6,
-   "source": "passive",
-   "added": [
-    "AAOI",
-    "ANET",
-    "APO",
-    "CIBR",
-    "SBIO",
-    "SMTC"
-   ],
-   "removed": [],
-   "ts": 1792151322.425132
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 18,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792157883.128036
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "AIT",
-   "source": "trade_remove",
-   "ts": 1792157908.604691
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 17,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792157912.1309881
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "CCL",
-   "source": "manual_remove",
-   "ts": 1792157919.909744
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 16,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792157923.125675
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "MCHP",
-   "source": "trade_remove",
-   "ts": 1792157943.416687
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 15,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792157947.123169
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "TRU",
-   "source": "trade_remove",
-   "ts": 1792157959.7547169
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 14,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792157963.127674
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "PAG",
-   "source": "trade_remove",
-   "ts": 1792157979.7399812
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 13,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792157983.124761
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "MA",
-   "source": "trade_remove",
-   "ts": 1792157995.727176
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 12,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792157999.127527
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "DE",
-   "source": "trade_remove",
-   "ts": 1792158012.35996
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 11,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158016.122852
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "REGN",
-   "source": "trade_remove",
-   "ts": 1792158040.200664
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 10,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158044.125723
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "MDT",
-   "source": "trade_remove",
-   "ts": 1792158063.143886
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 9,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158067.128024
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "COST",
-   "source": "trade_remove",
-   "ts": 1792158085.4385269
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 8,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158089.124288
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "AZN",
-   "source": "trade_remove",
-   "ts": 1792158100.663614
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 7,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158104.122835
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 7,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158122.52845
-  },
-  {
-   "op": "snapshot",
-   "group": "买买",
-   "count": 6,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158126.5278049
-  },
-  {
-   "op": "remove",
-   "group": "买买",
-   "symbol": "AAOI",
-   "source": "manual_remove",
-   "ts": 1792158180.540452
-  },
-  {
-   "op": "snapshot",
-   "group": "买买",
-   "count": 5,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158183.529442
-  },
-  {
-   "op": "remove",
-   "group": "买买",
-   "symbol": "APO",
-   "source": "manual_remove",
-   "ts": 1792158225.913855
-  },
-  {
-   "op": "snapshot",
-   "group": "买买",
-   "count": 4,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158229.528629
-  },
-  {
-   "op": "remove",
-   "group": "买买",
-   "symbol": "SBIO",
-   "source": "trade_remove",
-   "ts": 1792158249.0140731
-  },
-  {
-   "op": "snapshot",
-   "group": "买买",
-   "count": 3,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158252.545446
+   "op": "add",
+   "group": "买",
+   "symbol": "STX",
+   "source": "agent_add",
+   "ts": 1792760187.346818
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 48,
+   "count": 9,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792158258.5305731
+   "ts": 1792760191.35805
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "GEV",
+   "source": "agent_add",
+   "ts": 1792760242.39712
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 10,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792760246.3613892
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "NBIS",
+   "source": "agent_add",
+   "ts": 1792760251.087421
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 11,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792760255.3579562
   },
   {
    "op": "remove",
    "group": "买",
    "symbol": "ASTS",
-   "source": "manual_remove",
-   "ts": 1792158272.796422
+   "source": "agent_remove",
+   "ts": 1792760344.843379
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 47,
+   "count": 10,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792158276.5480561
+   "ts": 1792760348.35826
   },
   {
-   "op": "remove",
+   "op": "add",
    "group": "买",
-   "symbol": "BAC",
-   "source": "trade_remove",
-   "ts": 1792158323.704242
+   "symbol": "IREN",
+   "source": "agent_add",
+   "ts": 1792760412.003941
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 46,
+   "count": 11,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792158327.5273879
+   "ts": 1792760416.3601012
   },
   {
-   "op": "remove",
+   "op": "add",
    "group": "买",
-   "symbol": "AMAT",
-   "source": "trade_remove",
-   "ts": 1792158339.184989
+   "symbol": "RIO",
+   "source": "agent_add",
+   "ts": 1792760449.614
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 45,
+   "count": 12,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792158342.530067
+   "ts": 1792760453.35812
   },
   {
-   "op": "remove",
-   "group": "买",
-   "symbol": "SQM",
-   "source": "trade_remove",
-   "ts": 1792158386.6814
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 44,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158390.53153
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "SPXC",
-   "source": "trade_remove",
-   "ts": 1792158405.992528
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 43,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158409.527004
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "ROAD",
-   "source": "trade_remove",
-   "ts": 1792158464.7033658
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 42,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158468.529042
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "NWG",
-   "source": "manual_remove",
-   "ts": 1792158496.4486039
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 41,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158503.527009
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "HUT",
-   "source": "trade_remove",
-   "ts": 1792158531.368459
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 40,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158534.529203
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "KBWB",
-   "source": "trade_remove",
-   "ts": 1792158561.3920121
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 39,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158564.5278668
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "NPO",
-   "source": "manual_remove",
-   "ts": 1792158593.0137742
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 38,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158596.529254
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "MS",
-   "source": "trade_remove",
-   "ts": 1792158620.963167
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 37,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158624.530324
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "MOD",
-   "source": "trade_remove",
-   "ts": 1792158651.536437
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 36,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158655.5284128
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "KRMN",
-   "source": "manual_remove",
-   "ts": 1792158663.526552
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 35,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158666.546669
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "FIGR",
-   "source": "manual_remove",
-   "ts": 1792158676.4934359
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 34,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158679.526978
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "EPD",
-   "source": "trade_remove",
-   "ts": 1792158712.832782
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 33,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158741.553128
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "EME",
-   "source": "trade_remove",
-   "ts": 1792158787.61316
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 32,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158791.529516
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "BNY",
-   "source": "manual_remove",
-   "ts": 1792158797.215195
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 31,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158800.531352
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "FER",
-   "source": "manual_remove",
-   "ts": 1792158817.9855201
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 30,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792158821.530454
-  },
-  {
-   "op": "remove",
-   "group": "买",
+   "op": "add",
+   "group": "卖卖卖",
    "symbol": "LSCC",
-   "source": "trade_remove",
-   "ts": 1792158908.431954
+   "source": "agent_add",
+   "ts": 1792760567.133991
   },
   {
    "op": "snapshot",
-   "group": "买",
-   "count": 29,
+   "group": "卖卖卖",
+   "count": 2,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792158911.528197
+   "ts": 1792760571.364476
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "NVT",
-   "source": "manual_remove",
-   "ts": 1792158933.6528032
+   "symbol": "PWR",
+   "source": "agent_remove",
+   "ts": 1792760911.0132349
+  },
+  {
+   "op": "add",
+   "group": "买买",
+   "symbol": "PWR",
+   "source": "agent_add",
+   "ts": 1792760920.1725981
+  },
+  {
+   "op": "add",
+   "group": "卖卖卖",
+   "symbol": "STM",
+   "source": "agent_add",
+   "ts": 1792760929.240742
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 3,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792760933.3583958
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 28,
-   "source": "passive",
+   "count": 11,
+   "source": "collect",
    "added": [],
    "removed": [],
-   "ts": 1792158936.5287402
+   "ts": 1792760968.587785
   },
   {
-   "op": "remove",
+   "op": "add",
    "group": "买",
-   "symbol": "PRAX",
-   "source": "trade_remove",
-   "ts": 1792158977.098923
+   "symbol": "ASX",
+   "source": "agent_add",
+   "ts": 1792760972.191851
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 27,
+   "count": 12,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792158980.5332081
+   "ts": 1792760976.3603158
   },
   {
-   "op": "remove",
+   "op": "add",
    "group": "买",
-   "symbol": "ACMR",
-   "source": "trade_remove",
-   "ts": 1792159037.998674
+   "symbol": "ENTG",
+   "source": "agent_add",
+   "ts": 1792761017.261052
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 26,
+   "count": 13,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159041.5292218
+   "ts": 1792761021.3580701
   },
   {
-   "op": "remove",
-   "group": "买",
-   "symbol": "BA",
-   "source": "manual_remove",
-   "ts": 1792159046.8655841
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 25,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159050.5297658
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "CIFR",
-   "source": "manual_remove",
-   "ts": 1792159060.2343419
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 24,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159063.5268009
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "CRWD",
-   "source": "trade_remove",
-   "ts": 1792159079.092556
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 23,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159082.528192
-  },
-  {
-   "op": "remove",
+   "op": "add",
    "group": "买",
    "symbol": "ETN",
-   "source": "manual_remove",
-   "ts": 1792159105.6902
+   "source": "agent_add",
+   "ts": 1792761025.135009
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 22,
+   "count": 14,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159109.5279639
+   "ts": 1792761029.355396
   },
   {
-   "op": "remove",
+   "op": "add",
    "group": "买",
-   "symbol": "GDS",
-   "source": "manual_remove",
-   "ts": 1792159118.002094
+   "symbol": "EQIX",
+   "source": "agent_add",
+   "ts": 1792761033.100802
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 21,
+   "count": 15,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159121.540829
+   "ts": 1792761037.3574982
   },
   {
-   "op": "remove",
+   "op": "add",
    "group": "买",
-   "symbol": "PRMB",
-   "source": "manual_remove",
-   "ts": 1792159161.46809
+   "symbol": "FIX",
+   "source": "agent_add",
+   "ts": 1792761151.288384
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 20,
+   "count": 16,
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159164.54279
+   "ts": 1792761155.35834
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "SMCI",
-   "source": "trade_remove",
-   "ts": 1792159183.679436
+   "symbol": "FIX",
+   "source": "agent_remove",
+   "ts": 1792761164.5994098
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 15,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761168.3635452
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "FLS",
+   "source": "agent_add",
+   "ts": 1792761346.839325
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 16,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761350.3647292
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "IR",
+   "source": "agent_add",
+   "ts": 1792761384.229611
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 17,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761388.364875
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "LFUS",
+   "source": "agent_add",
+   "ts": 1792761444.0924869
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 18,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761448.366337
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "EME",
+   "source": "agent_add",
+   "ts": 1792761478.369343
   },
   {
    "op": "snapshot",
@@ -1086,14 +813,450 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159187.527116
+   "ts": 1792761482.36427
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "NVT",
+   "source": "agent_add",
+   "ts": 1792761498.228235
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 20,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761502.364435
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "ARMK",
+   "source": "agent_add",
+   "ts": 1792761583.860014
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 21,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761587.363073
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "DELL",
+   "source": "agent_add",
+   "ts": 1792761643.643855
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 22,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761647.363756
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "TTMI",
-   "source": "manual_remove",
-   "ts": 1792159206.2381802
+   "symbol": "FTI",
+   "source": "agent_remove",
+   "ts": 1792761660.7329159
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 21,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761664.364956
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "DXCM",
+   "source": "agent_add",
+   "ts": 1792761787.604137
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 22,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792761791.362391
+  },
+  {
+   "op": "snapshot",
+   "group": "买买",
+   "count": 2,
+   "source": "collect",
+   "added": [],
+   "removed": [],
+   "ts": 1792761996.4940522
+  },
+  {
+   "op": "add",
+   "group": "买买",
+   "symbol": "SNOW",
+   "source": "agent_add",
+   "ts": 1792761999.881393
+  },
+  {
+   "op": "snapshot",
+   "group": "买买",
+   "count": 3,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762003.3629818
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "APH",
+   "source": "agent_add",
+   "ts": 1792762025.176527
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 23,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762029.36368
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "BABA",
+   "source": "agent_add",
+   "ts": 1792762056.309848
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 24,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762060.364602
+  },
+  {
+   "op": "add",
+   "group": "买",
+   "symbol": "ECG",
+   "source": "agent_add",
+   "ts": 1792762080.075624
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 25,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762084.366643
+  },
+  {
+   "op": "add",
+   "group": "卖卖卖",
+   "symbol": "MSI",
+   "source": "agent_add",
+   "ts": 1792762193.882269
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 4,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762197.363233
+  },
+  {
+   "op": "add",
+   "group": "卖卖卖",
+   "symbol": "ARGX",
+   "source": "agent_add",
+   "ts": 1792762205.94595
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 5,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762209.363559
+  },
+  {
+   "op": "add",
+   "group": "卖卖卖",
+   "symbol": "ALL",
+   "source": "agent_add",
+   "ts": 1792762273.8907251
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 6,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762277.3638668
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 6,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762311.8952892
+  },
+  {
+   "op": "remove",
+   "group": "卖卖卖",
+   "symbol": "STM",
+   "source": "trade_remove",
+   "ts": 1792762338.495682
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 5,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762341.893738
+  },
+  {
+   "op": "remove",
+   "group": "卖卖卖",
+   "symbol": "CRS",
+   "source": "trade_remove",
+   "ts": 1792762392.597551
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 4,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762395.8947809
+  },
+  {
+   "op": "remove",
+   "group": "卖卖卖",
+   "symbol": "MSI",
+   "source": "trade_remove",
+   "ts": 1792762409.698142
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 3,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762412.894934
+  },
+  {
+   "op": "remove",
+   "group": "卖卖卖",
+   "symbol": "LSCC",
+   "source": "trade_remove",
+   "ts": 1792762425.4548979
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 2,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762428.895952
+  },
+  {
+   "op": "remove",
+   "group": "卖卖卖",
+   "symbol": "ALL",
+   "source": "trade_remove",
+   "ts": 1792762448.1163468
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 1,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762451.893982
+  },
+  {
+   "op": "snapshot",
+   "group": "买买",
+   "count": 3,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762462.894597
+  },
+  {
+   "op": "remove",
+   "group": "买买",
+   "symbol": "PWR",
+   "source": "trade_remove",
+   "ts": 1792762484.2219079
+  },
+  {
+   "op": "snapshot",
+   "group": "买买",
+   "count": 2,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762487.8951302
+  },
+  {
+   "op": "remove",
+   "group": "买买",
+   "symbol": "SNOW",
+   "source": "trade_remove",
+   "ts": 1792762510.769517
+  },
+  {
+   "op": "snapshot",
+   "group": "买买",
+   "count": 1,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762513.8943338
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 25,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762525.895728
+  },
+  {
+   "op": "remove",
+   "group": "买",
+   "symbol": "APH",
+   "source": "trade_remove",
+   "ts": 1792762547.421644
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 24,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762550.897595
+  },
+  {
+   "op": "remove",
+   "group": "买",
+   "symbol": "ARMK",
+   "source": "trade_remove",
+   "ts": 1792762570.157696
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 23,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762573.8955112
+  },
+  {
+   "op": "remove",
+   "group": "买",
+   "symbol": "BABA",
+   "source": "trade_remove",
+   "ts": 1792762607.0148559
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 22,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762610.894725
+  },
+  {
+   "op": "remove",
+   "group": "买",
+   "symbol": "ENTG",
+   "source": "trade_remove",
+   "ts": 1792762629.959469
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 21,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762633.896987
+  },
+  {
+   "op": "remove",
+   "group": "买",
+   "symbol": "IREN",
+   "source": "trade_remove",
+   "ts": 1792762648.807103
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 20,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762651.894544
+  },
+  {
+   "op": "remove",
+   "group": "买",
+   "symbol": "PG",
+   "source": "trade_remove",
+   "ts": 1792762676.8028429
+  },
+  {
+   "op": "snapshot",
+   "group": "买",
+   "count": 19,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792762679.912593
+  },
+  {
+   "op": "remove",
+   "group": "买",
+   "symbol": "STX",
+   "source": "trade_remove",
+   "ts": 1792762705.0467331
   },
   {
    "op": "snapshot",
@@ -1102,149 +1265,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159209.529877
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "HLN",
-   "source": "trade_remove",
-   "ts": 1792159229.049813
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 6,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159232.52877
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "MDLZ",
-   "source": "trade_remove",
-   "ts": 1792159248.924663
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 5,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159252.53088
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "NUE",
-   "source": "trade_remove",
-   "ts": 1792159266.1610801
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 4,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159269.5269299
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "SHW",
-   "source": "trade_remove",
-   "ts": 1792159288.507818
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 3,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159291.5275578
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "WAB",
-   "source": "trade_remove",
-   "ts": 1792159303.231034
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 2,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159306.5303948
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "PLD",
-   "source": "trade_remove",
-   "ts": 1792159345.6625988
-  },
-  {
-   "op": "snapshot",
-   "group": "卖卖卖",
-   "count": 1,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159349.529595
-  },
-  {
-   "op": "remove",
-   "group": "卖卖卖",
-   "symbol": "HD",
-   "source": "trade_remove",
-   "ts": 1792159373.081881
-  },
-  {
-   "op": "remove",
-   "group": "买买",
-   "symbol": "ANET",
-   "source": "trade_remove",
-   "ts": 1792159396.950294
-  },
-  {
-   "op": "snapshot",
-   "group": "买买",
-   "count": 2,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159400.528526
-  },
-  {
-   "op": "remove",
-   "group": "买买",
-   "symbol": "SMTC",
-   "source": "trade_remove",
-   "ts": 1792159444.415757
-  },
-  {
-   "op": "snapshot",
-   "group": "买买",
-   "count": 1,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159447.528207
+   "ts": 1792762708.8979998
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "ARWR",
-   "source": "manual_remove",
-   "ts": 1792159479.753503
+   "symbol": "FLS",
+   "source": "trade_remove",
+   "ts": 1792762730.1535292
   },
   {
    "op": "snapshot",
@@ -1253,14 +1281,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159483.529357
+   "ts": 1792762733.894481
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "EWT",
+   "symbol": "IR",
    "source": "trade_remove",
-   "ts": 1792159528.8760839
+   "ts": 1792762771.994496
   },
   {
    "op": "snapshot",
@@ -1269,14 +1297,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159532.5290072
+   "ts": 1792762775.8934941
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "DELL",
+   "symbol": "NBIS",
    "source": "trade_remove",
-   "ts": 1792159562.039391
+   "ts": 1792762804.112313
   },
   {
    "op": "snapshot",
@@ -1285,14 +1313,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159565.528168
+   "ts": 1792762807.922661
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "JAZZ",
-   "source": "manual_remove",
-   "ts": 1792159575.535564
+   "symbol": "ASX",
+   "source": "trade_remove",
+   "ts": 1792762843.316267
   },
   {
    "op": "snapshot",
@@ -1301,14 +1329,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159586.53073
+   "ts": 1792762846.89602
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "LBRT",
+   "symbol": "DELL",
    "source": "trade_remove",
-   "ts": 1792159613.9971058
+   "ts": 1792762865.270118
   },
   {
    "op": "snapshot",
@@ -1317,14 +1345,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159617.528331
+   "ts": 1792762868.895704
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "KGS",
-   "source": "manual_remove",
-   "ts": 1792159625.25905
+   "symbol": "EQIX",
+   "source": "trade_remove",
+   "ts": 1792762884.101673
   },
   {
    "op": "snapshot",
@@ -1333,14 +1361,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159628.5335119
+   "ts": 1792762887.895648
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "MTSI",
+   "symbol": "ETN",
    "source": "trade_remove",
-   "ts": 1792159656.5538409
+   "ts": 1792762904.4560158
   },
   {
    "op": "snapshot",
@@ -1349,14 +1377,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159660.5336719
+   "ts": 1792762907.8934999
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "NET",
+   "symbol": "LFUS",
    "source": "trade_remove",
-   "ts": 1792159686.026017
+   "ts": 1792762944.110314
   },
   {
    "op": "snapshot",
@@ -1365,14 +1393,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159689.531436
+   "ts": 1792762947.893072
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "ONTO",
-   "source": "manual_remove",
-   "ts": 1792159698.086901
+   "symbol": "MTSI",
+   "source": "trade_remove",
+   "ts": 1792762974.5400152
   },
   {
    "op": "snapshot",
@@ -1381,14 +1409,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159701.52861
+   "ts": 1792762977.892894
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "S",
-   "source": "manual_remove",
-   "ts": 1792159736.5191748
+   "symbol": "FPS",
+   "source": "trade_remove",
+   "ts": 1792762998.718852
   },
   {
    "op": "snapshot",
@@ -1397,14 +1425,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159739.528707
+   "ts": 1792763001.8949382
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "SIMO",
+   "symbol": "GEV",
    "source": "trade_remove",
-   "ts": 1792159781.527029
+   "ts": 1792763028.643568
   },
   {
    "op": "snapshot",
@@ -1413,14 +1441,14 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159784.5305731
+   "ts": 1792763031.893471
   },
   {
    "op": "remove",
    "group": "买",
-   "symbol": "SITM",
-   "source": "manual_remove",
-   "ts": 1792159803.8990421
+   "symbol": "ECG",
+   "source": "trade_remove",
+   "ts": 1792763058.2020621
   },
   {
    "op": "snapshot",
@@ -1429,101 +1457,63 @@
    "source": "passive",
    "added": [],
    "removed": [],
-   "ts": 1792159807.529438
+   "ts": 1792763098.8961222
   },
   {
-   "op": "remove",
-   "group": "买",
-   "symbol": "UMC",
-   "source": "trade_remove",
-   "ts": 1792159831.797378
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "clear_groups",
+   "added": [],
+   "removed": [],
+   "ts": 1792763144.217759
+  },
+  {
+   "op": "snapshot",
+   "group": "temp",
+   "count": 0,
+   "source": "clear_groups",
+   "added": [],
+   "removed": [],
+   "ts": 1792763146.98085
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 5,
-   "source": "passive",
+   "count": 0,
+   "source": "clear_groups",
    "added": [],
-   "removed": [],
-   "ts": 1792159837.529433
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "VG",
-   "source": "manual_remove",
-   "ts": 1792159841.542023
+   "removed": [
+    "DXCM",
+    "EME",
+    "GPK",
+    "IXP",
+    "NVT",
+    "RIO"
+   ],
+   "ts": 1792763184.967032
   },
   {
    "op": "snapshot",
-   "group": "买",
-   "count": 4,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159844.529181
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "VSEC",
-   "source": "trade_remove",
-   "ts": 1792159876.573455
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 3,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159880.532502
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "TSM",
-   "source": "manual_remove",
-   "ts": 1792159882.6699572
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 2,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159886.531595
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "RKLB",
-   "source": "manual_remove",
-   "ts": 1792159890.821918
-  },
-  {
-   "op": "snapshot",
-   "group": "买",
-   "count": 1,
-   "source": "passive",
-   "added": [],
-   "removed": [],
-   "ts": 1792159894.536587
-  },
-  {
-   "op": "remove",
-   "group": "买",
-   "symbol": "LRCX",
-   "source": "manual_remove",
-   "ts": 1792159896.534705
-  },
-  {
-   "op": "remove",
    "group": "买买",
-   "symbol": "CIBR",
-   "source": "trade_remove",
-   "ts": 1792159944.619982
+   "count": 0,
+   "source": "clear_groups",
+   "added": [],
+   "removed": [
+    "LRCX"
+   ],
+   "ts": 1792763193.597143
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 0,
+   "source": "clear_groups",
+   "added": [],
+   "removed": [
+    "ARGX"
+   ],
+   "ts": 1792763202.351507
   },
   {
    "op": "snapshot",
@@ -1532,16 +1522,80 @@
    "source": "passive_empty",
    "added": [],
    "removed": [],
-   "ts": 1792159951.527786
+   "ts": 1792763277.570357
+  },
+  {
+   "op": "add",
+   "group": "卖卖卖",
+   "symbol": "TOST",
+   "source": "manual_add",
+   "ts": 1792763289.66305
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 1,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792763292.57071
+  },
+  {
+   "op": "remove",
+   "group": "卖卖卖",
+   "symbol": "TOST",
+   "source": "trade_remove",
+   "ts": 1792763304.637625
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 0,
+   "source": "passive_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792763308.572463
+  },
+  {
+   "op": "add",
+   "group": "卖卖卖",
+   "symbol": "RCL",
+   "source": "manual_add",
+   "ts": 1792763338.1243892
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 1,
+   "source": "passive",
+   "added": [],
+   "removed": [],
+   "ts": 1792763341.600309
+  },
+  {
+   "op": "remove",
+   "group": "卖卖卖",
+   "symbol": "RCL",
+   "source": "trade_remove",
+   "ts": 1792763354.39805
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 0,
+   "source": "passive_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792763357.5690272
   },
   {
    "op": "snapshot",
    "group": "Earning",
-   "count": 8,
+   "count": 30,
    "source": "collect",
    "added": [],
    "removed": [],
-   "ts": 1792218351.228184
+   "ts": 1792814541.828253
   },
   {
    "op": "snapshot",
@@ -1550,16 +1604,38 @@
    "source": "collect_empty",
    "added": [],
    "removed": [
-    "AA",
-    "CFG",
-    "IBKR",
-    "JBHT",
-    "MTB",
-    "RF",
-    "TFC",
-    "TRV"
+    "ABCB",
+    "ALV",
+    "APPF",
+    "ASB",
+    "AXP",
+    "BAH",
+    "BYD",
+    "COLB",
+    "CORZ",
+    "DECK",
+    "EBC",
+    "ENVA",
+    "FCNCA",
+    "FFIN",
+    "FIX",
+    "FLG",
+    "GBCI",
+    "GNTX",
+    "INFY",
+    "ITW",
+    "KNSL",
+    "KRC",
+    "MXL",
+    "NEM",
+    "REXR",
+    "SLB",
+    "SLM",
+    "SSNC",
+    "VRSN",
+    "WDC"
    ],
-   "ts": 1792218401.600568
+   "ts": 1792814702.5309298
   },
   {
    "op": "snapshot",
@@ -1568,7 +1644,25 @@
    "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792218417.20833
+   "ts": 1792814719.107566
+  },
+  {
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "collect_empty",
+   "added": [],
+   "removed": [],
+   "ts": 1792814722.445869
+  },
+  {
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792814722.4530718
   },
   {
    "op": "snapshot",
@@ -1577,7 +1671,7 @@
    "source": "collect_empty",
    "added": [],
    "removed": [],
-   "ts": 1792218420.747777
+   "ts": 1792814725.99452
   },
   {
    "op": "snapshot",
@@ -1586,7 +1680,7 @@
    "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792218420.7531352
+   "ts": 1792814725.999796
   },
   {
    "op": "snapshot",
@@ -1595,7 +1689,7 @@
    "source": "collect",
    "added": [],
    "removed": [],
-   "ts": 1792218424.517441
+   "ts": 1792814729.803026
   },
   {
    "op": "snapshot",
@@ -1604,7 +1698,7 @@
    "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792218424.521208
+   "ts": 1792814729.8077362
   },
   {
    "op": "snapshot",
@@ -1613,7 +1707,7 @@
    "source": "collect_empty",
    "added": [],
    "removed": [],
-   "ts": 1792218428.06498
+   "ts": 1792814733.146931
   },
   {
    "op": "snapshot",
@@ -1622,7 +1716,7 @@
    "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792218428.070248
+   "ts": 1792814733.154013
   },
   {
    "op": "snapshot",
@@ -1631,7 +1725,7 @@
    "source": "collect_empty",
    "added": [],
    "removed": [],
-   "ts": 1792218431.4084082
+   "ts": 1792814736.4887118
   },
   {
    "op": "snapshot",
@@ -1640,7 +1734,7 @@
    "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792218431.413055
+   "ts": 1792814736.494076
   },
   {
    "op": "snapshot",
@@ -1649,7 +1743,7 @@
    "source": "collect_empty",
    "added": [],
    "removed": [],
-   "ts": 1792218434.7496982
+   "ts": 1792814740.03324
   },
   {
    "op": "snapshot",
@@ -1658,58 +1752,81 @@
    "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792218434.753721
+   "ts": 1792814740.040908
   },
   {
    "op": "snapshot",
    "group": "Earning",
    "count": 0,
-   "source": "passive_empty",
+   "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792225142.6302521
+   "ts": 1792816569.776305
   },
   {
-   "op": "add",
-   "group": "买",
-   "symbol": "ERIC",
-   "source": "agent_add",
-   "ts": 1792227837.257681
+   "op": "snapshot",
+   "group": "Must",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792816575.3334029
+  },
+  {
+   "op": "snapshot",
+   "group": "temp",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792816578.873398
+  },
+  {
+   "op": "snapshot",
+   "group": "Wrong",
+   "count": 4,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792816582.8496351
   },
   {
    "op": "snapshot",
    "group": "买",
-   "count": 1,
-   "source": "passive",
+   "count": 0,
+   "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792227841.631226
-  },
-  {
-   "op": "add",
-   "group": "买",
-   "symbol": "TSM",
-   "source": "agent_add",
-   "ts": 1792228776.901612
+   "ts": 1792816586.5950332
   },
   {
    "op": "snapshot",
-   "group": "买",
-   "count": 2,
-   "source": "passive",
+   "group": "买买",
+   "count": 0,
+   "source": "scan_all",
    "added": [],
    "removed": [],
-   "ts": 1792228780.630222
+   "ts": 1792816590.3415449
+  },
+  {
+   "op": "snapshot",
+   "group": "卖卖卖",
+   "count": 0,
+   "source": "scan_all",
+   "added": [],
+   "removed": [],
+   "ts": 1792816593.88365
   }
  ],
  "_meta": {
-  "updated_at": 1792228780.630222,
-  "updated_at_str": "2026-10-17 17:19:40",
-  "groups": 6,
+  "updated_at": 1792816593.88365,
+  "updated_at_str": "2026-10-24 12:36:33",
+  "groups": 7,
   "schema": "membership_v1"
  },
  "page_groups": [
   "Earning",
+  "Must",
   "temp",
   "Wrong",
   "买",

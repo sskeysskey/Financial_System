@@ -52,7 +52,6 @@
         "DASH",
         "ORLY",
         "ROST",
-        "SE",
         "EBAY",
         "AZO"
     ],
@@ -201,7 +200,9 @@
         "MRNA",
         "NTRA",
         "BDX",
-        "VEEV"
+        "VEEV",
+        "EW",
+        "HUM"
     ],
     "Industrials": [
         "GE",
@@ -239,13 +240,14 @@
         "VRT",
         "PCAR",
         "GWW",
-        "FIX",
         "AME",
         "URI",
         "FAST",
         "SPCX",
         "BE",
-        "HONA"
+        "HONA",
+        "DAL",
+        "TRI"
     ],
     "Real_Estate": [
         "PLD",
@@ -308,17 +310,17 @@
         "KEYS",
         "ASX",
         "NXPI",
-        "TER",
         "DDOG",
         "SNOW",
         "HPE",
         "SKHY",
         "GRMN",
         "LITE",
-        "NOK",
         "MSTR",
         "TEAM",
-        "ADSK"
+        "ADSK",
+        "INFY",
+        "WDAY"
     ],
     "Utilities": [
         "NEE",
@@ -328,7 +330,6 @@
         "CEG",
         "AEP",
         "SRE",
-        "D",
-        "VST"
+        "D"
     ]
 }

@@ -663,11 +663,92 @@ def compute_group_date_range(group_name: str):
 
 NO_RESULT_XPATH = "//*[contains(normalize-space(.), \"We couldn't find any results\")]"
 
+NA = "N/A"
+_EMPTY_CALL_VALUES = {"", "-", "--", "—", "–"}
+
+def normalize_call_time(raw):
+    """把空白/占位符统一成 N/A；BMO/AMC/TNS/TAS 或具体时间原样保留。"""
+    s = (raw or "").strip()
+    return NA if s in _EMPTY_CALL_VALUES else s
+
+# 一次性在浏览器内提取整张表：
+#  - 用 textContent，不受 Selenium .text 的"可见性"判断影响（滚动容器/溢出裁剪会导致 .text 为空）
+#  - 按 data-testid-cell 取列，不依赖列下标；取不到时回退到下标
+#  - 一次 execute_script 代替上百次 find_element/.text 往返
+EXTRACT_ROWS_JS = r"""
+const trs = document.querySelectorAll('table tbody > tr');
+const out = [];
+const clean = el => el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : '';
+trs.forEach(tr => {
+  const a = tr.querySelector('a[title][href*="/quote/"]');
+  if (!a) return;
+  const tds = tr.querySelectorAll('td');
+  const byName = name => tr.querySelector('td[data-testid-cell="' + name + '"]');
+  const evCell = byName('eventname') || tds[2] || null;
+  const callCell = byName('startdatetimetype') || tds[3] || null;
+  out.push({
+    symbol: (a.getAttribute('title') || clean(a)).trim(),
+    event: clean(evCell),
+    call: clean(callCell),
+    html: callCell ? callCell.outerHTML.slice(0, 200) : '(no call cell)'
+  });
+});
+return {rows: out, total: trs.length};
+"""
+
 def _earnings_page_state(d):
     if d.find_elements(By.CSS_SELECTOR, "table tbody > tr"):
         return 'rows'
     if d.find_elements(By.XPATH, NO_RESULT_XPATH):
         return 'end'
+    return False
+
+def _blank_count(rows):
+    return sum(1 for r in rows if normalize_call_time(r['call']) == NA)
+
+def _merge_rows(old_rows, new_rows):
+    """按 (symbol, event) 合并两次读取的结果：同一行优先保留非空的盘前盘后字段。"""
+    merged = {}
+    for r in list(old_rows) + list(new_rows):
+        k = (r['symbol'], r['event'])
+        cur = merged.get(k)
+        if cur is None or (normalize_call_time(cur['call']) == NA
+                           and normalize_call_time(r['call']) != NA):
+            merged[k] = r
+    return list(merged.values())
+
+def fetch_earnings_page(driver, url, blank_retries=2, retry_wait=1.5):
+    """
+    加载并解析一页。若有行的 Earnings Call Time 为空，短暂等待后重读（页面可能尚未渲染完，
+    或数据稍后才填充），最多 blank_retries 次；重读无改善则提前结束。
+    返回 (state, rows, total_tr_count)。
+    """
+    driver.get(url)
+    state = WebDriverWait(driver, 8).until(_earnings_page_state)
+    if state == 'end':
+        return 'end', [], 0
+
+    payload = driver.execute_script(EXTRACT_ROWS_JS)
+    rows, total = payload['rows'], payload['total']
+
+    for _ in range(blank_retries):
+        before = _blank_count(rows)
+        if before == 0:
+            break
+        time.sleep(retry_wait)
+        payload2 = driver.execute_script(EXTRACT_ROWS_JS)
+        rows = _merge_rows(rows, payload2['rows'])
+        total = max(total, payload2['total'])
+        if _blank_count(rows) >= before:  # 无改善：多半是 Yahoo 本身就没有数据
+            break
+    return 'rows', rows, total
+
+def file_has_unknown_call_time(path):
+    """文件中是否存在盘前盘后为 N/A 的行（格式: SYM : CALL : DATE）"""
+    for ln in read_clean_lines(path):
+        parts = ln.split(':')
+        if len(parts) >= 3 and parts[1].strip() == NA:
+            return True
     return False
 
 def run_single_scraper_task(driver, sectors_data, task_config):
@@ -684,13 +765,16 @@ def run_single_scraper_task(driver, sectors_data, task_config):
     end_date = datetime(last_ed.year, last_ed.month, last_ed.day)
     tqdm.write(f"   日期范围: {start_date.date()} -> {end_date.date()}")
 
+    # 白名单 symbol 集合（O(1) 查找）
+    sector_symbols = set()
+    for lst in sectors_data.values():
+        sector_symbols.update(lst)
+
     existing_release_entries = set()
-    if os.path.exists(earnings_release_path):
-        with open(earnings_release_path, 'r') as f:
-            for line in f:
-                parts = line.strip().split(':')
-                if len(parts) >= 2:
-                    existing_release_entries.add((parts[0].strip(), parts[-1].strip()))
+    for line in read_clean_lines(earnings_release_path):
+        parts = line.split(':')
+        if len(parts) >= 2:
+            existing_release_entries.add((parts[0].strip(), parts[-1].strip()))
 
     # 最近一个月内已发布的 symbols
     recent_backup_symbols = set()
@@ -707,44 +791,38 @@ def run_single_scraper_task(driver, sectors_data, task_config):
         os.makedirs(backup_dir, exist_ok=True)
         shutil.copy2(file_path, os.path.join(backup_dir, f'Earnings_Release_{group_name}_{ts}.txt'))
 
-    existing_lines = []
+    existing_lines = read_clean_lines(file_path)
     existing_map = {}
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as f:
-            for line in f:
-                ln = line.rstrip('\n')
-                if not ln.strip():
-                    continue
-                existing_lines.append(ln)
-                parts = ln.split(':')
-                if len(parts) >= 3:
-                    existing_map[parts[0].strip()] = (parts[1].strip(), parts[-1].strip())
+    for ln in existing_lines:
+        parts = ln.split(':')
+        if len(parts) >= 3:
+            existing_map[parts[0].strip()] = (parts[1].strip(), parts[-1].strip())
 
-    new_entries = []
+    new_entries_map = {}      # (symbol, ds) -> line ；同页同一 (symbol, 日期) 只保留信息更完整的一条
+    blank_samples = []        # 重试后仍为空的行，用于诊断
     date_list = [start_date + i * timedelta(days=1) for i in range((end_date - start_date).days + 1)]
     date_pbar = tqdm(date_list, desc=f"   [{group_name}] 日期进度", position=1, leave=False)
 
     for single_date in date_pbar:
         ds = single_date.strftime('%Y-%m-%d')
         offset = 0
+        last_sig = None
         date_pbar.set_description(f"   [{group_name}] {ds}")
 
         while True:
-            date_pbar.set_postfix(offset=offset, new=len(new_entries))
+            date_pbar.set_postfix(offset=offset, new=len(new_entries_map))
             url = f"https://finance.yahoo.com/calendar/earnings?day={ds}&offset={offset}&size=100"
-            rows = []
+            rows, total = [], 0
             found_end = False
             page_load_success = False
 
             for attempt in range(3):
                 try:
-                    driver.get(url)
-                    state = WebDriverWait(driver, 8).until(_earnings_page_state)
+                    state, rows, total = fetch_earnings_page(driver, url)
                     if state == 'end':
                         found_end = True
                         page_load_success = True
                         break
-                    rows = driver.find_elements(By.CSS_SELECTOR, "table tbody > tr")
                     if rows:
                         page_load_success = True
                         break
@@ -762,55 +840,61 @@ def run_single_scraper_task(driver, sectors_data, task_config):
             if not rows:
                 break
 
-            for row in rows:
-                try:
-                    symbol_el = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]')
-                    symbol = symbol_el.get_attribute('title')
+            # 翻页后内容与上一页完全相同 -> 已到末尾，防止死循环
+            sig = tuple((r['symbol'], r['event']) for r in rows)
+            if sig == last_sig:
+                break
+            last_sig = sig
 
-                    cells = row.find_elements(By.TAG_NAME, 'td')
-                    if len(cells) < 4:
-                        continue
-
-                    if group_name == "fifth" and symbol in EXCLUDE_FROM_FIFTH:
-                        continue
-
-                    event_name = cells[2].text.strip()
-                    call_time = cells[3].text.strip() or "N/A"
-
-                    if not any(k in event_name for k in ["Earnings Release", "Shareholders Meeting", "Earnings Announcement"]):
-                        continue
-                    if (symbol, ds) in existing_release_entries:
-                        continue
-                    if not any(symbol in lst for lst in sectors_data.values()):
-                        continue
-
-                    new_line = f"{symbol:<7}: {call_time:<4}: {ds}"
-
-                    if symbol in existing_map:
-                        old_ct, old_dt = existing_map[symbol]
-                        if old_ct == call_time and old_dt == ds:
-                            continue
-
-                    existing_map[symbol] = (call_time, ds)
-                    new_entries.append(new_line)
-                except Exception:
+            for r in rows:
+                symbol = r['symbol'].strip()
+                if not symbol:
                     continue
-            offset += 100
+                if group_name == "fifth" and symbol in EXCLUDE_FROM_FIFTH:
+                    continue
+
+                event_name = r['event']
+                call_time = normalize_call_time(r['call'])
+
+                if not any(k in event_name for k in ["Earnings Release", "Shareholders Meeting", "Earnings Announcement"]):
+                    continue
+                if (symbol, ds) in existing_release_entries:
+                    continue
+                if symbol not in sector_symbols:
+                    continue
+
+                if call_time == NA and len(blank_samples) < 3:
+                    blank_samples.append(f"{symbol} @ {ds}: {r.get('html', '')}")
+
+                if symbol in existing_map:
+                    old_ct, old_dt = existing_map[symbol]
+                    if old_dt == ds and old_ct == call_time:
+                        continue
+                    # 防降级：同一天已有真实时间(BMO/AMC/TNS...)，不被偶发的空值覆盖成 N/A
+                    if old_dt == ds and call_time == NA and old_ct != NA:
+                        continue
+
+                existing_map[symbol] = (call_time, ds)
+                new_entries_map[(symbol, ds)] = f"{symbol:<7}: {call_time:<4}: {ds}"
+
+            offset += total or len(rows)
+
+    new_entries = list(new_entries_map.values())
+
+    if blank_samples:
+        tqdm.write(f"   [诊断] 重试后仍无盘前盘后时间的样例（若页面实际有值，请把此处 HTML 发我）:")
+        for s in blank_samples:
+            tqdm.write(f"        {s}")
 
     # 写入文件处理
     symbols_to_avoid = set()
     for f_path in task_config["duplicate_check_files"]:
-        if os.path.exists(f_path):
-            with open(f_path, 'r') as f:
-                for line in f:
-                    parts = line.strip().split(':')
-                    if parts and parts[0].strip():
-                        symbols_to_avoid.add(parts[0].strip())
+        for line in read_clean_lines(f_path):
+            parts = line.split(':')
+            if parts and parts[0].strip():
+                symbols_to_avoid.add(parts[0].strip())
 
-    existing_diff_lines = set()
-    if os.path.exists(diff_path):
-        with open(diff_path, 'r') as f_diff:
-            existing_diff_lines.update(ln.rstrip('\n') for ln in f_diff)
+    existing_diff_lines = set(read_clean_lines(diff_path))
 
     entries_for_target = []
     entries_for_diff = []
@@ -829,17 +913,16 @@ def run_single_scraper_task(driver, sectors_data, task_config):
         else:
             entries_for_target.append(ln)
 
-    # 修复：仅当新记录确实写入主文件时，才删除该 symbol 的旧记录（原逻辑会导致旧行被删、新行进 diff，两头丢失）
+    # 仅当新记录确实写入主文件时，才删除该 symbol 的旧记录
     replaced_syms = {ln.split(':')[0].strip() for ln in entries_for_target}
     kept_lines = [ln for ln in existing_lines if ln.split(':')[0].strip() not in replaced_syms]
 
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     all_lines_to_write = kept_lines + entries_for_target
     atomic_write_lines(file_path, all_lines_to_write)
 
     if entries_for_diff:
         os.makedirs(os.path.dirname(diff_path), exist_ok=True)
-        with open(diff_path, 'a') as f:
+        with open(diff_path, 'a', encoding='utf-8', errors='surrogateescape') as f:
             for ln in entries_for_diff:
                 f.write(ln + '\n')
 
@@ -848,7 +931,7 @@ def run_single_scraper_task(driver, sectors_data, task_config):
     else:
         tqdm.write(f"   [结果] {group_name.upper()} 任务有更新：")
         if entries_for_target:
-            tqdm.write(f"     ✅ 主文件新增 {len(entries_for_target)} 条:")
+            tqdm.write(f"     ✅ 主文件新增/更新 {len(entries_for_target)} 条:")
             for item in entries_for_target:
                 tqdm.write(f"        -> {item}")
         if entries_for_diff:
@@ -863,9 +946,13 @@ def run_earnings_task():
     tqdm.write("=" * 50)
 
     TASK_CONFIGS = []
-    # 补抓：new 为空（通常是漏跑太久导致），则先补抓本周
-    if not file_has_dated_entries(earnings_file('new')):
+    # 补抓/刷新本周：new 为空（漏跑），或仍有 N/A（盘前盘后时间发布后需要刷新）
+    new_path = earnings_file('new')
+    if not file_has_dated_entries(new_path):
         tqdm.write("检测到 Earnings_Release_new 为空，将补抓本周数据。")
+        TASK_CONFIGS.append({"group_name": "new", "duplicate_check_files": []})
+    elif file_has_unknown_call_time(new_path):
+        tqdm.write("检测到 Earnings_Release_new 中存在 N/A，将刷新本周数据。")
         TASK_CONFIGS.append({"group_name": "new", "duplicate_check_files": []})
 
     for i, g in enumerate(EARNINGS_GROUPS[1:], start=1):

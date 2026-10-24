@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "USB"
-# TARGET_DATE = "2026-10-07"
+# SYMBOL_TO_TRACE = "HBAN"
+# TARGET_DATE = "2026-09-16"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -47,8 +47,9 @@ CONFIG = {
     },
     # ========== 目标分组 (两个策略共用) ==========
     "TARGET_GROUPS": [
-        "OverSell_W", "PE_Deeper", "PE_Deep", "PE_W"
+        "OverSell_W", "PE_Deeper", "PE_Deep", "PE_W", "PE_valid",
     ],
+    "COND_HIGH_JIA_REQUIRE_ER_INCREASING": False,  # True=甲类要求两次财报价格递增; False=不要求
     # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
     "COND8_VOLUME_LOOKBACK_MONTHS": 1.5,   # 过去 N 个月
     "COND8_VOLUME_RANK_THRESHOLD": 3,    # 成交量排名前 N 名
@@ -60,7 +61,13 @@ CONFIG = {
     "RETENTION_ALLOW_UP_PERCENT": 0.0,            # "下跌"容忍的小幅上涨比例,0=严格下跌(收盘<昨收)
     "RETENTION_REQUIRE_CLOSE_BELOW_OPEN": False,  # True=还要求收盘<=开盘
     "RETENTION_REQUIRE_VALID_POOL": False,        # True=还要求当天在验证池(PE_Deep等)里
-    "RETENTION_VOLUME_MAX_DROP": 0.10,            # 当天成交量相对起点日成交量最多允许低多少(0.10=最多低10%, 即 >= 起点量*90%)
+    "RETENTION_VOLUME_MAX_DROP": 0.60,            # 当天成交量相对起点日成交量最多允许低多少(0.10=最多低10%, 即 >= 起点量*90%)
+
+    # ========== PE_Volume 回溯保留 - 新增「深跌追」规则 ==========
+    "RETENTION_DEEP_ENABLED": True,               # 总开关
+    "RETENTION_DEEP_WINDOW_TRADING_DAYS": 20,     # 起点之后多少个交易日内有效
+    "RETENTION_DEEP_MIN_DROP_PERCENT": 0.08,      # 收盘价较起点收盘价下跌超过该比例 (0.10=10%)
+    "RETENTION_DEEP_REQUIRE_VOLUME": False,       # True=深跌规则也要求成交量不低于起点量*(1-RETENTION_VOLUME_MAX_DROP)
     
     # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
     "COND_UP_HISTORY_LOOKBACK_DAYS": 5,  # 历史记录回溯天数
@@ -73,6 +80,12 @@ CONFIG = {
     # [新增] 丙类专用配置
     "COND_HIGH_TURNOVER_BING_DAYS": 45,        # 丙类：成交额回溯45天
     "COND_HIGH_TURNOVER_BING_RANK_THRESHOLD": 3,  # 丙类：排名前3名
+
+    # ========== 策略3 甲类回溯 (财报日甲 -> 深跌追) 参数 ==========
+    "HIGH_JIA_CHASE_ENABLED": True,          # 总开关
+    "HIGH_JIA_CHASE_DROP_PERCENT": 0.095,    # 较财报日收盘 或 较财报日以来最高收盘, 下跌超过该比例即"追"
+    "HIGH_YI_CHASE_DROP_PERCENT": 0.11,      # [新增] 乙类(需命中HOT_TAGS_T)：同上逻辑，阈值单独设定
+    "HIGH_JIA_CHASE_MAX_TRADING_DAYS": 0,    # 财报日之后最多多少个交易日内有效; 0=不限(直到下一次财报)
 
     # ========== 策略6 (PE_Hot 白名单/超大市值) 参数 ==========
     "PE_HOT_MIN_MARKET_CAP": 150000000000,         # 超大市值门槛 (默认 1500亿)
@@ -122,6 +135,28 @@ def clean_symbol(symbol_with_suffix):
     
     # 如果没有匹配到（极其罕见，比如纯数字或纯中文开头），则返回原字符串
     return symbol_with_suffix
+
+def format_chase(n, compress_threshold=3):
+    """
+    把追的次数格式化成后缀。
+    n < compress_threshold: 追追
+    n >= compress_threshold: 追✖️8
+    """
+    if n <= 0:
+        return ""
+    if n < compress_threshold:
+        return "追" * n
+    return f"追✖️{n}"
+
+def strip_chase(text):
+    """
+    去掉备注里的所有追标记，同时兼容新旧两种格式：
+    - 旧格式: 追追追追
+    - 新格式: 追✖️8
+    """
+    if not text:
+        return text
+    return re.sub(r'追(?:✖\ufe0f?\d+)?', '', text)
 
 def load_tag_settings(json_path):
     try:
@@ -651,25 +686,37 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
 
 def check_pe_volume_retention(db_path, history_json_path, panel_json_path, current_pe_volume, sector_map, target_date_override, symbol_to_trace, log_detail):
     """
-    窗口版回溯保留机制:
+    窗口版回溯保留机制(双规则):
     - 起点(anchor): 历史 PE_Volume 中不带"追"的记录(真正新触发的),窗口内取最近一个。
-    - 窗口: 起点之后第 1 ~ RETENTION_WINDOW_TRADING_DAYS 个交易日(按全市场交易日历)。
-    - 条件: 今日下跌(收盘 < 昨收*(1+容忍)) 且 今日收盘 < 起点日收盘;
-            且 今日不是新触发、数据未过期、近N天无财报日;
-            (可选) 收盘<=开盘、在验证池。
-    返回: dict {symbol: 追字个数}。追字个数 = 起点之后满足"下跌且低于起点收盘"的天数(含今日)。
+    - 规则A(原规则, 窗口=RETENTION_WINDOW_TRADING_DAYS, 默认15个交易日):
+        今日下跌 且 今日收盘 < 起点收盘 且 成交量 >= 起点量*(1-容忍)  (可选: 收盘<=开盘)
+    - 规则B(新增"深跌追", 窗口=RETENTION_DEEP_WINDOW_TRADING_DAYS, 默认20个交易日):
+        今日下跌 且 今日收盘较起点收盘下跌超过 RETENTION_DEEP_MIN_DROP_PERCENT (默认10%)
+        (可选: 成交量要求 / 收盘<=开盘,由配置开关控制)
+    - 任一规则满足即捞回;两规则共同的过滤: 今日不是新触发、数据未过期、近N天无财报日、(可选)在验证池。
+    返回: dict {symbol: 追字个数}。追字个数 = 起点之后"满足规则A或规则B"的交易日数(含今日)。
     """
-    log_detail("\n========== 执行 PE_Volume 回溯保留机制 (窗口版 Retention Check) ==========")
+    log_detail("\n========== 执行 PE_Volume 回溯保留机制 (窗口版 Retention Check, 含深跌追) ==========")
 
-    window = CONFIG.get("RETENTION_WINDOW_TRADING_DAYS", 15)
+    window_a = CONFIG.get("RETENTION_WINDOW_TRADING_DAYS", 15)
     allow_up_pct = CONFIG.get("RETENTION_ALLOW_UP_PERCENT", 0.0)
     require_below_open = CONFIG.get("RETENTION_REQUIRE_CLOSE_BELOW_OPEN", False)
     require_pool = CONFIG.get("RETENTION_REQUIRE_VALID_POOL", False)
     earnings_days = CONFIG.get("COND8_EARNINGS_CHECK_DAYS", 2)
+    vol_max_drop = CONFIG.get("RETENTION_VOLUME_MAX_DROP", 0.10)
+
+    deep_enabled = CONFIG.get("RETENTION_DEEP_ENABLED", True)
+    window_b = CONFIG.get("RETENTION_DEEP_WINDOW_TRADING_DAYS", 20) if deep_enabled else 0
+    deep_drop = CONFIG.get("RETENTION_DEEP_MIN_DROP_PERCENT", 0.10)
+    deep_require_vol = CONFIG.get("RETENTION_DEEP_REQUIRE_VOLUME", False)
+    max_window = max(window_a, window_b)
 
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
-    log_detail(f"    配置: 窗口={window}个交易日, 容忍上涨={allow_up_pct*100:.2f}%, "
-               f"要求收盘<=开盘={require_below_open}, 要求在验证池={require_pool}, 财报过滤前{earnings_days}天")
+    log_detail(f"    配置[规则A]: 窗口={window_a}个交易日, 容忍上涨={allow_up_pct*100:.2f}%, "
+               f"成交量最多低{vol_max_drop*100:.0f}%, 要求收盘<=开盘={require_below_open}")
+    log_detail(f"    配置[规则B-深跌追]: 启用={deep_enabled}, 窗口={window_b}个交易日, "
+               f"较起点收盘跌幅>{deep_drop*100:.0f}%, 要求成交量={deep_require_vol}")
+    log_detail(f"    配置[公共]: 要求在验证池={require_pool}, 财报过滤前{earnings_days}天")
 
     # 1. 读取历史
     try:
@@ -708,26 +755,25 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
             return {}
 
     result = {}
+    anchors = {}
     conn = sqlite3.connect(db_path, timeout=60.0)
     try:
         cursor = conn.cursor()
 
-        # 3. 全市场交易日历: [T, T-1, ..., T-window]
-        global_dates = get_global_trading_dates(cursor, sector_map, base_date, limit=window + 1)
+        # 3. 全市场交易日历: [T, T-1, ..., T-max_window]
+        global_dates = get_global_trading_dates(cursor, sector_map, base_date, limit=max_window + 1)
         if len(global_dates) < 2:
             log_detail("    x 无法获取足够的交易日历,跳过回溯。")
             return {}
         today_trading = global_dates[0]
         log_detail(f"    -> 最新交易日 T={today_trading}, 窗口最早可用起点日期 > {global_dates[-1]}")
 
-        # 4. 收集窗口内的起点: sym -> 最近一次"新触发"(不带追)的日期
-        anchors = {}
+        # 4. 收集窗口内的起点: sym -> 最近一次"新触发"(不带追)的日期 (按最大窗口收集)
         for d, raw_list in hist_pe_vol.items():
             if not isinstance(d, str) or d >= base_date:
                 continue
-            # 起点之后已经过了几个交易日(含今天)。要求 1 <= elapsed <= window
             elapsed = sum(1 for c in global_dates if c > d)
-            if elapsed < 1 or elapsed > window:
+            if elapsed < 1 or elapsed > max_window:
                 continue
             for raw in raw_list:
                 if "追" in raw:
@@ -771,8 +817,16 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
                 continue
             anchor_close = anchor_row[1]
             anchor_volume = anchor_row[3]
-            if anchor_volume is None or anchor_volume <= 0:
-                if is_tracing: log_detail(f"    x [回溯] {sym}: 起点日 {anchor_row[0]} 成交量缺失，无法比较。")
+            if anchor_close is None or anchor_close <= 0:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 起点日 {anchor_row[0]} 收盘价无效。")
+                continue
+
+            # 起点成交量缺失 -> 仅影响"需要成交量"的判断
+            vol_ok = anchor_volume is not None and anchor_volume > 0
+            rule_a_usable = vol_ok  # 规则A必须比较成交量
+            rule_b_usable = deep_enabled and (not deep_require_vol or vol_ok)
+            if not rule_a_usable and not rule_b_usable:
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 起点日 {anchor_row[0]} 成交量缺失，且无可用的不依赖成交量的规则。")
                 continue
 
             # 起点之后到今天的全部行情(升序)
@@ -790,31 +844,60 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
                 if is_tracing: log_detail(f"    x [回溯] {sym}: 最新数据日期 {seq[-1][0]} != 最新交易日 {today_trading},跳过。")
                 continue
 
-            vol_max_drop = CONFIG.get("RETENTION_VOLUME_MAX_DROP", 0.10)
+            def elapsed_at(date_str, _anchor=anchor_date):
+                """date_str 距起点已过多少个全市场交易日"""
+                return sum(1 for c in global_dates if _anchor < c <= date_str)
 
-            def is_qualifying(prev_row, cur_row):
-                """某一天是否满足: 下跌 且 低于起点收盘 且 成交量不低于起点成交量的(1-容忍比例) (且可选: 收盘<=开盘)"""
-                _, p_prev = prev_row[0], prev_row[1]
+            vol_floor = anchor_volume * (1 - vol_max_drop) if vol_ok else None
+            deep_price_limit = anchor_close * (1 - deep_drop)
+
+            def check_rules(prev_row, cur_row, _elapsed_fn=elapsed_at, _vol_floor=vol_floor,
+                            _a_ok=rule_a_usable, _b_ok=rule_b_usable, _deep_limit=deep_price_limit,
+                            _anchor_close=anchor_close):
+                """返回 (规则A是否满足, 规则B是否满足)"""
+                p_prev = prev_row[1]
                 _, p_cur, o_cur, v_cur = cur_row
-                if not (p_cur < p_prev * (1 + allow_up_pct)):
-                    return False
-                if not (p_cur < anchor_close):
-                    return False
-                if require_below_open and (o_cur is None or p_cur > o_cur):
-                    return False
-                # 新增: 成交量不能比起点日低超过 vol_max_drop
-                if v_cur is None or v_cur < anchor_volume * (1 - vol_max_drop):
-                    return False
-                return True
 
-            today_ok = is_qualifying(seq[-2], seq[-1])
+                # 公共: 今日下跌
+                if not (p_cur < p_prev * (1 + allow_up_pct)):
+                    return False, False
+                # 公共(可选): 收盘<=开盘
+                if require_below_open and (o_cur is None or p_cur > o_cur):
+                    return False, False
+
+                e = _elapsed_fn(cur_row[0])
+
+                # 规则A: 低于起点收盘 + 成交量达标, 仅在 window_a 内有效
+                hit_a = False
+                if _a_ok and e <= window_a:
+                    if p_cur < _anchor_close and v_cur is not None and v_cur >= _vol_floor:
+                        hit_a = True
+
+                # 规则B: 较起点收盘跌幅 > deep_drop, 仅在 window_b 内有效
+                hit_b = False
+                if _b_ok and e <= window_b:
+                    if p_cur < _deep_limit:
+                        if deep_require_vol:
+                            hit_b = (v_cur is not None and v_cur >= _vol_floor)
+                        else:
+                            hit_b = True
+
+                return hit_a, hit_b
+
+            hit_a_today, hit_b_today = check_rules(seq[-2], seq[-1])
+            today_ok = hit_a_today or hit_b_today
             if is_tracing:
-                log_detail(f"    - [回溯] {sym}: 起点 {anchor_date} 收盘 {anchor_close:.2f} 成交量 {anchor_volume:,.0f}; "
-                           f"今日({seq[-1][0]}) 收盘 {seq[-1][1]:.2f}, 昨收 {seq[-2][1]:.2f}, 今开 {seq[-1][2]}, "
-                           f"成交量 {seq[-1][3]:,.0f} (下限 {anchor_volume * (1 - vol_max_drop):,.0f})")
-                log_detail(f"      下跌且低于起点收盘且成交量达标: {today_ok}")
+                drop_pct = (anchor_close - seq[-1][1]) / anchor_close * 100
+                vol_floor_str = f"{vol_floor:,.0f}" if vol_floor is not None else "N/A"
+                anchor_vol_str = f"{anchor_volume:,.0f}" if vol_ok else "N/A"
+                cur_vol_str = f"{seq[-1][3]:,.0f}" if seq[-1][3] is not None else "N/A"
+                log_detail(f"    - [回溯] {sym}: 起点 {anchor_date} 收盘 {anchor_close:.2f} 成交量 {anchor_vol_str}; "
+                           f"今日({seq[-1][0]}, 距起点第{elapsed_at(seq[-1][0])}个交易日) 收盘 {seq[-1][1]:.2f}, "
+                           f"昨收 {seq[-2][1]:.2f}, 今开 {seq[-1][2]}, 成交量 {cur_vol_str} (规则A下限 {vol_floor_str})")
+                log_detail(f"      较起点收盘跌幅 {drop_pct:.2f}% (规则B需 >{deep_drop*100:.0f}%, 即收盘 < {deep_price_limit:.2f})")
+                log_detail(f"      规则A(15日内下跌+低于起点+量达标): {hit_a_today} | 规则B(20日内下跌+深跌): {hit_b_today}")
             if not today_ok:
-                if is_tracing: log_detail(f"    x [回溯] {sym}: 今日未满足 下跌 且 低于起点收盘 且 成交量达标,未捞回。")
+                if is_tracing: log_detail(f"    x [回溯] {sym}: 今日规则A、规则B均未满足,未捞回。")
                 continue
 
             # 财报日过滤(与策略1一致)
@@ -824,10 +907,16 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
                 if is_tracing: log_detail(f"    🛑 [回溯过滤] {sym}: {hit_er} 为财报日(前{earnings_days}天内),不捞回。")
                 continue
 
-            # "追"字个数 = 起点之后所有满足条件的天数(含今日)
-            chase_n = sum(1 for i in range(1, len(seq)) if is_qualifying(seq[i - 1], seq[i]))
+            # "追"字个数 = 起点之后所有满足(规则A 或 规则B)的天数(含今日)
+            chase_n = 0
+            for i in range(1, len(seq)):
+                ha, hb = check_rules(seq[i - 1], seq[i])
+                if ha or hb:
+                    chase_n += 1
             result[sym] = chase_n
-            log_detail(f"    + [捞回] {sym}: 起点 {anchor_date}(收盘{anchor_close}) -> 今日收盘 {seq[-1][1]} (追×{chase_n})")
+            reason = "+".join(r for r, h in (("规则A", hit_a_today), ("规则B深跌", hit_b_today)) if h)
+            log_detail(f"    + [捞回] {sym}: 起点 {anchor_date}(收盘{anchor_close}) -> 今日收盘 {seq[-1][1]} "
+                       f"(追×{chase_n}, 今日命中: {reason})")
 
     finally:
         conn.close()
@@ -1059,6 +1148,15 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         log_detail(f"读取历史文件失败: {e}")
         hist_data = {}
 
+    # 预建索引 symbol -> [(date, 原始带后缀记录)]，避免每个 symbol 都全量遍历历史 (原为 O(symbol数×历史条数))
+    hist_high_index = {}
+    if isinstance(hist_pe_vol_high, dict):
+        for h_date, h_list in hist_pe_vol_high.items():
+            if not isinstance(h_list, list):
+                continue
+            for s in h_list:
+                hist_high_index.setdefault(clean_symbol(s), []).append((h_date, s))
+
     # ================= 加载当前回调池 (拆分基础池和扩展池) =================
     base_valid_pool = set()
     extended_valid_pool = set()
@@ -1207,26 +1305,24 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         was_in_high_history = False
         latest_jia_history_date = None  # 追踪最近一次有效历史出现的日期，用于路径C
         
-        for h_date, h_symbols_raw in hist_pe_vol_high.items():
-            if latest_er_date <= h_date <= latest_date:
-                # 遍历该日期的所有记录（保留后缀）
-                for s_with_suffix in h_symbols_raw:
-                    # 清洗后获取纯净 symbol
-                    clean_sym = clean_symbol(s_with_suffix)
-                    if clean_sym == symbol:
-                        # [修改] 检查是否满足条件：甲，或者 (乙/丙 且 包含 HOT_TAGS_T)
-                        is_valid_history = False
-                        if "甲" in s_with_suffix:
-                            is_valid_history = True
-                        elif ("乙" in s_with_suffix or "丙" in s_with_suffix) and has_hot_tag_t:
-                            is_valid_history = True
-                            
-                        if is_valid_history:
-                            was_in_high_history = True
-                            if is_tracing:
-                                log_detail(f"    - [抄底] 发现有效历史记录: {h_date} -> {s_with_suffix}")
-                            if latest_jia_history_date is None or h_date > latest_jia_history_date:
-                                latest_jia_history_date = h_date
+        for h_date, s_with_suffix in hist_high_index.get(symbol, ()):
+            # 用 "<" 排除当天自身的记录：回测/同日重跑时当天的甲已写入 history，不能拿来证明"曾入选"(前视偏差)
+            if not (latest_er_date <= h_date < latest_date):
+                continue
+            is_valid_history = False
+            if "甲" in s_with_suffix:
+                is_valid_history = True
+            # elif ("乙" in s_with_suffix or "丙" in s_with_suffix) and has_hot_tag_t:
+            #     is_valid_history = True
+
+            if is_tracing and ("乙" in s_with_suffix) and not is_valid_history:
+                log_detail(f"    - [抄底] 忽略乙类记录 {h_date} -> {s_with_suffix}（乙不参与抄底）")
+            if is_valid_history:
+                was_in_high_history = True
+                if is_tracing:
+                    log_detail(f"    - [抄底] 发现有效历史记录: {h_date} -> {s_with_suffix}")
+                if latest_jia_history_date is None or h_date > latest_jia_history_date:
+                    latest_jia_history_date = h_date
         
         if is_tracing:
             log_detail(f"    - [抄底] 历史区间: {latest_er_date} ~ {latest_date}, 是否有有效历史: {was_in_high_history}")
@@ -1381,20 +1477,32 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         )
         
         # ========== 分类判定 ==========
-        if cond_er_increasing and cond_price_breakout and cond_turnover_12m_top3:
+        er_ok = (not CONFIG.get("COND_HIGH_JIA_REQUIRE_ER_INCREASING", True)) or cond_er_increasing
+        # 财报发布当日: 最新交易日 == 最新财报日 (与甲回溯中 "er_date 当天出现甲" 的口径一致)
+        is_er_day = (latest_date == latest_er_date)
+
+        if er_ok and cond_price_breakout and cond_turnover_12m_top3:
             results_jia.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-甲类] 严格条件(财报递增) + 价格突破 + 12个月Top{turnover_rank_threshold}")
+                log_detail(f"    ✅ [选中-甲类] 价格突破 + 12个月Top{turnover_rank_threshold} "
+                           f"(要求财报递增={CONFIG.get('COND_HIGH_JIA_REQUIRE_ER_INCREASING', True)}, 实际递增={cond_er_increasing})")
         
         elif cond_er_pct_positive and cond_turnover_6m_top3:
-            # results_yi.append(symbol)
-            if is_tracing:
-                log_detail(f"    ✅ [选中-乙类] 财报涨幅>0 + 未突破 + 6个月Top{turnover_rank_threshold}")
+            # 乙类: 仅财报发布当日出现的才输出
+            if is_er_day:
+                results_yi.append(symbol)
+                if is_tracing:
+                    log_detail(f"    ✅ [选中-乙类] 财报日当天({latest_er_date}) + 财报涨幅>0 + 6个月Top{turnover_rank_threshold} "
+                               f"(HOT_TAGS_T={has_hot_tag_t}, {'后续可享受深跌追' if has_hot_tag_t else '后续不参与深跌追'})")
+            else:
+                if is_tracing:
+                    log_detail(f"    x [乙类-不输出] 满足乙类条件，但今日({latest_date})非财报日(最新财报日 {latest_er_date})")
         
         elif cond_turnover_45d_top3:
+            # 丙类: 继续不输出
             # results_bing.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-丙类] 价格突破 + {bing_lookback_days}天Top{bing_rank_threshold}")
+                log_detail(f"    - [丙类-不输出] 满足丙类条件 ({bing_lookback_days}天Top{bing_rank_threshold})，按配置不输出")
     
     conn.close()
     
@@ -1406,7 +1514,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     
     log_detail(f"\n————策略3 Volume_high 最终筛选结果:")
     log_detail(f"  - 甲类 (财报递增+突破+12月Top{turnover_rank_threshold}): {len(results_jia)} 个: {results_jia}")
-    log_detail(f"  - 乙类 (财报涨幅>0+未突破+6月Top{turnover_rank_threshold}): {len(results_yi)} 个: {results_yi}")
+    log_detail(f"  - 乙类 (财报日当天+财报涨幅>0+6月Top{turnover_rank_threshold}): {len(results_yi)} 个: {results_yi}")
     log_detail(f"  - 丙类 (宽松+突破+财报起前3+间隔>3天): {len(results_bing)} 个: {results_bing}")
     log_detail(f"  - 抄底类 (财报后曾入选且今日回调): {len(results_chaodi)} 个: {results_chaodi}")
     
@@ -1427,6 +1535,203 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             log_detail(f"📌 [策略3总结] {symbol_to_trace}: ❌ 未命中 PE_Volume_high（见上方详细日志）。")
     
     return results_jia, results_yi, results_bing, results_chaodi
+
+# --- 策略3 回溯: PE_Volume_high 甲类/乙类(HOT_TAGS_T) -> 财报后深跌 "追" ---
+def check_pe_volume_high_jia_retention(db_path, history_json_path, sector_map, current_high_new_symbols,
+                                       target_date_override, symbol_to_trace, log_detail,
+                                       symbol_to_tags_map=None, hot_tags_t=None):
+    """
+    规则:
+    - 起点: 最新财报日(Earning 表中 <= 基准日的最大日期) 当天, 历史 PE_Volume_high 中该股:
+        * 带"甲"(且不带"追")  -> 有资格
+        * 带"乙"(且不带"追") 且 该股命中 HOT_TAGS_T -> 有资格 (与甲同等待遇)
+        * 同日甲乙并存时按甲处理
+    - 触发(任一):
+        A. 今日收盘 < 财报日收盘 * (1 - 阈值)
+        B. 今日收盘 < [财报日, 今日] 区间最高收盘 * (1 - 阈值)
+    - 过滤: 今日已是甲/乙/丙(新触发优先) / 今日即财报日 / 数据过期 / 财报日无行情 / 超过可选有效期。
+    返回: dict {symbol: info_dict}  (info_dict["origin"] = "甲" 或 "乙")
+    """
+    log_detail("\n========== 执行 PE_Volume_high 甲/乙类回溯机制 (财报日甲 或 财报日乙+HOT_TAGS_T -> 深跌追) ==========")
+
+    if not CONFIG.get("HIGH_JIA_CHASE_ENABLED", True):
+        log_detail("    - 已关闭 (HIGH_JIA_CHASE_ENABLED=False)，跳过。")
+        return {}
+
+    symbol_to_tags_map = symbol_to_tags_map or {}
+    hot_tags_t = set(hot_tags_t or ())
+
+    def has_hot_tag_t(sym):
+        return bool(set(symbol_to_tags_map.get(sym, [])) & hot_tags_t)
+
+    drop_th_jia = CONFIG.get("HIGH_JIA_CHASE_DROP_PERCENT", 0.095)
+    drop_th_yi = CONFIG.get("HIGH_YI_CHASE_DROP_PERCENT", 0.11)
+    max_days = CONFIG.get("HIGH_JIA_CHASE_MAX_TRADING_DAYS", 0) or 0
+    base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+
+    log_detail(f"    配置: 甲类跌幅阈值 > {drop_th_jia*100:.2f}%, 乙类跌幅阈值 > {drop_th_yi*100:.2f}% "
+               f"(较财报日收盘 或 较财报日以来最高收盘), "
+               f"有效期 = {'不限(直到下次财报)' if max_days <= 0 else f'{max_days}个交易日'}")
+    log_detail(f"    配置: 乙类需命中 HOT_TAGS_T 才参与 (HOT_TAGS_T 共 {len(hot_tags_t)} 个标签)")
+
+    # 1. 读取历史, 建立 symbol -> {date: {"甲","乙"}} 索引 (只取基准日之前, 避免前视)
+    try:
+        with open(history_json_path, 'r', encoding='utf-8') as f:
+            history_data = json.load(f)
+    except Exception as e:
+        log_detail(f"    x 读取历史文件失败: {e}")
+        return {}
+
+    hist_high = history_data.get("PE_Volume_high", {})
+    if not isinstance(hist_high, dict) or not hist_high:
+        log_detail("    x 历史记录中无 PE_Volume_high 数据，跳过。")
+        return {}
+
+    origin_index = {}  # sym -> {date: set(origin)}
+    for d, raw_list in hist_high.items():
+        if not isinstance(d, str) or d >= base_date or not isinstance(raw_list, list):
+            continue
+        for raw in raw_list:
+            if not isinstance(raw, str) or "追" in raw:
+                continue
+            if "甲" in raw:
+                origin = "甲"
+            elif "乙" in raw:
+                origin = "乙"
+            else:
+                continue
+            origin_index.setdefault(clean_symbol(raw), {}).setdefault(d, set()).add(origin)
+
+    log_detail(f"    -> 历史中共有 {len(origin_index)} 个 symbol 曾出现过甲/乙类记录，逐个核对是否为最新财报日当天。")
+    if symbol_to_trace and symbol_to_trace not in origin_index:
+        log_detail(f"    --- 目标 {symbol_to_trace} 在基准日之前从未出现过甲/乙类记录，无需回溯。")
+
+    current_set = set(current_high_new_symbols)
+    result = {}
+
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    try:
+        cursor = conn.cursor()
+        global_dates = get_global_trading_dates(cursor, sector_map, base_date, limit=1)
+        if not global_dates:
+            log_detail("    x 无法获取交易日历，跳过。")
+            return {}
+        today_trading = global_dates[0]
+        log_detail(f"    -> 最新交易日 T={today_trading}")
+
+        for sym in sorted(origin_index):
+            is_tracing = (sym == symbol_to_trace)
+            date_map = origin_index[sym]
+
+            if sym in current_set:
+                if is_tracing: log_detail(f"    --- [甲乙回溯] {sym}: 今日已是甲/乙/丙新触发，无需追。")
+                continue
+
+            sector = sector_map.get(sym)
+            if not sector:
+                if is_tracing: log_detail(f"    x [甲乙回溯] {sym}: 未找到板块映射。")
+                continue
+
+            cursor.execute("SELECT date FROM Earning WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1",
+                           (sym, base_date))
+            er_row = cursor.fetchone()
+            if not er_row:
+                if is_tracing: log_detail(f"    x [甲乙回溯] {sym}: 无财报记录。")
+                continue
+            er_date = er_row[0]
+
+            if er_date >= today_trading:
+                if is_tracing: log_detail(f"    --- [甲乙回溯] {sym}: 今日({er_date})即为财报日，不追。")
+                continue
+
+            origins_on_er = date_map.get(er_date, set())
+            if not origins_on_er:
+                if is_tracing:
+                    log_detail(f"    x [甲乙回溯] {sym}: 最新财报日 {er_date} 当天未出现甲/乙 "
+                               f"(历史甲/乙日期: {sorted(date_map)[-5:]})。")
+                continue
+
+            # 资格判定: 甲优先; 乙必须命中 HOT_TAGS_T
+            if "甲" in origins_on_er:
+                origin = "甲"
+            else:
+                if not has_hot_tag_t(sym):
+                    if is_tracing:
+                        log_detail(f"    x [甲乙回溯] {sym}: 财报日 {er_date} 当天为乙，但未命中 HOT_TAGS_T "
+                                   f"(Tags: {sorted(symbol_to_tags_map.get(sym, []))})，不享受追。")
+                    continue
+                origin = "乙"
+
+            cursor.execute(
+                f'SELECT date, price FROM "{sector}" WHERE name = ? AND date >= ? AND date <= ? '
+                f'AND price IS NOT NULL AND price > 0 ORDER BY date ASC',
+                (sym, er_date, base_date))
+            rows = cursor.fetchall()
+
+            if not rows or rows[0][0] != er_date:
+                if is_tracing: log_detail(f"    x [甲乙回溯] {sym}: 财报日 {er_date} 无有效收盘价。")
+                continue
+            if len(rows) < 2:
+                if is_tracing: log_detail(f"    x [甲乙回溯] {sym}: 财报日之后无行情数据。")
+                continue
+            if rows[-1][0] != today_trading:
+                if is_tracing: log_detail(f"    x [甲乙回溯] {sym}: 最新数据日期 {rows[-1][0]} != 最新交易日 {today_trading}，跳过。")
+                continue
+
+            elapsed = len(rows) - 1
+            if max_days > 0 and elapsed > max_days:
+                if is_tracing: log_detail(f"    x [甲乙回溯] {sym}: 距财报日已 {elapsed} 个交易日，超过有效期 {max_days}。")
+                continue
+
+            er_close = rows[0][1]
+            latest_date, latest_close = rows[-1]
+            peak_close = max(r[1] for r in rows)
+            peak_date = max(r[0] for r in rows if r[1] == peak_close)  # 并列取最晚
+
+            # 按来源选阈值: 甲用 9.5%, 乙用 11%
+            drop_th_sym = drop_th_jia if origin == "甲" else drop_th_yi
+
+            drop_er = (er_close - latest_close) / er_close
+            drop_peak = (peak_close - latest_close) / peak_close
+            hit_er = latest_close < er_close * (1 - drop_th_sym)
+            hit_peak = latest_close < peak_close * (1 - drop_th_sym)
+
+            if is_tracing:
+                log_detail(f"    - [甲乙回溯] {sym}: 财报日 {er_date} 收盘 {er_close:.2f} (当日为{origin}"
+                           f"{'+HOT_TAGS_T' if origin == '乙' else ''}) | "
+                           f"区间最高 {peak_close:.2f} ({peak_date}) | 今日 {latest_date} 收盘 {latest_close:.2f} "
+                           f"| 距财报第 {elapsed} 个交易日")
+                log_detail(f"      较财报日收盘跌幅 {drop_er*100:.2f}% -> {hit_er} | "
+                           f"较区间最高跌幅 {drop_peak*100:.2f}% -> {hit_peak} (本条阈值 >{drop_th_sym*100:.2f}%, 来源{origin})")
+
+            if not (hit_er or hit_peak):
+                if is_tracing: log_detail(f"    x [甲乙回溯] {sym}: 两项跌幅均未超过阈值({origin}类 >{drop_th_sym*100:.2f}%)，不追。")
+                continue
+
+            reasons = []
+            if hit_er: reasons.append(f"较财报日跌{drop_er*100:.1f}%")
+            if hit_peak: reasons.append(f"较高点({peak_date})跌{drop_peak*100:.1f}%")
+            result[sym] = {
+                "origin": origin,
+                "er_date": er_date, "er_close": er_close,
+                "peak_date": peak_date, "peak_close": peak_close,
+                "latest_close": latest_close, "reasons": reasons,
+            }
+            log_detail(f"    + [{origin}回溯-追] {sym}: 财报日 {er_date} {origin} -> 今日 {latest_close:.2f} ({' & '.join(reasons)})")
+    except sqlite3.OperationalError as e:
+        log_detail(f"    x [甲乙回溯] 数据库查询失败: {e}")
+    finally:
+        conn.close()
+
+    n_jia = sum(1 for v in result.values() if v["origin"] == "甲")
+    n_yi = len(result) - n_jia
+    log_detail(f"PE_Volume_high 甲/乙类回溯完成，共命中 {len(result)} 个 (甲源 {n_jia}, 乙源 {n_yi}): {sorted(result.keys())}")
+    if symbol_to_trace:
+        if symbol_to_trace in result:
+            log_detail(f"📌 [甲乙回溯总结] {symbol_to_trace}: ✅ 输出为 PE_Volume_high 追 (来源: {result[symbol_to_trace]['origin']})")
+        else:
+            log_detail(f"📌 [甲乙回溯总结] {symbol_to_trace}: ❌ 未命中（见上方详细日志）")
+    return result
 
 def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, latest_date_str, latest_turnover, rank_threshold, log_detail, is_tracing):
     """
@@ -1793,8 +2098,23 @@ def run_pe_volume_logic(log_detail):
         hot_tags_t           # [新增] 传入 HOT_TAGS_T 集合
     )
     
-    # 合并所有策略3的结果用于统一处理
-    final_pe_volume_high = sorted(list(set(raw_pe_volume_high_jia) | set(raw_pe_volume_high_yi) | set(raw_pe_volume_high_bing) | set(raw_pe_volume_high_chaodi)))
+    # ================= 策略3 甲类回溯 (财报日甲 -> 深跌追) =================
+    high_new_symbols = set(raw_pe_volume_high_jia) | set(raw_pe_volume_high_yi) | set(raw_pe_volume_high_bing)
+    high_chase_info = check_pe_volume_high_jia_retention(
+        DB_FILE,
+        EARNING_HISTORY_JSON_FILE,
+        symbol_to_sector_map,
+        high_new_symbols,
+        TARGET_DATE,
+        SYMBOL_TO_TRACE,
+        log_detail,
+        symbol_to_tags_map=symbol_to_tags_map,
+        hot_tags_t=hot_tags_t,
+    )
+    raw_pe_volume_high_chase = sorted(high_chase_info.keys())
+
+    # 合并所有策略3的结果用于统一处理 (含甲类回溯追)
+    final_pe_volume_high = sorted(list(high_new_symbols | set(raw_pe_volume_high_chaodi) | set(raw_pe_volume_high_chase)))
 
     # ================= Tag 黑名单过滤逻辑 =================
     def filter_blacklisted_tags(symbols):
@@ -1816,6 +2136,7 @@ def run_pe_volume_logic(log_detail):
     filtered_pe_volume_high_yi = filter_blacklisted_tags(raw_pe_volume_high_yi)
     filtered_pe_volume_high_bing = filter_blacklisted_tags(raw_pe_volume_high_bing)
     filtered_pe_volume_high_chaodi = filter_blacklisted_tags(raw_pe_volume_high_chaodi)
+    filtered_pe_volume_high_chase = filter_blacklisted_tags(raw_pe_volume_high_chase)
     filtered_pe_volume_high = filter_blacklisted_tags(final_pe_volume_high)
 
     if SYMBOL_TO_TRACE:
@@ -1835,7 +2156,7 @@ def run_pe_volume_logic(log_detail):
             if existing_notes and sym in existing_notes:
                 n = existing_notes[sym]
                 orig_note = n[len(sym):] if n.startswith(sym) else n.replace(sym, "")
-                orig_note = orig_note.replace("追", "")   # "追"字统一由捞回逻辑重新计算
+                orig_note = strip_chase(orig_note)   # "追"字统一由捞回逻辑重新计算
             
             new_suffix = orig_note
             
@@ -1864,7 +2185,7 @@ def run_pe_volume_logic(log_detail):
                     if base_date_str in group_content:
                         for sym_with_note in group_content[base_date_str]:
                             sym = clean_symbol(sym_with_note)
-                            note_clean = sym_with_note.replace("追", "")
+                            note_clean = strip_chase(sym_with_note)
                             if len(note_clean) > len(all_existing_notes.get(sym, "")):
                                 all_existing_notes[sym] = note_clean
         else:
@@ -1876,7 +2197,7 @@ def run_pe_volume_logic(log_detail):
                         continue
                     if isinstance(group_content, dict):
                         for s, n in group_content.items():
-                            n_clean = n.replace("追", "")
+                            n_clean = strip_chase(n)
                             if len(n_clean) > len(all_existing_notes.get(s, "")):
                                 all_existing_notes[s] = n_clean
     except Exception as e:
@@ -1891,7 +2212,7 @@ def run_pe_volume_logic(log_detail):
 
     for sym, chase_n in retention_info.items():
         if sym in pe_volume_notes:
-            pe_volume_notes[sym] += "追" * chase_n
+            pe_volume_notes[sym] += format_chase(chase_n)
                 
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
     
@@ -1915,8 +2236,12 @@ def run_pe_volume_logic(log_detail):
             
         # 2. 只有在没有被分类为 甲、乙、丙 的情况下，才判断是否加入“抄底”
         # 如果 categories 为空，说明它既不是甲也不是乙也不是丙，此时才允许显示“抄底”
-        if not categories and sym in filtered_pe_volume_high_chaodi:
-            categories.append("抄底")
+        if not categories:
+            if sym in filtered_pe_volume_high_chaodi:
+                categories.append("抄底")
+            # 甲类回溯: 财报日甲 + 今日深跌 -> "追" (与抄底同时命中时为 "抄底追")
+            if sym in filtered_pe_volume_high_chase:
+                categories.append("追")
             
         suffix = "".join(categories)  # 例如 "甲乙" 或 "乙"
         
@@ -1969,7 +2294,7 @@ def run_pe_volume_logic(log_detail):
                     for sym in pe_hot_list:
                         if sym in prev_symbols:
                             if sym in pe_hot_notes:
-                                pe_hot_notes[sym] += "追"
+                                pe_hot_notes[sym] = strip_chase(pe_hot_notes[sym]) + "追"
                                 if SYMBOL_TO_TRACE == sym:
                                     log_detail(f"    - [PE_Hot连续命中] {sym} 在上一期({prev_date})也存在，追加'追'字。")
     except Exception as e:
@@ -1988,6 +2313,8 @@ def run_pe_volume_logic(log_detail):
         if SYMBOL_TO_TRACE in filtered_pe_volume_high_yi: high_parts.append("乙")
         if SYMBOL_TO_TRACE in filtered_pe_volume_high_bing: high_parts.append("丙")
         if SYMBOL_TO_TRACE in filtered_pe_volume_high_chaodi: high_parts.append("抄底")
+        if SYMBOL_TO_TRACE in filtered_pe_volume_high_chase:
+         high_parts.append(f"追({high_chase_info[SYMBOL_TO_TRACE]['origin']}回溯)")
         if high_parts:
             log_detail(f"  策略3 PE_Volume_high (财报突破):✅ 命中 ({','.join(high_parts)})")
         else:
@@ -2008,6 +2335,8 @@ def run_pe_volume_logic(log_detail):
         log_detail(f"    - 乙类: {len(filtered_pe_volume_high_yi)} 个")
         log_detail(f"    - 丙类: {len(filtered_pe_volume_high_bing)} 个")
         log_detail(f"    - 抄底类: {len(filtered_pe_volume_high_chaodi)} 个")
+        n_chase_yi = sum(1 for v in high_chase_info.values() if v["origin"] == "乙")
+        log_detail(f"    - 甲/乙回溯追: {len(filtered_pe_volume_high_chase)} 个 (其中乙源 {n_chase_yi} 个)")
         log_detail(f"📊 [策略-Hot] PE_Hot 命中: {len(pe_hot_list)} 个") 
         log_detail("="*60 + "\n")
         return

@@ -40,9 +40,32 @@ DISPLAY_LIMITS = {
     "Bonds": 3,
 }
 
+# ===== 分组过滤规则 =====
+# enabled=True 时生效；改为 False 即恢复显示全部
+ITEM_FILTERS = {
+    'PE_Volume_high_backup': {
+        'enabled': True,
+        # 参数: keyword(代码), translation(显示名)；返回 True 才显示
+        'test': lambda kw, tr: '甲' in tr,
+    },
+}
+
+def filter_group_items(sector, keywords):
+    """根据 ITEM_FILTERS 过滤分组内容，支持 dict 和 list 两种结构"""
+    rule = ITEM_FILTERS.get(sector)
+    if not rule or not rule.get('enabled'):
+        return keywords
+    test = rule['test']
+    if isinstance(keywords, dict):
+        return OrderedDict(
+            (k, v) for k, v in keywords.items()
+            if test(k, v if v else k)
+        )
+    return [k for k in keywords if test(k, k)]
+
 categories = [
-    ['Must', 'Today', 'Short_backup', 'Short_W_backup', 'PE_Volume_backup',
-     'PE_Volume_high_backup', 'PE_Hot_backup', 'PE_W_backup',
+    ['Must', 'Today', 'Short_backup', 'Short_W_backup', 'PE_Volume_high_backup', 'PE_Volume_backup',
+     'PE_Hot_backup', 'PE_W_backup',
      'ETF_Volume_high_backup', 
      'SupportLevel_Over_backup',
      ],
@@ -1224,8 +1247,14 @@ class MainWindow(QMainWindow):
                     if sector in self.config:
                         keywords = self.config[sector]
                         if (isinstance(keywords, dict) and not keywords) or \
-                        (isinstance(keywords, list) and not keywords):
+                           (isinstance(keywords, list) and not keywords):
                             continue
+
+                        # ★ 新增：先记录原始总数，再按规则过滤
+                        total = len(keywords)
+                        keywords = filter_group_items(sector, keywords)
+                        if not keywords:
+                            continue   # 过滤后没有内容，整个分组不显示
 
                         display_sector_name = self.display_name_map.get(sector, sector)
                         group_box = DraggableGroupBox(display_sector_name, sector)
@@ -1252,7 +1281,6 @@ class MainWindow(QMainWindow):
                         if not items:
                             continue
                         
-                        total = len(keywords)
                         shown = len(items)
                         title = (f"{display_sector_name} ({shown}/{total})"
                                 if shown != total else display_sector_name)

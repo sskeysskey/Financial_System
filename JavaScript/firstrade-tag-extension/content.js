@@ -629,7 +629,7 @@
    * ======================================================================== */
   let SYM_COLOR = true;
   const SYM_CLS = ['ft-sym-buy', 'ft-sym-sell', 'ft-sym-earn', 'ft-sym-held', 'ft-sym-held-earn'];
-  const COLOR_BUY = ['买', '买买'];
+  const COLOR_BUY = ['买', '买买', 'Must'];
   const COLOR_SELL = ['卖卖卖'];
   const normG = (s) => String(s || '').replace(/[（(][^）)]*[）)]\s*$/, '').replace(/\s+/g, '').toUpperCase();
   const nk = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');

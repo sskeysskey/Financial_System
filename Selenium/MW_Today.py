@@ -19,7 +19,7 @@ MW_Today.py
     python MW_Today.py --no-escalate        # 无头模式遇到验证码时不自动切换为有界面模式
 
 滑块自动验证（macOS）：
-    检测到验证码 -> 将爬虫启动的 Chrome Beta 窗口切到最前台 -> 屏幕模板匹配 marketwatch_verify.png
+    检测到验证码 -> 将爬虫启动的 Chrome 窗口切到最前台 -> 屏幕模板匹配 marketwatch_verify.png
     -> 拟人化拖拽 -> 滑块消失即判定通过 -> 把终端切回最前台 -> 等待页面自动跳转后继续抓取。
     自动失败时退回手动模式（系统通知 + 等待 CAPTCHA_MANUAL_WAIT 秒），手动通过后同样切回终端。
     需要给终端授予「屏幕录制」「辅助功能」「自动化」权限。
@@ -91,8 +91,8 @@ PROFILE_CACHE_SUBPATHS = [
 ]
 
 if IS_MAC:
-    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
-    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
+    CHROME_BINARY_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver")
 elif platform.system() == 'Windows':
     CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     if not os.path.exists(CHROME_BINARY_PATH):
@@ -930,7 +930,7 @@ class CaptchaAutoSolver:
             return None
 
     def activate_browser(self, driver):
-        """把爬虫启动的 Chrome Beta 切到最前台（优先按进程号，避免误切到你自己开的 Chrome Beta）"""
+        """把爬虫启动的 Chrome 切到最前台（优先按进程号，避免误切到你自己开的 Chrome）"""
         if not IS_MAC:
             return False
         ok = False
