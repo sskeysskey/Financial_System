@@ -139,9 +139,9 @@
         "modifiers": [
             "control"
         ],
-        "actionType": "runPythonBackground",
-        "target": "/Users/yanzhang/Coding/python_code/split_TXT.py",
-        "message": "正在执行 split_TXT..."
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/Selenium_News/News_AutoScroll.py'",
+        "message": "正在执行 News_AutoScroll.py…"
     },
     {
         "key": "g",
@@ -159,9 +159,9 @@
             "control",
             "command"
         ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/Selenium_News/News_AutoScroll.py'",
-        "message": "正在执行 News_AutoScroll.py…"
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Scroll_Shift_Engine.scpt\")",
+        "message": "正在执行 AutoScroll → Karing Shift → News（连续）..."
     },
     {
         "key": "k",
@@ -186,12 +186,31 @@
     {
         "key": "three",
         "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_MarketCapPEShare.py' --mode normal",
+        "message": "正在执行 YF_MarketCapPEShare 脚本…"
+    },
+    {
+        "key": "three",
+        "modifiers": [
             "control",
             "option"
         ],
         "actionType": "runPythonBackground",
         "target": "/Users/yanzhang/Coding/Financial_System/Query/Fix_MarketcapPEPB.py",
         "message": "正在执行 Fix_MarketcapPEPB..."
+    },
+    {
+        "key": "three",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_MarketCapPEShare.py' --mode empty --clear",
+        "message": "正在执行 YF_MarketCapPEShare (Empty/Clear)…"
     },
     {
         "key": "v",
@@ -266,9 +285,9 @@
         "modifiers": [
             "control"
         ],
-        "actionType": "runOsascript",
-        "target": "/Users/yanzhang/Coding/ScriptEditor/Polymarket_Prediction.scpt",
-        "message": "正在 Polymarket_Prediction..."
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/auto_pipeline.py' --skip-shangxidq --skip-sxkljc",
+        "message": "正在执行 全自动流水线（爬取 + 豆瓣/IMDb 补全）..."
     },
     {
         "key": "one",
@@ -496,6 +515,15 @@
             "/Users/yanzhang/Coding/Financial_System/Operations/Editor_Events.py"
         ],
         "message": "正在执行 Editor_Events 脚本..."
+    },
+    {
+        "key": "t",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Karing_Shift.scpt",
+        "message": "正在执行 Karing_Shift.scpt..."
     },
     {
         "key": "p",
@@ -824,25 +852,6 @@
         "actionType": "runOsascriptDirect",
         "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"deepseek_api@2,qianwen_api,doubao_ui\"}",
         "message": "正在执行 News (DeepSeekAPI起始, Force)..."
-    },
-    {
-        "key": "three",
-        "modifiers": [
-            "control"
-        ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_MarketCapPEShare.py' --mode normal",
-        "message": "正在执行 YF_MarketCapPEShare 脚本…"
-    },
-    {
-        "key": "three",
-        "modifiers": [
-            "control",
-            "command"
-        ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_MarketCapPEShare.py' --mode empty --clear",
-        "message": "正在执行 YF_MarketCapPEShare (Empty/Clear)…"
     },
     {
         "key": "zero",

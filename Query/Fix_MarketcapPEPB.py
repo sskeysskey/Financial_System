@@ -1,198 +1,266 @@
 import json
-import subprocess
 import os
-import shutil  # 新增导入 shutil 模块，用于移动文件
 import sys
+import shutil
+import sqlite3
+import subprocess
+import tempfile
+from pathlib import Path
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
-def show_alert(message):
-    try:
-        if sys.platform == 'darwin':
-            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-            subprocess.run(['osascript', '-e', applescript_code], check=True)
-        elif sys.platform == 'win32':
-            import ctypes
-            ctypes.windll.user32.MessageBoxW(0, message, "提示", 0)
-    except Exception:
-        pass
+SECTOR_ALL_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
+SECTOR_EMPTY_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_empty.json")
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 
-def load_keys_from_file(path):
-    """
-    读取 txt 文件，提取每行冒号前面的 symbol，返回一个 set
-    """
-    keys = set()
-    with open(path, encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if not line or ':' not in line:
-                continue
-            symbol = line.split(':', 1)[0].strip()
-            keys.add(symbol)
-    return keys
+PRIMARY_TXT_DIR = os.path.join(USER_HOME, "Downloads")
+FALLBACK_TXT_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
 
-def find_file_path_with_fallback(filename, primary_dir, fallback_dir):
-    """
-    尝试在主目录中查找文件，如果找不到，则在备用目录中查找。
-    如果都找不到，则抛出 FileNotFoundError。
-    """
-    primary_path = os.path.join(primary_dir, filename)
-    if os.path.exists(primary_path):
-        print(f"Found '{filename}' in primary directory: {primary_path}")
-        return primary_path
-    else:
-        print(f"'{filename}' not found in primary directory: {primary_dir}. Trying fallback...")
-        fallback_path = os.path.join(fallback_dir, filename)
-        if os.path.exists(fallback_path):
-            print(f"Found '{filename}' in fallback directory: {fallback_path}")
-            return fallback_path
-        else:
-            # 如果两个目录都找不到文件，则抛出异常，让调用者处理
-            raise FileNotFoundError(
-                f"File '{filename}' not found in primary directory '{primary_dir}' or fallback directory '{fallback_dir}'."
-            )
+MARKETCAP_FILENAME = 'marketcap_pe.txt'
+SHARES_FILENAME = 'Shares.txt'
 
-# --- 0. 定义文件路径 ---
-# JSON 文件路径
-sector_all_json_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
-sector_empty_json_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_empty.json") # 同时也是输出路径
+# 是否同时检查数据库 MNSPP 中 shares / marketcap 是否完整
+CHECK_DATABASE = True
 
-# TXT 文件的主目录和备用目录
-primary_txt_dir = os.path.join(USER_HOME, "Downloads")
-fallback_txt_dir = os.path.join(BASE_CODING_DIR, "News", "backup")
-
-# TXT 文件名
-marketcap_filename = 'marketcap_pe.txt'
-shares_filename = 'Shares.txt'
-# symbol_names_filename = 'symbol_names.txt'
-
-
-# --- 1. 读取 sector_all.json 和 sector_empty.json ---
-try:
-    with open(sector_all_json_path, encoding='utf-8') as f:
-        sector_all = json.load(f)
-
-    with open(sector_empty_json_path, encoding='utf-8') as f:
-        sector_empty = json.load(f)
-except FileNotFoundError as e:
-    error_message = f"Error: Critical JSON file not found: {e}. Please check paths:\n{sector_all_json_path}\n{sector_empty_json_path}"
-    print(error_message)
-    show_alert(error_message)
-    exit() # 如果核心JSON文件缺失，则无法继续
-except json.JSONDecodeError as e:
-    error_message = f"Error: Could not decode JSON file: {e}. Please check file content."
-    print(error_message)
-    show_alert(error_message)
-    exit()
-
-# --- 2. 定义要检查的分类 ---
-categories = [
+CATEGORIES = [
     'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Energy',
     'Technology', 'Utilities', 'Industrials', 'Consumer_Defensive',
     'Communication_Services', 'Financial_Services', 'Healthcare'
 ]
-
-# --- 3. 收集 sector_all 中所有目标分类的符号 ---
-all_symbols = set()
-for cat in categories:
-    all_symbols.update(sector_all.get(cat, []))
-
-# --- 4. 读取三个 txt 文件，分别得到已有的 symbol 集合 ---
-#    使用新的 find_file_path_with_fallback 函数确定文件路径
-try:
-    marketcap_file_path = find_file_path_with_fallback(marketcap_filename, primary_txt_dir, fallback_txt_dir)
-    marketcap_keys = load_keys_from_file(marketcap_file_path)
-
-    shares_file_path = find_file_path_with_fallback(shares_filename, primary_txt_dir, fallback_txt_dir)
-    shares_keys = load_keys_from_file(shares_file_path)
-
-    # symbol_names_file_path = find_file_path_with_fallback(symbol_names_filename, primary_txt_dir, fallback_txt_dir)
-    # symbol_names_keys = load_keys_from_file(symbol_names_file_path)
-
-except FileNotFoundError as e:
-    # 如果任何一个 TXT 文件在两个目录都找不到，则弹窗并退出
-    error_message = f"Error: Required data file missing from both primary and fallback locations. {e}"
-    print(error_message)
-    show_alert(error_message)
-    exit() # 退出脚本，因为缺少必要数据
-except Exception as e: # 捕获其他可能的读取错误
-    error_message = f"An unexpected error occurred while loading data files: {e}"
-    print(error_message)
-    show_alert(error_message)
-    exit()
+INVALID_TOKENS = {'', 'N/A', '-', '--', 'None', 'null'}
 
 
-# --- 5. 计算每个文件中缺失的 symbol ---
-missing_marketcap    = all_symbols - marketcap_keys
-missing_shares       = all_symbols - shares_keys
-# missing_symbol_names = all_symbols - symbol_names_keys
+def show_alert(message):
+    try:
+        if sys.platform == 'darwin':
+            msg = str(message).replace('\\', '\\\\').replace('"', '\\"')
+            code = f'display dialog "{msg}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', code], check=False)
+        elif sys.platform == 'win32':
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, str(message), "提示", 0)
+    except Exception:
+        pass
 
-# --- 6. 取三者缺失的并集，作为“所有缺失”的 symbol ---
-missing_all = missing_marketcap | missing_shares
 
-# --- 7. 将缺失符号按照原分类，填入 sector_empty ---
-for cat in categories:
-    original_syms = set(sector_all.get(cat, []))
-    miss_in_cat = original_syms & missing_all
-    # 只做赋值，空列表也会写入——保证 JSON 结构统一
-    sector_empty[cat] = sorted(miss_in_cat)
+def fail(message):
+    print(message)
+    show_alert(message)
+    sys.exit(1)
 
-# --- 8. 将更新后的 sector_empty.json 写回磁盘 ---
-#    输出路径已在顶部定义为 sector_empty_json_path
-try:
-    with open(sector_empty_json_path, 'w', encoding='utf-8') as f:
-        json.dump(sector_empty, f, ensure_ascii=False, indent=2)
-except IOError as e:
-    error_message = f"Error writing to output file '{sector_empty_json_path}': {e}"
-    print(error_message)
-    show_alert(error_message)
-    exit()
 
-# --- 9. 最后一条弹窗提示及文件备份逻辑 ---
-if missing_all:
-    show_alert(f"检测到 {len(missing_all)} 个缺失符号，已写入：{sector_empty_json_path}")
-else:
-    # 先弹窗提示
-    show_alert("未检测到缺失符号，无需更新。即将备份文件。")
-    
-    print("--- 开始备份文件 ---")
-    # 定义需要移动的文件列表
-    files_to_backup = [marketcap_filename, shares_filename]
-    
-    # 确保备份目录存在，如果不存在则创建
-    if not os.path.exists(fallback_txt_dir):
+# ---------- 与抓取脚本一致的有效性规则 ----------
+def parse_number(text):
+    if text is None:
+        return None
+    if isinstance(text, (int, float)):
+        return float(text)
+    s = str(text).strip().replace(',', '')
+    if s in INVALID_TOKENS:
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def parse_record_line(line):
+    line = line.strip()
+    if not line or ':' not in line:
+        return None, None
+    sym, rest = line.split(':', 1)
+    return sym.strip(), [p.strip() for p in rest.split(',')]
+
+
+def is_valid_shares_fields(fields):
+    """0 表示页面确认无股本（Yahoo 显示 --），也视为已检查过的有效记录"""
+    if not fields or len(fields) < 2:
+        return False
+    v = parse_number(fields[0])
+    return v is not None and v >= 0
+
+
+def is_valid_marketcap_fields(fields):
+    if not fields or len(fields) < 3:
+        return False
+    v = parse_number(fields[0])
+    return v is not None and v > 0
+
+
+def analyze_record_file(path, validator):
+    """返回 (有效集合, 出现集合, 重复集合)"""
+    counts, valid = {}, set()
+    with open(path, encoding='utf-8', errors='replace') as f:
+        for line in f:
+            sym, fields = parse_record_line(line)
+            if not sym:
+                continue
+            counts[sym] = counts.get(sym, 0) + 1
+            if validator(fields):
+                valid.add(sym)
+    dup = {s for s, c in counts.items() if c > 1}
+    return valid - dup, set(counts), dup
+
+
+def find_file_path_with_fallback(filename, primary_dir, fallback_dir):
+    for d in (primary_dir, fallback_dir):
+        p = os.path.join(d, filename)
+        if os.path.exists(p):
+            print(f"Found '{filename}': {p}")
+            return p
+    raise FileNotFoundError(
+        f"File '{filename}' not found in '{primary_dir}' or '{fallback_dir}'.")
+
+
+def check_database(symbols):
+    """检查 MNSPP 中 shares / marketcap 是否存在且 > 0。数据库不可用时只警告不阻断"""
+    problems = {}
+    if not os.path.exists(DB_PATH):
+        print(f"警告：数据库不存在，跳过数据库检查: {DB_PATH}")
+        return problems
+    try:
+        conn = sqlite3.connect(Path(DB_PATH).as_uri() + "?mode=ro", uri=True, timeout=30)
+        rows = conn.execute("SELECT upper(symbol), shares, marketcap FROM MNSPP").fetchall()
+        conn.close()
+    except sqlite3.Error as e:
+        print(f"警告：读取数据库失败，跳过数据库检查: {e}")
+        return problems
+
+    db = {r[0]: (r[1], r[2]) for r in rows}
+    for s in symbols:
+        rec = db.get(s.upper())
+        if rec is None:
+            problems.setdefault(s, []).append("数据库无记录")
+            continue
+        mc = parse_number(rec[1])
+        if not mc or mc <= 0:
+            problems.setdefault(s, []).append("数据库marketcap为空")
+    return problems
+
+
+def save_json_atomic(path, data):
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix='.tmp_', dir=d)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
+def backup_txt_files():
+    """将 Downloads 下的 txt 移动到 backup（覆盖）"""
+    moved, errors = [], []
+    os.makedirs(FALLBACK_TXT_DIR, exist_ok=True)
+    for filename in (MARKETCAP_FILENAME, SHARES_FILENAME):
+        src = os.path.join(PRIMARY_TXT_DIR, filename)
+        dst = os.path.join(FALLBACK_TXT_DIR, filename)
+        if not os.path.exists(src):
+            print(f"Downloads 中没有 {filename}，跳过备份")
+            continue
         try:
-            os.makedirs(fallback_txt_dir)
-            print(f"Created backup directory: {fallback_txt_dir}")
-        except OSError as e:
-            print(f"Error creating backup directory: {e}")
-
-    for filename in files_to_backup:
-        # 源文件路径 (强制从 Downloads 目录找，因为你的需求是将 Downloads 下的文件移动走)
-        src_path = os.path.join(primary_txt_dir, filename)
-        # 目标文件路径
-        dst_path = os.path.join(fallback_txt_dir, filename)
-        
-        # 检查源文件是否存在
-        if os.path.exists(src_path):
             try:
-                # 如果目标文件已存在，先删除，以实现“覆盖”效果
-                if os.path.exists(dst_path):
-                    os.remove(dst_path)
-                    print(f"Removed existing backup: {dst_path}")
-                
-                # 移动文件
-                shutil.move(src_path, dst_path)
-                print(f"Successfully moved: {filename} -> {fallback_txt_dir}")
-            except Exception as e:
-                error_msg = f"Failed to move {filename}: {e}"
-                print(error_msg)
-                # 可选：如果移动失败也弹窗提醒
-                # show_alert(error_msg)
+                os.replace(src, dst)  # 同一磁盘：原子覆盖
+            except OSError:
+                shutil.copy2(src, dst)  # 跨磁盘：复制后删除
+                os.remove(src)
+            moved.append(filename)
+            print(f"Successfully moved: {filename} -> {FALLBACK_TXT_DIR}")
+        except Exception as e:
+            errors.append(f"{filename}: {e}")
+            print(f"Failed to move {filename}: {e}")
+    return moved, errors
+
+
+def main():
+    # 1. 读取 JSON
+    try:
+        with open(SECTOR_ALL_JSON, encoding='utf-8') as f:
+            sector_all = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        fail(f"Error: 无法读取 {SECTOR_ALL_JSON}: {e}")
+
+    sector_empty = {}
+    if os.path.exists(SECTOR_EMPTY_JSON):
+        try:
+            with open(SECTOR_EMPTY_JSON, encoding='utf-8') as f:
+                sector_empty = json.load(f)
+        except json.JSONDecodeError as e:
+            fail(f"Error: {SECTOR_EMPTY_JSON} 内容损坏: {e}")
+
+    # 2. 目标 symbol
+    all_symbols = set()
+    for cat in CATEGORIES:
+        all_symbols.update(sector_all.get(cat, []))
+
+    # 3. 读取 txt 并按内容校验
+    try:
+        mc_path = find_file_path_with_fallback(MARKETCAP_FILENAME, PRIMARY_TXT_DIR, FALLBACK_TXT_DIR)
+        sh_path = find_file_path_with_fallback(SHARES_FILENAME, PRIMARY_TXT_DIR, FALLBACK_TXT_DIR)
+        mc_valid, mc_present, mc_dup = analyze_record_file(mc_path, is_valid_marketcap_fields)
+        sh_valid, sh_present, sh_dup = analyze_record_file(sh_path, is_valid_shares_fields)
+    except FileNotFoundError as e:
+        fail(f"Error: 数据文件缺失. {e}")
+    except Exception as e:
+        fail(f"读取数据文件时发生错误: {e}")
+
+    reasons = {}
+
+    def add(sym, why):
+        reasons.setdefault(sym, []).append(why)
+
+    for s in all_symbols:
+        for name, valid, present, dup in (("marketcap_pe", mc_valid, mc_present, mc_dup),
+                                          ("Shares", sh_valid, sh_present, sh_dup)):
+            if s not in present:
+                add(s, f"{name}缺失")
+            elif s in dup:
+                add(s, f"{name}重复")
+            elif s not in valid:
+                add(s, f"{name}数据无效")
+
+    if CHECK_DATABASE:
+        for s, rs in check_database(all_symbols).items():
+            for r in rs:
+                add(s, r)
+
+    missing_all = set(reasons)
+
+    # 4. 写回 Sectors_empty（目标板块按原分类填入，其他分组保持不变）
+    for cat in CATEGORIES:
+        sector_empty[cat] = sorted(set(sector_all.get(cat, [])) & missing_all)
+    try:
+        save_json_atomic(SECTOR_EMPTY_JSON, sector_empty)
+    except OSError as e:
+        fail(f"Error writing '{SECTOR_EMPTY_JSON}': {e}")
+
+    # 5. 结果
+    if missing_all:
+        print("---- 问题明细 ----")
+        for s in sorted(missing_all):
+            print(f"{s}: {', '.join(reasons[s])}")
+        preview = ", ".join(sorted(missing_all)[:15]) + (" ..." if len(missing_all) > 15 else "")
+        show_alert(f"检测到 {len(missing_all)} 个缺失/异常符号，已写入：{SECTOR_EMPTY_JSON}\n{preview}")
+    else:
+        show_alert("未检测到缺失符号，无需更新。即将备份文件。")
+        print("--- 开始备份文件 ---")
+        moved, errors = backup_txt_files()
+        if errors:
+            show_alert("备份出错：\n" + "\n".join(errors))
+        elif moved:
+            show_alert(f"移动文件成功完成！({', '.join(moved)})")
         else:
-            print(f"Source file not found in Downloads, skipping backup: {filename}")
+            show_alert("Downloads 中没有需要备份的文件。")
 
-        show_alert("移动文件成功完成！")
+    print("脚本执行完毕。")
 
-print("脚本执行完毕。")
+
+if __name__ == "__main__":
+    main()

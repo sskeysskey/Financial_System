@@ -27,6 +27,53 @@ const WL_JOB_TIMEOUT = 90 * 60 * 1000;
 const DEFAULT_GROUP = 'Earning';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+/* ==================== ★ 防休眠（chrome.power，任务期间常亮） ==================== */
+const AWAKE_LEASE = 3 * 60 * 1000;        // 持有者超过 3 分钟没心跳即视为失效（防止崩溃后永久常亮）
+const AWAKE_BEAT = 60 * 1000;             // 心跳间隔
+const awakeHolders = new Map();           // key -> 最后心跳时间
+let awakeOn = false;
+
+// 启动时先释放一次，防止 service worker 被回收前遗留的 keep-awake
+try { chrome.power.releaseKeepAwake(); } catch (e) { }
+
+function awakeApply() {
+  const want = awakeHolders.size > 0;
+  try {
+    if (want) chrome.power.requestKeepAwake('display');   // display = 阻止屏幕休眠/屏保，也阻止系统空闲睡眠
+    else chrome.power.releaseKeepAwake();
+  } catch (e) { console.warn(LOG, 'keep-awake 调用失败', e); }
+  if (want !== awakeOn) {
+    awakeOn = want;
+    console.log(LOG, want ? '🔆 防休眠已开启' : '💤 防休眠已释放');
+  }
+}
+function awakeSweep() {
+  const now = Date.now();
+  let changed = false;
+  for (const [k, t] of awakeHolders) {
+    if (now - t > AWAKE_LEASE) { awakeHolders.delete(k); changed = true; }
+  }
+  if (changed) awakeApply();
+}
+function awakeHold(key) {
+  awakeHolders.set(key, Date.now());
+  awakeSweep();
+  awakeApply();
+}
+function awakeRelease(key) {
+  awakeHolders.delete(key);
+  awakeApply();
+}
+/* 包裹一段异步任务：开始时持有，期间定时心跳，结束（成功/失败）都释放 */
+function withAwake(label, fn) {
+  const key = 'bg:' + label + ':' + Date.now() + ':' + Math.random().toString(36).slice(2, 6);
+  awakeHold(key);
+  const hb = setInterval(() => awakeHold(key), AWAKE_BEAT);
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => { clearInterval(hb); awakeRelease(key); });
+}
+setInterval(awakeSweep, 30 * 1000);
 
 async function jsonFetch(url, options) {
   const res = await fetch(url, options);
@@ -469,17 +516,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'FT_TRADE_LOG': return done(postTradeLog(msg.payload));
     case 'FT_WL_ENQUEUE': return done(enqueueSymbolTask(msg.task, msg.symbol, msg.group));
 
-    case 'FT_POS_QUOTE': return direct(posQuote(msg.symbol));
-    case 'FT_RUN_ON_PAGE': return direct(runOnPage(msg));
+    case 'FT_POS_QUOTE': return direct(withAwake('posq', () => posQuote(msg.symbol)));
+    case 'FT_RUN_ON_PAGE': return direct(withAwake('run', () => runOnPage(msg)));
     case 'FT_PEEK_PAGE': return direct(peekPage(msg.page, msg.msg));
-    case 'FT_COMBO': return direct(runCombo(msg));
+    case 'FT_COMBO': return direct(withAwake('combo', () => runCombo(msg)));
     case 'FT_ENSURE_WATCHLIST_TAB':
       return done(openPageTab('watchlist', true).then(r => ({ tabId: r.tab.id, status: r.how })));
     case 'FT_RESTORE_TAB':
       sendResponse({ ok: true });
       return;
+    case 'FT_AWAKE': {
+      const tid = sender && sender.tab ? sender.tab.id : 'x';
+      const key = 'tab:' + tid + ':' + (msg.id || 'content');
+      if (msg.on) awakeHold(key); else awakeRelease(key);
+      sendResponse({ ok: true, holders: awakeHolders.size });
+      return;
+    }
     default: return;
   }
+});
+
+/* 页面关闭时，释放它持有的防休眠 */
+chrome.tabs.onRemoved.addListener((tabId) => {
+  let changed = false;
+  for (const k of [...awakeHolders.keys()]) {
+    if (k.startsWith('tab:' + tabId + ':')) { awakeHolders.delete(k); changed = true; }
+  }
+  if (changed) awakeApply();
 });
 
 console.log(LOG, 'service worker 就绪 (v10.1：持仓页交易 / 按股数下单 / G 键取变更%)');

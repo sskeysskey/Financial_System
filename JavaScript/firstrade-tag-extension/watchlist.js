@@ -1648,9 +1648,22 @@
 
   const scanState = { running: false, abort: false };
 
+  let awakeState = false, awakeBeat = null;
+  function reportAwake(on) {
+    on = !!on;
+    if (on === awakeState) return;
+    awakeState = on;
+    clearInterval(awakeBeat);
+    const send = (v) => { try { chrome.runtime.sendMessage({ action: 'FT_AWAKE', id: 'content', on: v }); } catch (e) { } };
+    send(on);
+    // 任务期间每 60 秒心跳一次，防止后台 lease 过期
+    awakeBeat = on ? setInterval(() => send(true), 60 * 1000) : null;
+  }
+
   function syncBusy() {
     window.__FT_AUTOMATION__ = !!(job.running || job.finishing || scanState.running ||
       window.__FT_AGENT_BUSY__ || window.__FT_TRADE_BUSY__);
+    reportAwake(window.__FT_AUTOMATION__);      // ★ 任务期间保持屏幕常亮
   }
 
   async function persist(autoResume) {

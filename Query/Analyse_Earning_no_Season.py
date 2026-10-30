@@ -10,11 +10,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 # --- 1. 配置文件和路径 ---
 BASE_PATH = USER_HOME
 
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "ROL"
-# TARGET_DATE = "2026-09-25"
+SYMBOL_TO_TRACE = "BLCO"
+TARGET_DATE = "2026-10-12"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),

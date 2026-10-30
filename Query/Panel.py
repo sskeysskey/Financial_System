@@ -64,7 +64,7 @@ def filter_group_items(sector, keywords):
     return [k for k in keywords if test(k, k)]
 
 categories = [
-    ['Must', 'Today', 'Short_backup', 'Short_W_backup', 'PE_Volume_high_backup', 'PE_Volume_backup',
+    ['Must', 'Today', 'PE_Volume_high_backup', 'Short_backup', 'Short_W_backup', 'PE_Volume_backup',
      'PE_Hot_backup', 'PE_W_backup',
      'ETF_Volume_high_backup', 
      'SupportLevel_Over_backup',

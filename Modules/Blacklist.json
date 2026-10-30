@@ -393,7 +393,9 @@
         "PSKY",
         "WBD",
         "QRVO",
-        "Russia"
+        "Russia",
+        "CZR",
+        "PAG"
     ],
     "etf": [
         "VDE",
@@ -818,7 +820,8 @@
         "IDEQ",
         "GRPM",
         "FTA",
-        "GUSE"
+        "GUSE",
+        "QVAL"
     ],
     "Earning": [],
     "Options": [

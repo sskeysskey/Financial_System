@@ -1,77 +1,79 @@
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from tqdm import tqdm
 import os
 import re
 import json
 import time
-import pyperclip
+import random
+import sqlite3
+import argparse
+import platform
 import subprocess
+import tempfile
+import atexit
+import pyperclip
 import tkinter as tk
 from tkinter import ttk, messagebox
-import argparse
-import sqlite3
-import random
-import platform  # <--- 新增
+
+
+def log(msg=""):
+    """与 tqdm 进度条兼容的输出"""
+    tqdm.write(str(msg))
+
 
 # ================= 防止系统休眠控制 =================
 _caffeinate_proc = None
 
 def start_caffeinate():
-    """启动 caffeinate 以防止系统休眠 (仅限 macOS)"""
+    """启动 caffeinate 防休眠 (仅 macOS)。-w 绑定本进程 PID，即使脚本被强杀 caffeinate 也会自动退出"""
     global _caffeinate_proc
-    import platform
-    import subprocess
-    if platform.system() == 'Darwin':
-        try:
-            # -i: 防止系统空闲休眠, -d: 防止显示器休眠, -m: 防止磁盘休眠, -u: 声明用户活动
-            _caffeinate_proc = subprocess.Popen(["caffeinate", "-idmu"])
-            print(">>> [系统] 已开启防休眠模式 (caffeinate)")
-        except Exception as e:
-            print(f">>> [系统] 无法启动 caffeinate: {e}")
+    if platform.system() != 'Darwin' or _caffeinate_proc:
+        return
+    try:
+        _caffeinate_proc = subprocess.Popen(["caffeinate", "-idmu", "-w", str(os.getpid())])
+        log(">>> [系统] 已开启防休眠模式 (caffeinate)")
+    except Exception as e:
+        log(f">>> [系统] 无法启动 caffeinate: {e}")
 
 def stop_caffeinate():
-    """停止 caffeinate"""
     global _caffeinate_proc
     if _caffeinate_proc:
         try:
             _caffeinate_proc.terminate()
-            print(">>> [系统] 已关闭防休眠模式")
+            _caffeinate_proc.wait(timeout=3)
+            log(">>> [系统] 已关闭防休眠模式")
         except Exception as e:
-            print(f">>> [系统] 关闭 caffeinate 时出错: {e}")
+            log(f">>> [系统] 关闭 caffeinate 时出错: {e}")
+        finally:
+            _caffeinate_proc = None
 
-import atexit
 atexit.register(stop_caffeinate)
 
-# ================= 配置区域 (跨平台修改) =================
-
-# 1. 动态获取主目录
+# ================= 配置区域 =================
 USER_HOME = os.path.expanduser("~")
-
-# 2. 定义基础路径
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
 DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
 NEWS_BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
 
-# 3. 具体业务文件路径
 SECTORS_EMPTY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_empty.json")
 SECTORS_ALL_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_All.json")
 SECTORS_TODAY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_today.json")
 SECTORS_HOLIDAY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_US_holiday.json")
 DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 
-# 4. 浏览器与驱动路径 (跨平台适配)
+SHARES_FILENAME = "Shares.txt"
+MARKETCAP_FILENAME = "marketcap_pe.txt"
+
 if platform.system() == 'Darwin':
     CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
     CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
 elif platform.system() == 'Windows':
-    # Windows 路径优化
     CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     if not os.path.exists(CHROME_BINARY_PATH):
         CHROME_BINARY_PATH = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
@@ -80,759 +82,774 @@ else:
     CHROME_BINARY_PATH = "/usr/bin/google-chrome"
     CHROME_DRIVER_PATH = "/usr/bin/chromedriver"
 
-# ========================================================
+TARGET_SECTORS = [
+    'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Energy',
+    'Technology', 'Utilities', 'Industrials', 'Consumer_Defensive',
+    'Communication_Services', 'Financial_Services', 'Healthcare'
+]
 
-def create_db_connection(db_file):
-    """ 创建一个到SQLite数据库的连接 """
-    conn = None
-    try:
-        conn = sqlite3.connect(db_file, timeout=60.0)
-        # 让查询结果可以像字典一样通过列名访问
-        conn.row_factory = sqlite3.Row
-        print("成功连接到数据库。")
-    except sqlite3.Error as e:
-        print(f"数据库连接错误: {e}")
-        show_alert(f"数据库连接错误: {e}")
-    return conn
+INVALID_TOKENS = {'', 'N/A', '-', '--', 'None', 'null'}
+MAX_RETRIES = 3
+KEY_STATS_URL = "https://finance.yahoo.com/quote/{symbol}/key-statistics/"
+QUOTE_URL = "https://finance.yahoo.com/quote/{symbol}/"
 
-def get_stock_from_db(conn, symbol):
-    """ 从MNSPP表中根据symbol查询股票数据 """
+# ================= 通用解析工具 =================
+def parse_number(text):
+    """'1,234.5' -> 1234.5；无效值返回 None"""
+    if text is None:
+        return None
+    if isinstance(text, (int, float)):
+        return float(text)
+    s = str(text).strip().replace(',', '')
+    if s in INVALID_TOKENS:
+        return None
     try:
-        cur = conn.cursor()
-        # 使用 upper() 进行不区分大小写的比较
-        cur.execute("SELECT * FROM MNSPP WHERE upper(symbol) = ?", (symbol.upper(),))
-        row = cur.fetchone()
-        return row  # 返回一个sqlite3.Row对象或None
-    except sqlite3.Error as e:
-        print(f"从数据库查询 {symbol} 时出错: {e}")
+        return float(s)
+    except ValueError:
         return None
 
-def should_update_field(db_value, scraped_value_str):
-    """
-    根据您的更新规则，判断一个字段是否需要更新。
-    返回 (是否更新_bool, 转换后的新值_float_or_int)
-    """
-    # 规则：如果抓取到的是空、0或'--'，则认为无效
-    is_scraped_valid = False
-    scraped_value = 0
-    
-    if scraped_value_str not in ('N/A', '-', '--', None):
-        try:
-            # 尝试将抓取到的值转为浮点数
-            val = float(scraped_value_str)
-            if val != 0:
-                is_scraped_valid = True
-                scraped_value = val
-        except (ValueError, TypeError):
-            is_scraped_valid = False
+def convert_shares_format(value_str):
+    """'15.33B' -> 15330000000.0；支持 T/B/M/K 和纯数字，无效返回 0"""
+    if value_str is None:
+        return 0
+    s = str(value_str).strip().replace(',', '')
+    if s in INVALID_TOKENS:
+        return 0
+    m = re.match(r'^(-?\d+(?:\.\d+)?)\s*([TtBbMmKk]?)$', s)
+    if not m:
+        return 0
+    multiplier = {'T': 1e12, 'B': 1e9, 'M': 1e6, 'K': 1e3, '': 1}[m.group(2).upper()]
+    return float(m.group(1)) * multiplier
 
-    # 规则：如果数据库中的值是空或0，则认为无效
-    is_db_valid = db_value is not None and float(db_value) != 0
+def format_marketcap(value):
+    """保持原有浮点格式（如 2590000000.0），并消除浮点误差"""
+    return str(float(round(value)))
 
-    # 如果抓取到的数据无效，则不更新
-    if not is_scraped_valid:
+# ================= JSON 工具 =================
+def atomic_write_text(path, content):
+    """先写临时文件再 os.replace，崩溃时不会留下半截文件"""
+    d = os.path.dirname(path) or '.'
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix='.tmp_', dir=d)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+def load_json(path, default=None):
+    if not os.path.exists(path):
+        return default
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def save_json_atomic(path, data):
+    atomic_write_text(path, json.dumps(data, ensure_ascii=False, indent=2))
+
+# ================= TXT 记录读写（与 Fix 脚本使用同一套有效性规则） =================
+def parse_record_line(line):
+    line = line.strip()
+    if not line or ':' not in line:
+        return None, None
+    sym, rest = line.split(':', 1)
+    return sym.strip(), [p.strip() for p in rest.split(',')]
+
+def is_valid_shares_fields(fields):
+    """Shares.txt: 'SYM: shares, pb'，shares 必须 > 0"""
+    if not fields or len(fields) < 2:
+        return False
+    v = parse_number(fields[0])
+    return v is not None and v > 0
+
+def is_valid_marketcap_fields(fields):
+    """marketcap_pe.txt: 'SYM: marketcap, pe, pb'，marketcap 必须 > 0"""
+    if not fields or len(fields) < 3:
+        return False
+    v = parse_number(fields[0])
+    return v is not None and v > 0
+
+def load_record_status(path, validator):
+    """返回 (有效 symbol 集合, 出现过的 symbol 集合)。重复出现的 symbol 视为无效（需要重写去重）"""
+    counts, valid = {}, set()
+    if not os.path.exists(path):
+        return set(), set()
+    with open(path, encoding='utf-8', errors='replace') as f:
+        for line in f:
+            sym, fields = parse_record_line(line)
+            if not sym:
+                continue
+            counts[sym] = counts.get(sym, 0) + 1
+            if validator(fields):
+                valid.add(sym)
+    dup = {s for s, c in counts.items() if c > 1}
+    return valid - dup, set(counts)
+
+def upsert_record(path, symbol, line):
+    """删除该 symbol 的所有旧行（含重复/损坏行），追加新行，原子写回"""
+    kept = []
+    if os.path.exists(path):
+        with open(path, encoding='utf-8', errors='replace') as f:
+            for raw in f:
+                sym, _ = parse_record_line(raw)
+                if sym == symbol:
+                    continue
+                if raw.strip():
+                    kept.append(raw.rstrip('\r\n'))
+    kept.append(line)
+    atomic_write_text(path, '\n'.join(kept) + '\n')
+
+def append_record(path, line):
+    """追加一行；若文件末尾没有换行（上次崩溃写了半行），先补换行，避免两行粘连"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    prefix = ''
+    if os.path.exists(path) and os.path.getsize(path) > 0:
+        with open(path, 'rb') as f:
+            f.seek(-1, os.SEEK_END)
+            if f.read(1) != b'\n':
+                prefix = '\n'
+    with open(path, 'a', encoding='utf-8') as f:
+        f.write(prefix + line + '\n')
+        f.flush()
+        os.fsync(f.fileno())
+
+def build_target(paths, validator, always_upsert):
+    valid, present = load_record_status(paths[0], validator)
+    return {'paths': paths, 'valid': valid, 'present': present, 'always_upsert': always_upsert}
+
+def write_to_target(target, symbol, line, is_valid):
+    for p in target['paths']:
+        if target['always_upsert'] or symbol in target['present']:
+            upsert_record(p, symbol, line)
+        else:
+            append_record(p, line)
+    target['present'].add(symbol)
+    if is_valid:
+        target['valid'].add(symbol)
+    else:
+        target['valid'].discard(symbol)
+
+def get_repair_paths(filename):
+    """
+    修复模式写入目标：Downloads 和 backup 中所有已存在的副本都更新。
+    （Fix 脚本最后会用 Downloads 的文件覆盖 backup，只写 backup 会导致数据被覆盖丢失）
+    两处都没有时，写到 Downloads。第一个路径作为状态判断的主文件（与 Fix 的查找顺序一致）。
+    """
+    candidates = [os.path.join(DOWNLOADS_DIR, filename), os.path.join(NEWS_BACKUP_DIR, filename)]
+    existing = [p for p in candidates if os.path.exists(p)]
+    return existing or [candidates[0]]
+
+# ================= 数据库 =================
+def create_db_connection(db_file):
+    try:
+        conn = sqlite3.connect(db_file, timeout=60.0)
+        conn.row_factory = sqlite3.Row
+        log("成功连接到数据库。")
+        return conn
+    except sqlite3.Error as e:
+        log(f"数据库连接错误: {e}")
+        show_alert(f"数据库连接错误: {e}")
+        return None
+
+def get_stock_from_db(conn, symbol):
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM MNSPP WHERE upper(symbol) = ?", (symbol.upper(),))
+    return cur.fetchone()
+
+def should_update_field(db_value, scraped_value):
+    """
+    抓取值无效(空/0/--)不更新；数据库值无效则更新；两者都有效但不同（相对误差）则更新。
+    返回 (是否更新, 新值)
+    """
+    new_val = parse_number(scraped_value)
+    if new_val is None or new_val == 0:
         return False, None
-
-    # 如果抓取到的数据有效，但数据库数据无效，则更新
-    if not is_db_valid:
-        return True, scraped_value
-
-    # 如果两者都有效，但值不相同（处理浮点数精度问题），则更新
-    if abs(float(db_value) - scraped_value) > 1e-9: # 比较浮点数差异
-        return True, scraped_value
-
-    # 其他情况（两者都无效，或两者都有效且值相同）不更新
+    old_val = parse_number(db_value)
+    if old_val is None or old_val == 0:
+        return True, new_val
+    if abs(old_val - new_val) > 1e-9 * max(1.0, abs(old_val)):
+        return True, new_val
     return False, None
 
-# --- 修改点 1: 移除 update_stock_in_db 中关于 name 的部分 ---
-def update_stock_in_db(conn, symbol, scraped_data, db_record):
-    """
-    根据新抓取的数据更新数据库中的记录。
-    scraped_data: 包含新数据的字典。
-    db_record: 从数据库查询到的旧数据（sqlite3.Row对象）。
-    """
-    updates = []
-    params = []
-    
-    # 检查 'shares' 字段
-    update_shares, new_shares = should_update_field(db_record['shares'], scraped_data['shares'])
-    if update_shares:
-        updates.append("shares = ?")
-        params.append(int(new_shares)) # Shares应该是整数
-
-    # 检查 'marketcap' 字段
-    update_marketcap, new_marketcap = should_update_field(db_record['marketcap'], scraped_data['marketcap'])
-    if update_marketcap:
-        updates.append("marketcap = ?")
-        params.append(new_marketcap)
-
-    # 检查 'pe_ratio' 字段
-    update_pe, new_pe = should_update_field(db_record['pe_ratio'], scraped_data['pe'])
-    if update_pe:
-        updates.append("pe_ratio = ?")
-        params.append(new_pe)
-
-    # 检查 'pb' 字段
-    update_pb, new_pb = should_update_field(db_record['pb'], scraped_data['pb'])
-    if update_pb:
-        updates.append("pb = ?")
-        params.append(new_pb)
-
+def update_stock_in_db(conn, symbol, res, db_record):
+    updates, params = [], []
+    for col, key, as_int in (('shares', 'shares', True), ('marketcap', 'marketcap', False),
+                             ('pe_ratio', 'pe', False), ('pb', 'pb', False)):
+        need, new_val = should_update_field(db_record[col], res[key])
+        if need:
+            updates.append(f"{col} = ?")
+            params.append(int(new_val) if as_int else new_val)
     if not updates:
-        print(f"数据库中 {symbol} 的数据已是最新，无需更新。")
-        return
-
+        log(f"数据库中 {symbol} 的数据已是最新，无需更新。")
+        return True
     try:
         sql = f"UPDATE MNSPP SET {', '.join(updates)} WHERE upper(symbol) = ?"
         params.append(symbol.upper())
-        
-        cur = conn.cursor()
-        cur.execute(sql, tuple(params))
+        conn.execute(sql, tuple(params))
         conn.commit()
-        print(f"已更新数据库中 {symbol} 的记录: {', '.join(field.split(' ')[0] for field in updates)}")
+        log(f"已更新数据库中 {symbol} 的记录: {', '.join(u.split(' ')[0] for u in updates)}")
+        return True
     except sqlite3.Error as e:
-        print(f"更新数据库中 {symbol} 的记录时出错: {e}")
+        log(f"更新数据库中 {symbol} 的记录时出错: {e}")
+        return False
 
-# --- 修改点 2: 移除 insert_stock_into_db 中的 name 参数和相关逻辑 ---
-def insert_stock_into_db(conn, symbol, shares, marketcap, pe, pb):
-    """ 向MNSPP表中插入一条新的股票记录 (已移除name列) """
-    # 修改了SQL语句，去掉了 name 列和对应的占位符
-    sql = ''' INSERT INTO MNSPP(symbol, shares, marketcap, pe_ratio, pb)
-              VALUES(?,?,?,?,?) '''
+def _positive_or_none(v):
+    n = parse_number(v)
+    return n if (n is not None and n > 0) else None
+
+def insert_stock_into_db(conn, symbol, res):
+    shares = _positive_or_none(res['shares'])
     try:
-        cur = conn.cursor()
-        # 将'--'或无效值转换成数据库的NULL
-        pe_to_db = None if pe in ('--', 'N/A', '-') else float(pe)
-        pb_to_db = None if pb in ('--', 'N/A', '-') else float(pb)
-        
-        # 修改了 execute 的参数，移除了 name
-        cur.execute(sql, (symbol, int(shares), marketcap, pe_to_db, pb_to_db))
+        conn.execute(
+            "INSERT INTO MNSPP(symbol, shares, marketcap, pe_ratio, pb) VALUES(?,?,?,?,?)",
+            (symbol,
+             int(shares) if shares else None,
+             _positive_or_none(res['marketcap']),
+             parse_number(res['pe']),
+             parse_number(res['pb'])))
         conn.commit()
-        print(f"已将新symbol {symbol} 插入到数据库。")
-    except (sqlite3.Error, ValueError) as e:
-        print(f"向数据库插入 {symbol} 时出错: {e}")
+        log(f"已将新symbol {symbol} 插入到数据库。")
+        return True
+    except sqlite3.Error as e:
+        log(f"向数据库插入 {symbol} 时出错: {e}")
+        return False
 
+def sync_db(conn, symbol, res, new_db_symbols):
+    try:
+        record = get_stock_from_db(conn, symbol)
+    except sqlite3.Error as e:
+        log(f"从数据库查询 {symbol} 时出错: {e}")
+        return False
+    if record:
+        return update_stock_in_db(conn, symbol, res, record)
+    log(f"注意：新Symbol '{symbol}' 在数据库中未找到，将添加新记录。")
+    ok = insert_stock_into_db(conn, symbol, res)
+    if ok:
+        new_db_symbols.append(symbol)
+    return ok
 
-def resolve_data_path(filename):
-    """
-    优先返回 ~/Downloads/filename，如果不存在则返回 ~/Coding/News/backup/filename。
-    """
-    dl = os.path.join(DOWNLOADS_DIR, filename)
-    bu = os.path.join(NEWS_BACKUP_DIR, filename)
-    if os.path.exists(dl):
-        return dl
-    elif os.path.exists(bu):
-        return bu
-    else:
-        # 两处都不存在，默认写到 Downloads
-        os.makedirs(DOWNLOADS_DIR, exist_ok=True)
-        return dl
-
-def Copy_Command_C():
-    """
-    跨平台模拟复制快捷键
-    """
-    if platform.system() == 'Darwin':
-        # Mac
-        script = '''
-        tell application "System Events"
-            keystroke "c" using command down
-        end tell
-        '''
-        subprocess.run(['osascript', '-e', script])
-    else:
-        # Windows/Linux (使用 pyautogui 模拟 Ctrl+C)
-        # 注意：这需要确保焦点在正确的窗口上
-        import pyautogui
-        pyautogui.hotkey('ctrl', 'c')
-        time.sleep(0.1) # 等待剪贴板更新
+# ================= 系统交互 / UI =================
+def _escape_applescript(s):
+    return str(s).replace('\\', '\\\\').replace('"', '\\"')
 
 def show_alert(message):
-    """
-    跨平台弹窗提示
-    """
     if platform.system() == 'Darwin':
-        # Mac 原生 AppleScript
         try:
-            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-            subprocess.run(['osascript', '-e', applescript_code], check=True)
+            code = f'display dialog "{_escape_applescript(message)}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', code], check=False)
         except Exception:
             pass
     else:
-        # Windows Tkinter
         root = tk.Tk()
         root.withdraw()
         messagebox.showinfo("提示", message)
         root.destroy()
 
-def show_yes_no_dialog(message):
-    """显示是/否对话框并返回用户选择结果"""
+def Copy_Command_C():
     if platform.system() == 'Darwin':
-        applescript_code = f'display dialog "{message}" buttons {{"否", "是"}} default button "是"'
-        result = subprocess.run(['osascript', '-e', applescript_code], 
-                                capture_output=True, text=True, check=False)
-        return "button returned:是" in result.stdout
+        script = 'tell application "System Events" to keystroke "c" using command down'
+        subprocess.run(['osascript', '-e', script])
+        time.sleep(0.1)
     else:
-        root = tk.Tk()
-        root.withdraw()
-        result = messagebox.askyesno("确认", message)
-        root.destroy()
-        return result
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='股票数据抓取工具')
-    parser.add_argument('--mode', type=str, default='normal', 
-                        help='运行模式: normal或empty。默认为normal')
-    parser.add_argument('--clear', action='store_true',
-                        help='抓取结束后直接清空 Sectors_empty.json，无需弹窗确认')
-    return parser.parse_args()
-
-def check_empty_json_has_content(json_file_path):
-    if not os.path.exists(json_file_path):
-        return False
-    with open(json_file_path, 'r') as file:
-        data = json.load(file)
-    for group, items in data.items():
-        if items:  # 如果该分组有任何项目
-            return True
-    return False
-
-def add_symbol_to_json_files(symbol, group):
-    """将symbol添加到指定的JSON文件的对应分组中"""
-    # 动态路径
-    json_files = [SECTORS_EMPTY_JSON, SECTORS_ALL_JSON, SECTORS_TODAY_JSON]
-    
-    for file_path in json_files:
-        if not os.path.exists(file_path):
-            # 确保父目录存在
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, 'w') as f:
-                json.dump({}, f)
-        
-        # 读取文件内容
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-        
-        # 如果组不存在，创建一个空列表
-        if group not in data:
-            data[group] = []
-        
-        # 如果symbol不在该组中，添加它
-        if symbol not in data[group]:
-            data[group].append(symbol)
-        
-        # 写回文件
-        with open(file_path, 'w') as f:
-            json.dump(data, f, indent=2)
+        import pyautogui
+        pyautogui.hotkey('ctrl', 'c')
+        time.sleep(0.1)
 
 def show_input_dialog(default_symbol=""):
-    """
-    修改后的对话框：
-    仅用于输入symbol，输入后自动转换为大写，不需要选择分组
-    """
-    def close_app(event=None):
-        root.quit()
-    
+    result = {'symbol': ''}
     root = tk.Tk()
     root.title("输入Symbol")
     root.geometry("400x150")
     root.lift()
     root.focus_force()
-    root.bind('<Escape>', close_app)
-    
-    symbol = ""
-    
-    # 创建输入框和标签
+    root.attributes('-topmost', True)
+
     tk.Label(root, text="请输入Stock Symbol:").pack(pady=10)
-    symbol_entry = tk.Entry(root)
-    symbol_entry.pack(pady=5)
-    
+    entry = tk.Entry(root)
+    entry.pack(pady=5)
     if default_symbol:
-        symbol_entry.insert(0, default_symbol)
-    
-    symbol_entry.focus_set()
-    
-    def on_ok():
-        nonlocal symbol
-        symbol = symbol_entry.get().strip().upper()  # 自动转换为大写
+        entry.insert(0, default_symbol)
+    entry.focus_set()
+
+    def on_ok(event=None):
+        result['symbol'] = entry.get().strip().upper()
         root.destroy()
-    
-    def on_cancel():
+
+    def on_cancel(event=None):
         root.destroy()
-    
-    # 创建按钮
-    button_frame = tk.Frame(root)
-    button_frame.pack(pady=20)
-    
-    tk.Button(button_frame, text="确定", command=on_ok).pack(side=tk.LEFT, padx=10)
-    tk.Button(button_frame, text="取消", command=on_cancel).pack(side=tk.LEFT, padx=10)
-    
+
+    root.bind('<Return>', on_ok)
+    root.bind('<Escape>', on_cancel)
+    frame = tk.Frame(root)
+    frame.pack(pady=20)
+    tk.Button(frame, text="确定", command=on_ok).pack(side=tk.LEFT, padx=10)
+    tk.Button(frame, text="取消", command=on_cancel).pack(side=tk.LEFT, padx=10)
     root.mainloop()
-    return symbol
+    return result['symbol']
 
-def convert_shares_format(shares_str):
-    # 转换股票数量的表示方式，例如 "15.33B" 转换为 15330000000
-    if shares_str == 'N/A' or shares_str == '-':
-        return 0
-    if 'T' in shares_str:
-        return float(shares_str.replace('T', '')) * 10**12
-    elif 'B' in shares_str:
-        return float(shares_str.replace('B', '')) * 10**9
-    elif 'M' in shares_str:
-        return float(shares_str.replace('M', '')) * 10**6
-    elif 'K' in shares_str or 'k' in shares_str:
-        return float(shares_str.replace('K', '').replace('k', '')) * 10**3
-    try:
-        return float(shares_str)  # 如果没有单位标识符，直接返回原始字符串
-    except ValueError:
-        return 0  # 如果无法转换为浮点数，返回0
-
-# 处理公司名称的函数
-def clean_company_name(name):
-    # 1. 先把 " del …" 或 " de …"（前后都要空格，忽略大小写）及其后面所有内容一起去掉
-    #    \s           匹配前面的空格
-    #    (?:del|de)   匹配 del 或 de
-    #    \s+          至少一个空格
-    #    .*           后面所有内容
-    name = re.sub(r'\s(?:del|de)\s+.*', '', name, flags=re.IGNORECASE)
-
-    # 移除常见的公司后缀
-    suffixes = [
-        ', Inc.', ' Inc.', ', LLC', ' LLC', ', Ltd.', ' Ltd.', ', Limited', ' Limited', ', Corp.', ' Corp.',
-        ', Corporation', ' Corporation', ', Co.', ' Co.', ', Company', ' Company', ' Bros', ' plc', ' Group', ' S.A.',
-        ' N.V.', ' Holdings', ' S.A.B.', ' C.V.', ' Ltd', ' Holding', ' Companies', ' PLC', '& plc', ' Incorporated',
-        ' AG', ' &', ' SE', '- Petrobras', ' L.P.', ', L.P.', ', LP', ' LP', 'de C.V.', ' Inc', ', Incorporated',
-        ' National Information Services', ' American Pipeline,', ' - SABESP', ' - Eletrobrás', ' Solutions',
-        ' S.p.A.', ' A/S', ' A.S.', ' p.l.c.', ', S. A. B. de C. V.', ' - COPEL', ' - CEMIG', ' Equities',
-        ' Plc', ',B. de', ' Worldwide', ' International', ' Technologies', ' and', ' Bancorp', ' Bancshares',
-        ' Bankshares', ' Services', ' Fund', ' Bancorporation', ' Association', ' Management', ' Entertainment',
-        ' Interactive Software', ' Technology', ' SA', ' Partners', ' Innovations', ' Brasileiras', ' Properties',
-        ' Enterprise', ' DI', ' Alliance', ' Associates', ' Systems,' ' Systems', ' Kaspi.kz', ' Manufacturing',
-        ' Participações', ' Partners,', ' Investment Trust'
-    ]
-    
-    cleaned_name = name
-    for suffix in suffixes:
-        cleaned_name = cleaned_name.replace(suffix, '')
-    
-    return cleaned_name.strip()
-
-# 读取JSON文件获取股票符号
-def get_stock_symbols_from_json(json_file_path):
-    with open(json_file_path, 'r') as file:
-        sectors_data = json.load(file)
-    
-    # 只提取指定分类的股票符号，注意这里的target_sectors需与实际分组对应
-    target_sectors = [
-        'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Energy',
-        'Technology', 'Utilities', 'Industrials', 'Consumer_Defensive',
-        'Communication_Services', 'Financial_Services', 'Healthcare'
-    ]
-    
-    stock_symbols = []
-    for sector in target_sectors:
-        if sector in sectors_data:
-            stock_symbols.extend(sectors_data[sector])
-    
-    return stock_symbols
-
-# 获取已处理的股票符号列表
-def get_existing_symbols(file_path):
-    existing_symbols = set()
-    if os.path.exists(file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
-            for line in file:
-                if ':' in line:
-                    symbol = line.split(':')[0].strip()
-                    existing_symbols.add(symbol)
-    return existing_symbols
-
-# 优化等待策略的函数
-def wait_for_element(driver, by, value, timeout=10):
-    """等待元素加载完成并返回"""
-    try:
-        element = WebDriverWait(driver, timeout).until(
-            EC.presence_of_element_located((by, value))
-        )
-        return element
-    except Exception as e:
-        return None
-
-def clear_empty_json():
-    """清空 Sectors_empty.json 文件中的所有股票符号，但保留分组结构"""
-    empty_json_path = SECTORS_EMPTY_JSON
-    with open(empty_json_path, 'r') as file:
-        data = json.load(file)
-    
-    # 清空每个分组中的内容，但保留分组
-    for group in data:
-        data[group] = []
-    
-    # 写回文件
-    with open(empty_json_path, 'w') as file:
-        json.dump(data, file, indent=2)
-    print("已清空 Sectors_empty.json 文件中的所有股票符号")
-
-def get_group_for_symbol(symbol):
-    """
-    从 Sectors_All.json 中自动匹配symbol所属的分组（忽略大小写）
-    """
-    with open(SECTORS_ALL_JSON, 'r') as f:
-        data = json.load(f)
-    for group, symbols in data.items():
-        # 将比对双方都转换为大写
-        symbols_upper = [s.upper() for s in symbols]
-        if symbol in symbols_upper:
-            return group
-    return None
-
-# ---- 1. 新增：从 Sectors_All.json 提取所有分组名 ---- #
-def extract_group_names():
-    with open(SECTORS_ALL_JSON, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return list(data.keys())
-
-# ---- 2. 新增：弹出带下拉框的对话，供用户选择分组 ---- #
 def show_group_selection_dialog(groups):
-    """
-    弹出一个小窗口，groups 为字符串列表，用户从下拉列表中选一个分组，返回选择的分组名。
-    取消或关闭窗口返回空字符串。
-    """
     selected = {'group': ''}
-    def on_ok():
-        selected['group'] = combo.get().strip()
-        root.destroy()
-    def on_cancel():
-        root.destroy()
-    
     root = tk.Tk()
     root.title("请选择分组")
     root.geometry("300x120")
     root.resizable(False, False)
-    # 确保窗口置顶
     root.attributes('-topmost', True)
-    
     tk.Label(root, text="在下拉列表中选择一个分组：").pack(pady=(10, 5))
-
     combo = ttk.Combobox(root, values=groups, state='readonly')
     combo.pack(pady=5, padx=10, fill='x')
     if groups:
         combo.current(0)
-    
-    btn_frame = tk.Frame(root)
-    btn_frame.pack(pady=(10, 5))
-    tk.Button(btn_frame, text="确定", width=10, command=on_ok).pack(side='left', padx=5)
-    tk.Button(btn_frame, text="取消", width=10, command=on_cancel).pack(side='left', padx=5)
-    
+
+    def on_ok():
+        selected['group'] = combo.get().strip()
+        root.destroy()
+
+    frame = tk.Frame(root)
+    frame.pack(pady=(10, 5))
+    tk.Button(frame, text="确定", width=10, command=on_ok).pack(side='left', padx=5)
+    tk.Button(frame, text="取消", width=10, command=root.destroy).pack(side='left', padx=5)
     root.mainloop()
     return selected['group']
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='股票数据抓取工具')
+    parser.add_argument('--mode', type=str, default='normal', help='运行模式: normal 或 empty')
+    parser.add_argument('--clear', action='store_true',
+                        help='结束后从 Sectors_empty.json 移除已成功修复的 symbol（失败的保留）')
+    return parser.parse_args()
+
+# ================= Sectors JSON =================
+def check_empty_json_has_content(json_file_path):
+    data = load_json(json_file_path, {}) or {}
+    return any(data.get(g) for g in data)
+
+def get_stock_symbols_from_json(json_file_path):
+    data = load_json(json_file_path, {}) or {}
+    seen, out = set(), []
+    for sector in TARGET_SECTORS:
+        for s in data.get(sector, []) or []:
+            s = str(s).strip()
+            if s and s not in seen:
+                seen.add(s)
+                out.append(s)
+    return out
+
+def add_symbol_to_json_files(symbol, group):
+    for file_path in [SECTORS_EMPTY_JSON, SECTORS_ALL_JSON, SECTORS_TODAY_JSON]:
+        data = load_json(file_path, {}) or {}
+        data.setdefault(group, [])
+        if symbol not in data[group]:
+            data[group].append(symbol)
+        save_json_atomic(file_path, data)
+
+def get_group_for_symbol(symbol):
+    data = load_json(SECTORS_ALL_JSON, {}) or {}
+    for group, symbols in data.items():
+        if symbol.upper() in (s.upper() for s in symbols):
+            return group
+    return None
+
+def extract_group_names():
+    return list((load_json(SECTORS_ALL_JSON, {}) or {}).keys())
+
+def finalize_empty_json(succeeded):
+    """
+    只从目标板块中移除成功修复的 symbol；失败/未处理的保留，方便再次修复。
+    非目标分组本脚本不处理，沿用原逻辑直接清空。
+    """
+    data = load_json(SECTORS_EMPTY_JSON, None)
+    if not isinstance(data, dict):
+        return 0
+    remaining = 0
+    for g in list(data.keys()):
+        if g in TARGET_SECTORS:
+            data[g] = [s for s in (data[g] or []) if s not in succeeded]
+            remaining += len(data[g])
+        else:
+            data[g] = []
+    save_json_atomic(SECTORS_EMPTY_JSON, data)
+    log(f"Sectors_empty.json 已更新：移除 {len(succeeded)} 个已修复 symbol，剩余 {remaining} 个待修复。")
+    return remaining
+
+# ================= 浏览器 & 抓取 =================
+def build_driver():
+    opts = Options()
+    if os.path.exists(CHROME_BINARY_PATH):
+        opts.binary_location = CHROME_BINARY_PATH
+    else:
+        log(f"警告：未找到指定 Chrome 路径 {CHROME_BINARY_PATH}，尝试使用系统默认...")
+    opts.add_argument('--headless=new')
+    opts.add_argument('--window-size=1920,1080')
+    opts.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+    opts.add_argument('--disable-blink-features=AutomationControlled')
+    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+    opts.add_experimental_option('useAutomationExtension', False)
+    opts.add_argument("--disable-extensions")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--blink-settings=imagesEnabled=false")
+    opts.page_load_strategy = 'eager'
+
+    if not os.path.exists(CHROME_DRIVER_PATH):
+        log(f"错误：未找到驱动文件: {CHROME_DRIVER_PATH}")
+        return None
+    try:
+        driver = webdriver.Chrome(service=Service(executable_path=CHROME_DRIVER_PATH), options=opts)
+        driver.set_page_load_timeout(20)
+        driver.set_script_timeout(20)
+        return driver
+    except Exception as e:
+        log(f"Selenium 启动失败: {e}")
+        return None
+
+class DriverManager:
+    """管理浏览器实例，会话崩溃时自动重建"""
+    def __init__(self):
+        self.driver = None
+
+    def start(self):
+        self.quit()
+        self.driver = build_driver()
+        return self.driver is not None
+
+    def is_alive(self):
+        if not self.driver:
+            return False
+        try:
+            _ = self.driver.current_url
+            return True
+        except Exception:
+            return False
+
+    def ensure_alive(self):
+        if not self.is_alive():
+            log("⚠️ 浏览器会话不可用，正在重建...")
+            if not self.start():
+                raise RuntimeError("浏览器重建失败")
+
+    def quit(self):
+        if self.driver:
+            try:
+                self.driver.quit()
+            except Exception:
+                pass
+            self.driver = None
+
+READY_STATS_JS = r"""
+for (const td of document.querySelectorAll('td')) {
+  const t = (td.textContent || '').trim();
+  if (t.startsWith('Shares Outstanding') || t.startsWith('Market Cap')) return true;
+}
+return false;
+"""
+
+STATS_JS = r"""
+const out = {};
+document.querySelectorAll('tr').forEach(tr => {
+  const cells = tr.querySelectorAll('td, th');
+  if (cells.length < 2) return;
+  const label = (cells[0].textContent || '').replace(/\s+/g, ' ').trim();
+  const value = (cells[1].textContent || '').replace(/\s+/g, ' ').trim();
+  if (label && !(label in out)) out[label] = value;
+});
+return out;
+"""
+
+READY_QUOTE_JS = r"""
+return !!document.querySelector('fin-streamer[data-field="marketCap"], [data-testid="quote-statistics"]');
+"""
+
+PRICE_JS = r"""
+const sym = arguments[0];
+const pick = el => el ? ((el.textContent || '').trim() || el.getAttribute('data-value') || '') : '';
+let v = pick(document.querySelector('[data-testid="qsp-price"]'));
+if (!v) v = pick(document.querySelector('fin-streamer[data-field="regularMarketPrice"][data-symbol="' + sym + '"]'));
+return v;
+"""
+
+QUOTE_MC_JS = r"""
+const sym = arguments[0];
+const pick = el => el ? ((el.textContent || '').trim() || el.getAttribute('data-value') || '') : '';
+let v = pick(document.querySelector('fin-streamer[data-field="marketCap"][data-symbol="' + sym + '"]'))
+     || pick(document.querySelector('fin-streamer[data-field="marketCap"]'));
+if (v) return v;
+for (const li of document.querySelectorAll('li')) {
+  const label = li.querySelector('.label, span');
+  if (label && /^Market Cap/i.test((label.textContent || '').trim())) {
+    const val = li.querySelector('.value');
+    if (val) return (val.textContent || '').trim();
+  }
+}
+return '';
+"""
+
+def load_page(driver, url, ready_js, timeout=10):
+    """加载页面；加载超时时停止加载并继续用已渲染的内容"""
+    try:
+        driver.get(url)
+    except TimeoutException:
+        try:
+            driver.execute_script("window.stop();")
+        except Exception:
+            pass
+    try:
+        WebDriverWait(driver, timeout).until(lambda d: d.execute_script(ready_js))
+        return True
+    except TimeoutException:
+        return False
+
+def find_stat(stats, prefix):
+    p = prefix.lower()
+    for label, value in stats.items():
+        if label.lower().startswith(p):
+            return value
+    return None
+
+def empty_result():
+    return {'shares': 0, 'shares_absent': False, 'pb': '--', 'marketcap': 0,
+            'pe': '--', 'price': 0, 'mc_source': None}
+
+def merge_results(best, cur):
+    """多次尝试的结果合并：保留任意一次拿到的有效值"""
+    out = dict(best)
+    if cur['shares'] > 0:
+        out['shares'] = cur['shares']
+    out['shares_absent'] = best['shares_absent'] or cur['shares_absent']
+    if out['shares'] > 0:
+        out['shares_absent'] = False
+    if cur['marketcap'] > 0:
+        out['marketcap'], out['mc_source'] = cur['marketcap'], cur['mc_source']
+    if cur['price'] > 0:
+        out['price'] = cur['price']
+    for k in ('pb', 'pe'):
+        if cur[k] != '--':
+            out[k] = cur[k]
+    return out
+
+def scrape_symbol(driver, symbol):
+    res = empty_result()
+
+    # 1) key-statistics 页面：一次 JS 取出全部表格数据（替代原先逐字段等待）
+    load_page(driver, KEY_STATS_URL.format(symbol=symbol), READY_STATS_JS)
+    stats = driver.execute_script(STATS_JS) or {}
+
+    raw_shares = find_stat(stats, 'Shares Outstanding')
+    res['shares'] = convert_shares_format(raw_shares)
+    # 标签存在但值为 --/N/A：页面确认没有该数据（区别于页面没加载出来的 None）
+    res['shares_absent'] = raw_shares is not None and res['shares'] <= 0
+    pb = parse_number(find_stat(stats, 'Price/Book'))
+    if pb is not None:
+        res['pb'] = str(pb)
+    pe = parse_number(find_stat(stats, 'Trailing P/E'))
+    if pe is not None:
+        res['pe'] = str(pe)
+    mc = convert_shares_format(find_stat(stats, 'Market Cap'))
+    if mc > 0:
+        res['marketcap'], res['mc_source'] = mc, 'key-statistics'
+    price = parse_number(driver.execute_script(PRICE_JS, symbol))
+    if price and price > 0:
+        res['price'] = price
+
+    # 2) 市值兜底：quote 主页面的 Market Cap (intraday)（新股/分拆股估值表常为 --）
+    if res['marketcap'] <= 0:
+        load_page(driver, QUOTE_URL.format(symbol=symbol), READY_QUOTE_JS)
+        mc = convert_shares_format(driver.execute_script(QUOTE_MC_JS, symbol))
+        if mc > 0:
+            res['marketcap'], res['mc_source'] = mc, 'quote'
+        if res['price'] <= 0:
+            price = parse_number(driver.execute_script(PRICE_JS, symbol))
+            if price and price > 0:
+                res['price'] = price
+    return res
+
+def scrape_with_retries(dm, symbol, max_retries=MAX_RETRIES):
+    best = empty_result()
+    for attempt in range(max_retries):
+        if attempt > 0:
+            log(f"正在重试 {symbol} (第 {attempt + 1}/{max_retries} 次)...")
+            time.sleep(random.uniform(2, 4))
+        try:
+            dm.ensure_alive()
+            best = merge_results(best, scrape_symbol(dm.driver, symbol))
+            if best['shares'] > 0 and best['marketcap'] > 0:
+                break
+            if best['shares_absent'] and best['marketcap'] > 0:
+                log(f"{symbol} 页面确认无 Shares Outstanding，不再重试")
+                break
+            log(f"尝试 {attempt + 1}: {symbol} 数据不完整 (shares={best['shares']}, marketcap={best['marketcap']})")
+        except WebDriverException as e:
+            log(f"尝试 {attempt + 1} 抓取 {symbol} 时浏览器出错: {str(e).splitlines()[0] if str(e) else e}")
+        except RuntimeError:
+            raise
+        except Exception as e:
+            log(f"尝试 {attempt + 1} 抓取 {symbol} 时发生错误: {e}")
+
+    # 3) 最终兜底：价格 × 股本 推算市值
+    if best['marketcap'] <= 0 and best['shares'] > 0 and best['price'] > 0:
+        best['marketcap'] = best['shares'] * best['price']
+        best['mc_source'] = 'computed'
+        log(f"⚠️ {symbol} 页面无市值，已用 价格({best['price']}) × 股本({int(best['shares'])}) 推算")
+    return best
+
+# ================= 主流程 =================
+SYMBOL_RE = re.compile(r'^[A-Z0-9.\-^=]{1,15}$')
+
+def prepare_single_symbol():
+    """empty.json 为空时：从剪贴板/输入框获取单个 symbol 并写入分组。返回 symbol 或 None"""
+    Copy_Command_C()
+    clip = (pyperclip.paste() or "").strip().upper()
+    symbol = clip if SYMBOL_RE.match(clip) else show_input_dialog(default_symbol="").strip().upper()
+    if not symbol:
+        log("未输入有效的股票Symbol，程序退出")
+        return None
+
+    group = get_group_for_symbol(symbol)
+    if not group:
+        show_alert(f"在 Sectors_All.json 中未找到 {symbol} 对应的分组，请手动选择。")
+        group = show_group_selection_dialog(extract_group_names())
+        if not group:
+            show_alert("未选择分组，程序退出")
+            return None
+    if group not in TARGET_SECTORS:
+        show_alert(f"{symbol} 属于分组 {group}，不在本脚本处理的板块范围内，不会被抓取。")
+    add_symbol_to_json_files(symbol, group)
+    log(f"已将 {symbol} 匹配到 {group} 分组并写入 Sectors_empty.json")
+    return symbol
+
 def main():
-    # 新增：启动防休眠
+    args = parse_arguments()
+    repair_mode = args.mode.lower() == 'empty'
     start_caffeinate()
 
-    # 解析命令行参数
-    args = parse_arguments()
-    
-    # 根据命令行参数选择JSON文件路径和输出目录
-    if args.mode.lower() == 'empty':
-        empty_json_path = SECTORS_EMPTY_JSON
-        has_content = check_empty_json_has_content(empty_json_path)
-        
-        # 根据检查结果决定使用哪种模式
-        if has_content:
-            # empty.json有内容，使用测试模式
-            json_file_path = empty_json_path
-            shares_file_path = resolve_data_path("Shares.txt")
-            marketcap_pe_file_path = resolve_data_path("marketcap_pe.txt")
-            print("使用空测试文件模式和backup目录...")
-        else:
-            # 首先尝试从剪贴板获取内容
-            Copy_Command_C()
-            clipboard_content = (pyperclip.paste() or "").strip()
-            
-            if clipboard_content:
-                symbol = clipboard_content.upper()
-            else:
-                # 剪贴板无内容则显示输入对话框
-                symbol = show_input_dialog(default_symbol="").strip().upper()
-            
-            if not symbol:
-                print("未输入有效的股票Symbol，程序退出")
+    if repair_mode:
+        if not check_empty_json_has_content(SECTORS_EMPTY_JSON):
+            if not prepare_single_symbol():
+                stop_caffeinate()
                 return
-            
-            group = get_group_for_symbol(symbol)
-            if not group:
-                show_alert(f"在 Sectors_All.json 中未找到 {symbol} 对应的分组，请手动选择。")
-                # 自动匹配失败，弹出下拉列表让用户选
-                groups = extract_group_names()
-                group = show_group_selection_dialog(groups)
-                if not group:
-                    show_alert("未选择分组，程序退出")
-                    return
-            if group:
-                add_symbol_to_json_files(symbol, group)
-                print(f"已将 {symbol} 自动匹配到 {group} 分组并写入 Sectors_empty.json")
-            
-            json_file_path = empty_json_path
-            shares_file_path = os.path.join(NEWS_BACKUP_DIR, "Shares.txt")
-            marketcap_pe_file_path = os.path.join(NEWS_BACKUP_DIR, "marketcap_pe.txt")
-            print("使用空测试文件模式和backup目录...")
+        json_file_path = SECTORS_EMPTY_JSON
+        shares_target = build_target(get_repair_paths(SHARES_FILENAME), is_valid_shares_fields, True)
+        mc_target = build_target(get_repair_paths(MARKETCAP_FILENAME), is_valid_marketcap_fields, True)
+        log(f"修复模式：强制重抓 Sectors_empty.json 中的 symbol，写入：{shares_target['paths'] + mc_target['paths']}")
     else:
         json_file_path = SECTORS_ALL_JSON
-        shares_file_path = os.path.join(DOWNLOADS_DIR, "Shares.txt")
-        marketcap_pe_file_path = os.path.join(DOWNLOADS_DIR, "marketcap_pe.txt")
-        print("使用正常模式和Downloads目录...")
+        shares_target = build_target([os.path.join(DOWNLOADS_DIR, SHARES_FILENAME)], is_valid_shares_fields, False)
+        mc_target = build_target([os.path.join(DOWNLOADS_DIR, MARKETCAP_FILENAME)], is_valid_marketcap_fields, False)
+        log("使用正常模式和Downloads目录（已完整的 symbol 自动跳过，不完整的会重抓并替换）...")
 
-    # --- 数据库连接 ---
-    # 确保数据库目录存在
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     db_conn = create_db_connection(DB_PATH)
     if not db_conn:
-        print("无法连接到数据库，程序退出。")
+        stop_caffeinate()
         return
 
-    # 设置Chrome选项
-    chrome_options = Options()
-    if os.path.exists(CHROME_BINARY_PATH):
-        chrome_options.binary_location = CHROME_BINARY_PATH
-    else:
-        print(f"警告：未找到指定 Chrome 路径 {CHROME_BINARY_PATH}，尝试使用系统默认...")
-
-    chrome_options.add_argument('--headless=new')
-    chrome_options.add_argument('--window-size=1920,1080')
-
-    # --- 伪装设置 ---
-    # 更新 User-Agent 为较新的版本，匹配 Beta
-    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    chrome_options.add_argument(f'user-agent={user_agent}')
-    
-    # 自动化特征屏蔽
-    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-    
-    # --- 性能相关设置 ---
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
-    chrome_options.add_argument("--disable-images")
-    chrome_options.page_load_strategy = 'eager'
-
-    if not os.path.exists(CHROME_DRIVER_PATH):
-        print(f"错误：未找到驱动文件: {CHROME_DRIVER_PATH}")
+    dm = DriverManager()
+    if not dm.start():
+        db_conn.close()
+        stop_caffeinate()
         return
 
-    service = Service(executable_path=CHROME_DRIVER_PATH)
-    try:
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-    except Exception as e:
-        print(f"Selenium 启动失败: {e}")
-        return
-
-    # 设置更短的超时时间
-    driver.set_page_load_timeout(20)  # 页面加载超时时间
-    driver.set_script_timeout(20)  # 脚本执行超时时间
-
-    # 从JSON文件获取股票符号（只提取指定分组）
     stock_symbols = get_stock_symbols_from_json(json_file_path)
-
-    # 获取已处理的股票符号
-    existing_shares = get_existing_symbols(shares_file_path)
-    # existing_names = get_existing_symbols(symbol_names_file_path)
-    existing_marketcap_pe = get_existing_symbols(marketcap_pe_file_path)
+    succeeded, failed, computed_mc, new_db_symbols = set(), {}, [], []
+    skipped = processed = 0
 
     try:
-        # 逐个抓取股票数据
-        for symbol in tqdm(stock_symbols,
-                       desc="Processing symbols",
-                       unit="sym"):
-            
-            # --- 初始化/重置变量 (在重试循环外) ---
-            # 在每次循环开始时，重置所有相关变量，防止数据污染
-            shares_outstanding = "N/A"
-            shares_outstanding_converted = 0
-            price_book_value = "--"
-            market_cap_converted = 0
-            pe_str = "--"
-            
-            # 状态标志位
-            got_shares = False
-            got_price_book = False
-            got_marketcap = False
-            any_data_scraped = False # <--- 新增：总抓取成功标志位
-
-            # 检查是否所有文件都已包含此symbol，如果是则完全跳过
-            if symbol in existing_shares and symbol in existing_marketcap_pe:
-                print(f"已在所有文件中抓取过 {symbol}，跳过...")
-                show_alert(f"{symbol} 已经在三个文件中都存在了！")
+        for symbol in tqdm(stock_symbols, desc="Processing symbols", unit="sym"):
+            # 正常模式断点续跑：两份文件都有效才跳过（不再逐个弹窗）
+            if not repair_mode and symbol in shares_target['valid'] and symbol in mc_target['valid']:
+                skipped += 1
                 continue
-            
-            # --- [修改开始] 重试机制 ---
-            max_retries = 3
-            
-            for attempt in range(max_retries):
-                try:
-                    url = f"https://finance.yahoo.com/quote/{symbol}/key-statistics/"
-                    
-                    # 如果是重试，等待一下再加载
-                    if attempt > 0:
-                        print(f"\n正在重试 {symbol} (第 {attempt+1}/{max_retries} 次)...")
-                        time.sleep(random.uniform(2, 4))
-                    
-                    driver.get(url)
-                    
-                    # 1. 查找Shares Outstanding数据
-                    shares_outstanding_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Shares Outstanding')]/following-sibling::td[1]", timeout=5)
-                    if shares_outstanding_element and shares_outstanding_element.text not in ("N/A", "-"):
-                        shares_outstanding = shares_outstanding_element.text
-                        got_shares = True
-                        print(f"通过XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
-                    else:
-                        # 尝试其他XPath
-                        alternative_xpaths = [
-                            "//span[contains(text(), 'Shares Outstanding')]/../../following-sibling::td",
-                            "//th[contains(text(), 'Shares Outstanding')]/following-sibling::td"
-                        ]
-                        for xpath in alternative_xpaths:
-                            alt_element = wait_for_element(driver, By.XPATH, xpath, timeout=3)
-                            if alt_element and alt_element.text not in ("N/A", "-"):
-                                shares_outstanding = alt_element.text
-                                got_shares = True
-                                print(f"通过备选XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
-                                break
-                        
-                        # JS 兜底
-                        if not got_shares:
-                            try:
-                                js_result = driver.execute_script("""
-                                    const elements = document.querySelectorAll('td');
-                                    for (let i = 0; i < elements.length; i++) {
-                                        if (elements[i].textContent.includes('Shares Outstanding')) {
-                                            return elements[i].nextElementSibling ? elements[i].nextElementSibling.textContent : 'Not found';
-                                        }
-                                    }
-                                    return 'Not found';
-                                """)
-                                if js_result and js_result != 'Not found':
-                                    shares_outstanding = js_result
-                                    got_shares = True
-                                    print(f"通过JavaScript获取到 {symbol} 的股票数量: {shares_outstanding}")
-                            except Exception as js_error:
-                                pass # JS错误忽略，继续后面逻辑
 
-                    if got_shares:
-                        shares_outstanding_converted = convert_shares_format(shares_outstanding)
+            processed += 1
+            try:
+                res = scrape_with_retries(dm, symbol)
+            except RuntimeError as e:
+                log(f"❌ 浏览器不可用，终止抓取: {e}")
+                failed[symbol] = "浏览器不可用"
+                break
 
-                    # 2. 查找Price/Book数据
-                    price_book_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Price/Book')]/following-sibling::td[1]", timeout=3)
-                    if price_book_element:
-                        text = price_book_element.text.strip()
-                        if text not in ('N/A', '-', '--', ''):
-                            try:
-                                pb_float = float(text)
-                                price_book_value = str(pb_float)
-                                got_price_book = True
-                            except ValueError:
-                                price_book_value = "--"
-                    
-                    # 3. 查找Market Cap数据
-                    market_cap_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]", timeout=3)
-                    if market_cap_element:
-                        text = market_cap_element.text.strip()
-                        if text not in ('N/A', '-', '', '--'):
-                            market_cap_converted = convert_shares_format(text)
-                            if market_cap_converted > 0:
-                                got_marketcap = True
+            shares_ok = res['shares'] > 0
+            shares_absent = res['shares_absent'] and not shares_ok
+            mc_ok = res['marketcap'] > 0
+            pb_ok = res['pb'] != '--'
+            log(f"{symbol}: shares={int(res['shares'])}, marketcap={res['marketcap']:.0f}"
+                f"({res['mc_source']}), pe={res['pe']}, pb={res['pb']}")
+            if res['mc_source'] == 'computed':
+                computed_mc.append(symbol)
 
-                    # 4. 查找Trailing P/E数据
-                    pe_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Trailing P/E')]/following-sibling::td[1]", timeout=3)
-                    if pe_element:
-                        pe_ratio_text = pe_element.text.strip()
-                        if pe_ratio_text not in ('N/A', '-', '', '--'):
-                            try:
-                                pe_ratio = float(pe_ratio_text)
-                                pe_str = str(pe_ratio)
-                            except ValueError:
-                                pe_str = "--"
+            try:
+                if shares_ok:
+                    write_to_target(shares_target, symbol,
+                                    f"{symbol}: {int(res['shares'])}, {res['pb']}", True)
+                    log(f"已保存 {symbol} 的Shares和Price/Book")
+                elif (shares_absent or pb_ok) and symbol not in shares_target['valid']:
+                    # 页面确认无股本：写 0。is_valid=False 使正常模式下次仍会重抓，
+                    # 拿到真实数据时自动覆盖；若已有有效数据则保留旧值
+                    write_to_target(shares_target, symbol,
+                                    f"{symbol}: 0, {res['pb']}", False)
+                    log(f"{symbol} 无 Shares Outstanding，按 0 记录")
+                if mc_ok:
+                    write_to_target(mc_target, symbol,
+                                    f"{symbol}: {format_marketcap(res['marketcap'])}, {res['pe']}, {res['pb']}", True)
+                    log(f"已保存 {symbol} 的市值和PE")
+            except OSError as e:
+                log(f"写入 txt 失败 {symbol}: {e}")
 
-                    # --- 检查本次尝试的结果 ---
-                    any_data_scraped = got_shares or got_price_book or got_marketcap
-                    
-                    if any_data_scraped:
-                        # 成功抓取到数据，跳出重试循环
-                        break 
-                    else:
-                        print(f"尝试 {attempt+1}: {symbol} 页面加载完成但未找到有效数据。")
-                
-                except Exception as e:
-                    print(f"尝试 {attempt+1} 抓取 {symbol} 时发生错误: {str(e)}")
+            db_ok = True
+            if shares_ok or mc_ok or pb_ok or res['pe'] != '--':
+                db_ok = sync_db(db_conn, symbol, res, new_db_symbols)
 
-            # --- 后续处理逻辑 ---
-            if symbol not in existing_shares and (got_shares or got_price_book):
-                with open(shares_file_path, 'a', encoding='utf-8') as file:
-                    file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
-                print(f"已保存 {symbol} 的Shares和Price/Book 进txt文件中")
-                existing_shares.add(symbol)
-
-            # 2. 保存到 marketcap_pe.txt
-            if symbol not in existing_marketcap_pe and got_marketcap:
-                with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
-                    file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
-                print(f"已保存 {symbol} 的市值和PE")
-                existing_marketcap_pe.add(symbol)
-
-            # 3. 数据库操作
-            if any_data_scraped:
-                print(f"成功抓取到 {symbol} 的部分或全部新数据。")
-                print(f"--- 开始处理 {symbol} 的数据库操作 ---")
-                
-                db_record = get_stock_from_db(db_conn, symbol)
-                scraped_data = {
-                    "shares": shares_outstanding_converted,
-                    "marketcap": market_cap_converted,
-                    "pe": pe_str,
-                    "pb": price_book_value
-                }
-                
-                if db_record:
-                    update_stock_in_db(db_conn, symbol, scraped_data, db_record)
-                else:
-                    show_alert(f"注意：新Symbol '{symbol}' 在数据库中未找到，将添加新记录。")
-                    insert_stock_into_db(
-                        db_conn, symbol, 
-                        scraped_data['shares'], 
-                        scraped_data['marketcap'], 
-                        scraped_data['pe'], 
-                        scraped_data['pb']
-                    )
-                print(f"--- 完成 {symbol} 的数据库操作 ---")
+            shares_done = shares_ok or shares_absent or symbol in shares_target['valid']
+            mc_done = mc_ok or symbol in mc_target['valid']
+            if shares_done and mc_done and db_ok:
+                succeeded.add(symbol)
             else:
-                # 3次尝试都失败后
-                print(f"❌ 最终失败: 未能为 {symbol} 抓取到任何有效的新数据，跳过。")
+                reasons = []
+                if not shares_done:
+                    reasons.append("无股本")
+                if not mc_done:
+                    reasons.append("无市值")
+                if not db_ok:
+                    reasons.append("数据库写入失败")
+                failed[symbol] = "/".join(reasons)
+                log(f"❌ {symbol} 未完全修复: {failed[symbol]}")
 
-            # 添加短暂延迟，避免请求过于频繁
             time.sleep(random.uniform(1, 2))
 
+    except KeyboardInterrupt:
+        log("用户中断。")
     finally:
-        # 关闭浏览器
-        if 'driver' in locals() and driver:
-            driver.quit()
-        
-        # --- 新增：关闭防休眠 ---
-        stop_caffeinate()
-        
-        # --- 新增：关闭数据库连接 ---
-        if db_conn:
+        dm.quit()
+        try:
             db_conn.close()
-            print("数据库连接已关闭。")
-        print("数据抓取完成！")
-        
-        has_content = check_empty_json_has_content(SECTORS_EMPTY_JSON)
-        if has_content and args.clear:
-             clear_empty_json()
+            log("数据库连接已关闭。")
+        except Exception:
+            pass
+        stop_caffeinate()
+
+        if repair_mode and args.clear:
+            try:
+                finalize_empty_json(succeeded)
+            except Exception as e:
+                log(f"更新 Sectors_empty.json 失败: {e}")
+
+        summary = [f"处理 {processed}，成功 {len(succeeded)}，跳过 {skipped}，失败 {len(failed)}"]
+        if computed_mc:
+            summary.append("市值由价格×股本推算: " + ", ".join(computed_mc[:20]))
+        if new_db_symbols:
+            summary.append("数据库新增: " + ", ".join(new_db_symbols[:20]))
+        if failed:
+            items = [f"{s}({r})" for s, r in list(failed.items())[:20]]
+            summary.append("失败(保留在待修复列表): " + ", ".join(items))
+        msg = "\n".join(summary)
+        log("数据抓取完成！\n" + msg)
+        if repair_mode or failed or new_db_symbols:
+            show_alert(msg)
 
 if __name__ == "__main__":
     main()

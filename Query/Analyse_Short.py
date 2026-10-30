@@ -19,8 +19,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "PCG"
-# TARGET_DATE = "2026-09-28"
+# SYMBOL_TO_TRACE = "WELL"
+# TARGET_DATE = "2026-10-07"
 
 # 追踪日志路径
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")

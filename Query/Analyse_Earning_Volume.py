@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "HBAN"
-# TARGET_DATE = "2026-09-16"
+# SYMBOL_TO_TRACE = "GBCI"
+# TARGET_DATE = "2026-10-23"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -75,8 +75,9 @@ CONFIG = {
     "COND_UP_VOL_RANK_THRESHOLD": 3,     # 放量检查前 N 名
 
     # ========== 策略3 (PE_Volume_high 财报突破放量) 参数 ==========
-    "COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月 (用于甲类)
-    "COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前3名
+    "COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 6,       # 甲类：成交额回溯6个月 (原12)
+    "COND_HIGH_TURNOVER_YI_LOOKBACK_MONTHS": 4,    # [新增] 乙类：成交额回溯4个月 (原6)
+    "COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,        # 成交额排名前3名
     # [新增] 丙类专用配置
     "COND_HIGH_TURNOVER_BING_DAYS": 45,        # 丙类：成交额回溯45天
     "COND_HIGH_TURNOVER_BING_RANK_THRESHOLD": 3,  # 丙类：排名前3名
@@ -1114,8 +1115,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     """
     执行策略3：PE_Volume_high
     返回四个分类：
-    - 甲类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额12个月前3名
-    - 乙类: 最新财报涨跌幅>0 + 未突破 + 成交额6个月前3名
+    - 甲类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额6个月前3名
+    - 乙类: 财报日当天 + 最新财报涨跌幅>0 + 成交额4个月前3名
     - 丙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额45天前3名
     - 抄底类: 最新日期到最近财报之间曾入选 PE_Volume_high 且今日在指定回调池中
     
@@ -1125,14 +1126,15 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量 & 抄底扫描) ==========")
     
     # 读取配置
-    turnover_lookback_months = CONFIG.get("COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 12)
+    turnover_lookback_months = CONFIG.get("COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 6)
+    turnover_yi_lookback_months = CONFIG.get("COND_HIGH_TURNOVER_YI_LOOKBACK_MONTHS", 4)  # [新增]
     turnover_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_RANK_THRESHOLD", 3)
     
-    # [新增] 读取丙类专用配置
+    # 丙类专用配置
     bing_lookback_days = CONFIG.get("COND_HIGH_TURNOVER_BING_DAYS", 45)
     bing_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_BING_RANK_THRESHOLD", 3)
     
-    log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月(甲类) / 6 个月(乙类) / {bing_lookback_days} 天(丙类), 排名阈值 = Top {turnover_rank_threshold}")
+    log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月(甲类) / {turnover_yi_lookback_months} 个月(乙类) / {bing_lookback_days} 天(丙类), 排名阈值 = Top {turnover_rank_threshold}")
     
     # 确定基准日期 (提前确定以供加载 pool 使用)
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
@@ -1425,11 +1427,11 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         # ================= 以下为甲乙丙逻辑，仍受成交额门槛限制 ===============
         
         # 门槛 (仅甲乙丙): 成交额门槛
-        turnover_threshold = 200000000
-        threshold_desc = "2亿"
+        turnover_threshold = 100000000
+        threshold_desc = "1亿"
         if has_hot_tag_t:
-            turnover_threshold = 150000000
-            threshold_desc = "1.5亿 (命中 HOT_TAGS_T)"
+            turnover_threshold = 50000000
+            threshold_desc = "0.5亿 (命中 HOT_TAGS_T)"
             
         # 门槛 1: 成交额检查 (只过滤甲乙丙，抄底已在上方处理完毕)
         if latest_turnover < turnover_threshold:
@@ -1455,17 +1457,17 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         if is_tracing:
             log_detail(f"    - 条件D (价格突破财报): {latest_price:.2f} >= {latest_er_price:.2f} = {cond_price_breakout}")
                 
-        # 条件E: 成交额为12个月前3名 (用于甲类)
-        cond_turnover_12m_top3 = check_turnover_rank(
+        # 条件E: 成交额为 N 个月前3名 (甲类，N=6)
+        cond_turnover_jia_top3 = check_turnover_rank(
             cursor, sector, symbol, latest_date, latest_turnover,
             turnover_lookback_months, turnover_rank_threshold,
             log_detail, is_tracing
         )
 
-        # 条件E2: 成交额为6个月前3名 (用于乙类)
-        cond_turnover_6m_top3 = check_turnover_rank(
+        # 条件E2: 成交额为 N 个月前3名 (乙类，N=4)
+        cond_turnover_yi_top3 = check_turnover_rank(
             cursor, sector, symbol, latest_date, latest_turnover,
-            6, turnover_rank_threshold, # 强制使用6个月
+            turnover_yi_lookback_months, turnover_rank_threshold,
             log_detail, is_tracing
         )
 
@@ -1481,18 +1483,18 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         # 财报发布当日: 最新交易日 == 最新财报日 (与甲回溯中 "er_date 当天出现甲" 的口径一致)
         is_er_day = (latest_date == latest_er_date)
 
-        if er_ok and cond_price_breakout and cond_turnover_12m_top3:
+        if er_ok and cond_price_breakout and cond_turnover_jia_top3:
             results_jia.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-甲类] 价格突破 + 12个月Top{turnover_rank_threshold} "
+                log_detail(f"    ✅ [选中-甲类] 价格突破 + {turnover_lookback_months}个月Top{turnover_rank_threshold} "
                            f"(要求财报递增={CONFIG.get('COND_HIGH_JIA_REQUIRE_ER_INCREASING', True)}, 实际递增={cond_er_increasing})")
         
-        elif cond_er_pct_positive and cond_turnover_6m_top3:
+        elif cond_er_pct_positive and cond_turnover_yi_top3:
             # 乙类: 仅财报发布当日出现的才输出
             if is_er_day:
                 results_yi.append(symbol)
                 if is_tracing:
-                    log_detail(f"    ✅ [选中-乙类] 财报日当天({latest_er_date}) + 财报涨幅>0 + 6个月Top{turnover_rank_threshold} "
+                    log_detail(f"    ✅ [选中-乙类] 财报日当天({latest_er_date}) + 财报涨幅>0 + {turnover_yi_lookback_months}个月Top{turnover_rank_threshold} "
                                f"(HOT_TAGS_T={has_hot_tag_t}, {'后续可享受深跌追' if has_hot_tag_t else '后续不参与深跌追'})")
             else:
                 if is_tracing:
@@ -1513,8 +1515,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     results_chaodi = sorted(list(set(results_chaodi))) # 排序抄底结果
     
     log_detail(f"\n————策略3 Volume_high 最终筛选结果:")
-    log_detail(f"  - 甲类 (财报递增+突破+12月Top{turnover_rank_threshold}): {len(results_jia)} 个: {results_jia}")
-    log_detail(f"  - 乙类 (财报日当天+财报涨幅>0+6月Top{turnover_rank_threshold}): {len(results_yi)} 个: {results_yi}")
+    log_detail(f"  - 甲类 (财报递增+突破+{turnover_lookback_months}月Top{turnover_rank_threshold}): {len(results_jia)} 个: {results_jia}")
+    log_detail(f"  - 乙类 (财报日当天+财报涨幅>0+{turnover_yi_lookback_months}月Top{turnover_rank_threshold}): {len(results_yi)} 个: {results_yi}")
     log_detail(f"  - 丙类 (宽松+突破+财报起前3+间隔>3天): {len(results_bing)} 个: {results_bing}")
     log_detail(f"  - 抄底类 (财报后曾入选且今日回调): {len(results_chaodi)} 个: {results_chaodi}")
     

@@ -594,7 +594,8 @@
     "ECHO",
     "RUM",
     "VEON",
-    "SKYD"
+    "SKYD",
+    "MSGK"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -676,7 +677,6 @@
     "BBWI",
     "RL",
     "NIO",
-    "PAG",
     "CHDN",
     "CCK",
     "ALV",
@@ -698,7 +698,6 @@
     "MMYT",
     "GNTX",
     "MNSO",
-    "CZR",
     "FIVE",
     "MHK",
     "MTN",
@@ -1318,7 +1317,8 @@
     "IOVA",
     "HAE",
     "CON",
-    "BLTE"
+    "BLTE",
+    "HTFL"
   ],
   "Industrials": [
     "GE",

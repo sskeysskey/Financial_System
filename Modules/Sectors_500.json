@@ -12,7 +12,6 @@
         "AEM",
         "FCX",
         "B",
-        "VALE",
         "NUE",
         "WPM"
     ],
@@ -70,8 +69,7 @@
         "CL",
         "MNST",
         "TGT",
-        "DEO",
-        "ABEV"
+        "DEO"
     ],
     "Energy": [
         "XOM",
@@ -202,7 +200,7 @@
         "BDX",
         "VEEV",
         "EW",
-        "HUM"
+        "A"
     ],
     "Industrials": [
         "GE",
@@ -319,8 +317,9 @@
         "MSTR",
         "TEAM",
         "ADSK",
-        "INFY",
-        "WDAY"
+        "NOK",
+        "ALAB",
+        "CIEN"
     ],
     "Utilities": [
         "NEE",
