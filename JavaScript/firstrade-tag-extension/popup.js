@@ -76,7 +76,7 @@ function fmtMember(r) {
 function fmtStart(r) {
   if (r.clearOnly) return `🧹 已启动只清空：「${r.targetGroup}」`;
   return `✅ 已启动：「${r.targetGroup}」系列（每组 ≤ ${r.cap}，当前「${r.group}」）\n` +
-    `读取各系列分组 → 分配 → 新建缺少的分组 → 逐组删多余${r.strictSync ? '' : '(已关闭)'}/补缺失/复核 → 删除用不上的分组\n` +
+    `读取各系列分组 → 分配 → 整组删除作废分组 → 新建/重建分组 → 逐组补缺失/复核${r.strictSync ? '' : '(已关闭)'}/补缺失/复核 → 删除用不上的分组\n` +
     `进度看网页右下角面板；任务期间尽量让该标签页保持在前台。`;
 }
 function fmtClearOnly(r) { return `🧹 已启动只清空：目标分组「${r.targetGroup}」`; }
@@ -87,7 +87,9 @@ function fmtClearGroups(r) {
 }
 function fmtDiff(r) {
   return `目标：「${r.targetGroup}」系列（每组 ≤ ${r.cap}）\n来源：${r.srcFrom}（${r.srcCount} 只）\n系列现有：${r.haveCount} 只\n` +
-    `★ 待添加 ${r.missing}｜★ 待删除 ${r.extraCount}` + ((r.surplus && r.surplus.length) ? `｜删除分组 ${r.surplus.join('/')}` : '') + '\n' +
+    `★ 待添加 ${r.missing}｜★ 待删除 ${r.extraCount}` +
+    ((r.rebuild && r.rebuild.length) ? `｜整组重建 ${r.rebuild.join('/')}` : '') +
+    ((r.surplus && r.surplus.length) ? `｜删除分组 ${r.surplus.join('/')}` : '') + '\n' +
     `分配：${r.planText || '-'}\n` +
     (r.overflow ? `⚠ ${r.overflow} 只超出分组数量上限\n` : '') +
     (r.srcCount === 0 ? '⚠ 数据源目标日期无数据（不回退）\n' : '') +
@@ -256,7 +258,7 @@ chrome.storage.local.get(
     'ftAutoScrape', 'ftWlManualList', 'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
     'ftWlClearFirst', 'ftWlAgent', 'ftWlRestoreGroup', 'ftWlTargetGroup', 'ftWlStrictSync',
     'ftWlMemberPassive', 'ftLastOp', 'ftWlKeepExtra', 'ftTradeMode', 'ftSymColor', 'ftWlGroupCap',
-    'ftTradeEnabled', 'ftTradeDryRun', 'ftTradeRemoveAfter', 'ftTradePresets'],
+    'ftTradeEnabled', 'ftTradeDryRun', 'ftTradeRemoveAfter', 'ftTradePresets', 'ftWlGroupRebuild'],
   (res) => {
     if (res.maxTags) $('maxTags').value = res.maxTags;
     $('dbgChk').checked = !!res.ftDebug;
@@ -269,6 +271,7 @@ chrome.storage.local.get(
     $('wlAgent').checked = res.ftWlAgent !== false;
     $('wlRestore').checked = res.ftWlRestoreGroup !== false;
     $('wlStrict').checked = res.ftWlStrictSync !== false;
+    $('wlRebuild').checked = res.ftWlGroupRebuild !== false;
     let tg = (res.ftWlTargetGroup && String(res.ftWlTargetGroup).trim()) || DEFAULT_GROUP;
     if (tg.toUpperCase() === 'ALL') { tg = DEFAULT_GROUP; chrome.storage.local.set({ ftWlTargetGroup: tg }); }
     $('wlTarget').value = tg;
@@ -502,6 +505,13 @@ $('wlStrict').addEventListener('change', () => {
     setWl(v ? '✅ 严格同步已开：分组内「不在数据源里」的标的会被删除（删前自动备份）'
       : 'ℹ️ 严格同步已关：只补齐缺失，不删任何东西');
   });
+});
+
+$('wlRebuild').addEventListener('change', () => {
+  const v = $('wlRebuild').checked;
+  chrome.storage.local.set({ ftWlGroupRebuild: v }, () =>
+    setWl(v ? '✅ 整组重建已开：作废标的多的分组会直接整组删除再按今日数据新建（删前备份 + 5 秒倒计时）'
+      : 'ℹ️ 整组重建已关：恢复逐只删除多余标的'));
 });
 
 $('wlGroupsBtn').addEventListener('click', () =>

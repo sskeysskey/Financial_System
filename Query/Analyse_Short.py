@@ -19,8 +19,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "WELL"
-# TARGET_DATE = "2026-10-07"
+# SYMBOL_TO_TRACE = "ERIE"
+# TARGET_DATE = "2026-09-24"
 
 # 追踪日志路径
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
@@ -39,7 +39,7 @@ CONFIG = {
     # ---------- [新增] Short类 "追" 捞回规则 ----------
     "CHASE_ENABLED": True,                 # 总开关
     "CHASE_SOURCE_GROUPS": ["Short", "Short_W"],   # [新增] 哪些分组的原生命中可作为锚点
-    "CHASE_LOOKBACK_TRADING_DAYS": 20,     # 在锚点(原生Short_W)之后多少个交易日内有效
+    "CHASE_LOOKBACK_TRADING_DAYS": 26,     # 在锚点(原生Short_W)之后多少个交易日内有效
     "CHASE_MIN_DROP_PCT": 0.031,            # 收盘价需比锚点日收盘价低超过该比例
     "CHASE_SUFFIX": "追",                  # 非原生(捞回)标识
     # ---------- [新增] ETF 特殊规则 ----------

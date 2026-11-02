@@ -286,7 +286,7 @@
             "control"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/auto_pipeline.py' --skip-shangxidq --skip-sxkljc",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/auto_pipeline.py' --skip-sxkljc --skip-312f",
         "message": "正在执行 全自动流水线（爬取 + 豆瓣/IMDb 补全）..."
     },
     {
@@ -308,6 +308,16 @@
         "actionType": "runOsascript",
         "target": "/Users/yanzhang/Coding/ScriptEditor/Ask_ETF_info.scpt",
         "message": "正在执行 Ask_ETF_info.scpt..."
+    },
+    {
+        "key": "one",
+        "modifiers": [
+            "control",
+            "shift"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/bin/bash '/Users/yanzhang/Coding/sh/ovideo_all.sh'",
+        "message": "正在执行 一条龙：auto_pipeline → Downie_transfer ..."
     },
     {
         "key": "one",
@@ -335,7 +345,7 @@
             "control"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_pdy0.py' open",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_dzfwjd.py' open",
         "message": "正在执行 Crawl_pdy0 (open)..."
     },
     {
@@ -621,6 +631,16 @@
         "actionType": "runOsascript",
         "target": "/Users/yanzhang/Coding/ScriptEditor/Title_Engine.scpt",
         "message": "正在执行 Title_Engine.scpt..."
+    },
+    {
+        "key": "zero",
+        "modifiers": [
+            "control",
+            "shift"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Users/yanzhang/Coding/python_code/Selenium_News/Selenium_run_all.sh",
+        "message": "正在执行 Selenium_Combined → Title_Engine 全自动流程…"
     },
     {
         "key": "minus",
@@ -965,7 +985,7 @@
             "option"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
         "message": "如果用tiger的话开启check_yesterday的“ --ignore_sectors“参数"
     },
     {
@@ -975,7 +995,7 @@
             "shift"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/MW_Today.py' --headful",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/MW_Today.py' --headful",
         "message": ""
     },
     {

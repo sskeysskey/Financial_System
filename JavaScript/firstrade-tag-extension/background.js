@@ -311,7 +311,7 @@ const fmtOrd = (r) => {
   const d = (r.server && r.server.data) || {};
   return `${r.count ?? '?'} 笔` + (r.server && r.server.ok ? `，新增 ${d.added ?? '?'} / 累计 ${d.total ?? '?'}` : '，写入本机失败');
 };
-const PHASE_TXT = { idle: '收尾', group: '切换分组', diff: '比对差集', clear: '删除中', add: '添加中', verify: '复核中' };
+const PHASE_TXT = { idle: '收尾', group: '切换/删建分组', diff: '比对差集', clear: '删除中', add: '添加中', verify: '复核中' };
 
 const fmtQuotes = (r) => r.empty
   ? (r.message || `分组「${r.group || '?'}」为空，已清空本机 JSON`)
@@ -358,9 +358,12 @@ async function waitWlJob(tabId, onTick) {
   if (!last) return { ok: false, msg: '无法读取自选股任务状态' };
   if (last.running || last.finishing) return { ok: false, msg: '等待任务结束超时' };
   const fails = (last.failed || 0) + (last.clearFailed || 0);
-  const did = (last.cleared || 0) + (last.added || 0);
+  const gDel = last.famDeleted || [], gNew = last.famCreated || [];
+  const grpOps = gDel.length + gNew.length;
+  const did = (last.cleared || 0) + (last.added || 0) + grpOps;      // ★ 删组/建组也算改动，避免误报「已一致」
   const ok = fails === 0 && !(last.lastError && did === 0 && last.lastError.indexOf('一致') < 0);
   let msg = `删除 ${last.cleared || 0}（失败 ${last.clearFailed || 0}）｜新增 ${last.added || 0}（失败 ${last.failed || 0}）`;
+  if (grpOps) msg += `｜删组 ${gDel.join('/') || '-'}｜建组 ${gNew.join('/') || '-'}`;
   if (did === 0 && fails === 0 && !last.lastError) msg = '分组已与数据源一致，无需改动';
   if (last.lastError) msg += `｜最后错误：${last.lastError}`;
   return { ok, msg };
@@ -446,7 +449,7 @@ function migrateFlags() {
     ['ftAutoScrape', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
       'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead', 'ftWlGroupCap',
       'ftWlAgent', 'ftWlRestoreGroup', 'ftWlRestoreTab', 'ftSymColor',
-      'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive',
+      'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive', 'ftWlGroupRebuild',
       'ftTradeEnabled', 'ftTradeMode', 'ftTradeRemoveAfter', 'ftTradePresets'],     // ★ 补上 ftTradeMode
     (res) => {
       const patch = {};
@@ -462,6 +465,7 @@ function migrateFlags() {
       const tg = String(res.ftWlTargetGroup || '').trim();
       if (!tg || tg.toUpperCase() === 'ALL') patch.ftWlTargetGroup = DEFAULT_GROUP;
       if (res.ftWlStrictSync === undefined) patch.ftWlStrictSync = true;
+      if (res.ftWlGroupRebuild === undefined) patch.ftWlGroupRebuild = true;
       if (res.ftWlRestoreGroup === undefined) patch.ftWlRestoreGroup = true;
       if (res.ftWlRestoreTab === undefined) patch.ftWlRestoreTab = true;
       if (res.ftWlMemberPassive === undefined) patch.ftWlMemberPassive = true;

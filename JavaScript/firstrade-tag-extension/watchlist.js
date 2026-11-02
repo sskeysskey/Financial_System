@@ -1,5 +1,5 @@
 /* ============================================================================
- * Firstrade 自选股助手 watchlist.js  v11      仅在 /app/watchlist 生效
+ * Firstrade 自选股助手 watchlist.js  v11.5      仅在 /app/watchlist 生效
  *
  * v11 变更:
  *   ★ Earning 系列分组：源清单按「每组上限(默认35，可配)」分配到 Earning / Earning1 / Earning2 …
@@ -39,7 +39,15 @@
     /* ★ v11 Earning 系列 */
     groupCap: 35,            // 每组最多写入多少只（popup 可改）
     groupHardMax: 38,        // Firstrade 实测单组上限
-    maxFamilyGroups: 15      // 系列分组数量安全上限
+    maxFamilyGroups: 15,     // 系列分组数量安全上限
+    /* ★ v11.3 整组重建：作废标的多时直接删整个分组再按今日数据新建 */
+    groupRebuild: true,      // popup「整组重建」开关
+    rebuildMinRemove: 6,     // 多余标的少于这个数，始终逐只删
+    costDelSym: 2.2,         // 估算：逐只删除 1 只（秒）
+    costAddSym: 2.6,         // 估算：逐只添加 1 只（秒）
+    costGroupRebuild: 16,     // 估算：删 1 个分组 + 建 1 个分组（秒）
+    groupOpPause: 1200,      // ★ v11.5 删分组时，每个关键步骤之间的停顿（ms）
+    groupBetweenPause: 2500  // ★ v11.5 连续删两个分组之间的停顿（ms）
   };
   let RUN = Object.assign({}, CFG);
 
@@ -812,11 +820,22 @@
     return Array.from(new Set(out));
   }
 
+  /* ★ v11.4：表里已有就跳过（幂等），每次输入前都检查，防止任何原因造成的重复添加 */
+  function symbolAlreadyInGrid(sym) {
+    if ((gridRowCount() || 0) <= 1) return '';
+    return candidateForms(sym).find(c => hasSymbolInGrid(c)) || '';
+  }
+
   async function addOneSymbol(sym) {
     let lastErr = '';
     for (let attempt = 0; attempt <= RUN.maxRetry; attempt++) {
       for (const cand of candidateForms(sym)) {
         if (job.stop) return { status: 'aborted' };
+        const exists = symbolAlreadyInGrid(sym);
+        if (exists) {
+          log(`${sym} 已在当前分组表内（${exists}），跳过添加`);
+          return { status: 'added', form: exists, verify: 'exists', existed: true };
+        }
         try {
           cleanNavSearch();
           const input = await ensureInput();
@@ -1295,22 +1314,36 @@
     }
   }
 
-  async function deleteGroup(name, base) {
+  async function deleteGroup(name, base, opts) {
+    opts = opts || {};
     base = base || TARGET.group || 'Earning';
     const n = normGroup(name);
-    if (!n || n === 'WRONG' || familyIndex(name, base) === 0) return { ok: false, error: `拒绝删除保护分组「${name}」` };
+    const isBase = familyIndex(name, base) === 0;
+    const P = CFG.groupOpPause || 1200;          // ★ v11.5 每步停顿
+    if (!n || n === 'WRONG' || (isBase && !opts.allowBase)) return { ok: false, error: `拒绝删除保护分组「${name}」` };
     try {
       if (normGroup(groupName()) === n) {
-        const sr = await switchGroup(base);
+        const park = opts.park || (isBase ? '' : base);
+        if (!park || normGroup(park) === n) return { ok: false, error: `当前停在「${name}」，且没有可切换停靠的其它分组` };
+        const sr = await switchGroup(park);
         if (!sr.ok) return { ok: false, error: '删除前切离该分组失败：' + sr.error };
+        await sleep(P);
+        await waitGridSettled();
+        await sleep(P);                          // ★ 切换后等表格稳定
       }
+
+      await closeGroupSelect();                  // ★ 确保分组下拉已收起
+      await sleep(P / 2);
+
       const dlg = await openManageDialog();
       if (!dlg) return { ok: false, error: '打不开「管理自选股组合」（「添加自选股」右侧 ⋮ 菜单未弹出）' };
-      await sleep(200);
+      await sleep(P);                            // ★ 弹层打开后停一下再读行
+
       const rows = manageRows(dlg);
       const row = rows.find(r => normGroup(r.name) === n);
       if (!row) { await closeDialogs(); return { ok: true, missing: true }; }
       if (!row.del) { await closeDialogs(); return { ok: false, error: '该行找不到 🗑 删除按钮' }; }
+
       const findConfirm = () => {
         const ds = visDialogs();
         for (let i = ds.length - 1; i >= 0; i--) {
@@ -1320,23 +1353,36 @@
         }
         return null;
       };
+
       fireMouseSeq(row.del);
-      let btn = await waitFor(findConfirm, 3000, 100);
-      if (!btn && row.del.isConnected) { try { row.del.click(); } catch (e) { } btn = await waitFor(findConfirm, 2500, 100); }
+      await sleep(P);                            // ★ 点 🗑 后等确认框出现
+      let btn = await waitFor(findConfirm, 4000, 150);
+      if (!btn && row.del.isConnected) {
+        try { row.del.click(); } catch (e) { }
+        await sleep(P);
+        btn = await waitFor(findConfirm, 3000, 150);
+      }
       if (!btn) { await closeDialogs(); return { ok: false, error: '点 🗑 后未出现删除确认框' }; }
+
       const cd = btn.closest('[role="dialog"], [role="alertdialog"], [data-dialog-content]');
       const ct = normGroup(cd ? cleanText(cd) : '');
       if (ct && !ct.includes(n)) {
         const other = rows.find(r => { const rn = normGroup(r.name); return rn !== n && !n.includes(rn) && ct.includes(rn); });
         if (other) { await closeDialogs(); return { ok: false, error: `确认框提到的是「${other.name}」，已取消（防误删）` }; }
       }
+
+      await sleep(P);                            // ★ 确认前停顿，等确认框稳定
       fireMouseSeq(btn);
-      await waitFor(() => !cd || !cd.isConnected || !isVisible(cd), 5000, 120);
-      const gone = await waitFor(() => manageHas(name) === false, 3000, 150);
-      await sleep(300);
+      await waitFor(() => !cd || !cd.isConnected || !isVisible(cd), 6000, 150);
+      await sleep(P * 1.5);                      // ★ 确认后等服务器与列表刷新
+
+      const gone = await waitFor(() => manageHas(name) === false, 5000, 200);
+      await sleep(P);
       await closeDialogs();
-      await sleep(300);
+      await sleep(P);
       if (gone) return { ok: true, deleted: true };
+
+      await sleep(P);
       const has = await groupListHas(name);
       if (has === false) return { ok: true, deleted: true };
       return { ok: false, error: has === null ? '删除后无法读取分组列表' : '删除后分组仍在列表中' };
@@ -1643,7 +1689,8 @@
     startedAt: 0, sinceReload: 0, sinceReopen: 0,
     srcFrom: '', srcCount: 0, haveCount: 0,
     multi: null, skipQuotes: false,
-    family: false, famText: '', famCreated: [], famDeleted: []
+    family: false, famText: '', famCreated: [], famDeleted: [],
+    retry: []                       // ★ v11.5 待收尾重试的失败项
   };
 
   const scanState = { running: false, abort: false };
@@ -1761,52 +1808,88 @@
     return syms;
   }
 
-  function planFamily(srcSyms, base, famNames, contents, cap, strict, wipe) {
+  /* ★ v11.3：两遍规划
+   *   第 1 遍按「原地保留」算出每组 keep/remove；
+   *   对每个已存在分组估算「逐只删」与「整组删+重建+补回保留项」的耗时，后者更省就标记 rebuild；
+   *   第 2 遍把 rebuild 分组当作空组重新分配（其中仍在源里的标的回到待加池） */
+  function planFamily(srcSyms, base, famNames, contents, cap, strict, wipe, opt) {
+    opt = opt || {};
+    const C = opt.cost || {};
     const srcKeys = new Set(srcSyms.map(normKey));
     const byIdx = new Map();
     famNames.forEach(n => { const i = familyIndex(n, base); if (i >= 0 && !byIdx.has(i)) byIdx.set(i, n); });
     const maxIdx = byIdx.size ? Math.max(...byIdx.keys()) : 0;
     const pruning = strict || wipe;
     const K = pruning ? Math.max(1, Math.ceil(srcSyms.length / cap)) : maxIdx + 1;
-    const mk = (i) => {
-      const ex = byIdx.has(i);
-      const name = ex ? byIdx.get(i) : familyName(base, i);
-      return { index: i, name, exists: ex, cur: ex ? (contents[name] || []).slice() : [], keep: [], remove: [], add: [] };
-    };
-    const slots = [], taken = new Set();
-    for (let i = 0; i < K; i++) {
-      const s = mk(i);
-      s.cur.forEach(sym => {
-        const k = normKey(sym);
-        if (wipe) s.remove.push(sym);
-        else if (!pruning) { s.keep.push(sym); taken.add(k); }
-        else if (srcKeys.has(k) && !taken.has(k) && s.keep.length < cap) { s.keep.push(sym); taken.add(k); }
-        else s.remove.push(sym);
-      });
-      slots.push(s);
-    }
-    const pool = [];
-    srcSyms.forEach(sym => { const k = normKey(sym); if (!taken.has(k)) { taken.add(k); pool.push(sym); } });
-    for (let i = 0; pool.length; i++) {
-      if (i >= slots.length) {
-        if (slots.length >= (CFG.maxFamilyGroups || 15)) break;
-        slots.push(mk(slots.length));
+
+    const build = (rb) => {
+      const mk = (i) => {
+        const ex = byIdx.has(i);
+        const name = ex ? byIdx.get(i) : familyName(base, i);
+        const rebuild = ex && rb.has(i);
+        return {
+          index: i, name, existed: ex, exists: ex && !rebuild, rebuild,
+          cur: ex ? (contents[name] || []).slice() : [], keep: [], remove: [], drop: [], add: []
+        };
+      };
+      const slots = [], taken = new Set();
+      for (let i = 0; i < K; i++) {
+        const s = mk(i);
+        s.cur.forEach(sym => {
+          const k = normKey(sym);
+          if (s.rebuild) { if (!srcKeys.has(k)) s.drop.push(sym); }     // 随分组一起消失；仍在源里的回到待加池
+          else if (wipe) s.remove.push(sym);
+          else if (!pruning) { s.keep.push(sym); taken.add(k); }
+          else if (srcKeys.has(k) && !taken.has(k) && s.keep.length < cap) { s.keep.push(sym); taken.add(k); }
+          else s.remove.push(sym);
+        });
+        slots.push(s);
       }
-      const s = slots[i];
-      const free = cap - s.keep.length;
-      if (free > 0) s.add = s.add.concat(pool.splice(0, free));
+      const pool = [];
+      srcSyms.forEach(sym => { const k = normKey(sym); if (!taken.has(k)) { taken.add(k); pool.push(sym); } });
+      for (let i = 0; pool.length; i++) {
+        if (i >= slots.length) {
+          if (slots.length >= (CFG.maxFamilyGroups || 15)) break;
+          slots.push(mk(slots.length));
+        }
+        const s = slots[i];
+        const free = cap - s.keep.length;
+        if (free > 0) s.add = s.add.concat(pool.splice(0, free));
+      }
+      return { slots, pool };
+    };
+
+    let R = build(new Set());
+    if (pruning && opt.rebuild) {
+      const rb = new Set();
+      const minRm = Number.isFinite(+C.minRemove) ? +C.minRemove : 6;
+      R.slots.forEach(s => {
+        if (!s.existed || !s.remove.length) return;
+        if (s.index === 0 && !opt.canRebuildBase) return;           // 没有可停靠分组时 Earning 不整组删
+        const costDel = s.remove.length * (+C.del || 2.2);
+        const costReb = (+C.group || 16) + s.keep.length * (+C.add || 2.6);
+        if (s.remove.length >= minRm && costReb < costDel) rb.add(s.index);
+      });
+      if (rb.size) R = build(rb);
     }
+    const { slots, pool } = R;
     const surplus = pruning
       ? Array.from(byIdx.entries()).filter(([i]) => i >= 1 && i >= slots.length).sort((a, b) => a[0] - b[0]).map(([, n]) => n)
       : [];
-    const used = slots.filter(s => s.exists || s.add.length);
-    const text = used.map(s => `${s.name}${s.exists ? '' : '(新建)'} ${s.keep.length + s.add.length}只(+${s.add.length}/-${s.remove.length})`).join('｜') +
-      (surplus.length ? `｜删除分组 ${surplus.join('/')}` : '');
+    const needCreate = (s) => !s.exists && (s.add.length > 0 || s.index === 0);   // 基组 Earning 永远要存在
+    const rebuild = slots.filter(s => s.rebuild).map(s => s.name);
+    const shown = slots.filter(s => s.existed || s.add.length || s.index === 0);
+    const text = shown.map(s => {
+      if (s.rebuild && !needCreate(s)) return `${s.name}(整组删除) -${s.cur.length}`;
+      const tag = s.rebuild ? '(整组重建)' : (s.existed ? '' : '(新建)');
+      return `${s.name}${tag} ${s.keep.length + s.add.length}只(+${s.add.length}/-${s.rebuild ? s.drop.length : s.remove.length})`;
+    }).join('｜') + (surplus.length ? `｜删除分组 ${surplus.join('/')}` : '');
     return {
-      slots, surplus, overflow: pool, text,
+      slots, surplus, rebuild, overflow: pool, text,
       addTotal: slots.reduce((a, s) => a + s.add.length, 0),
       removeTotal: slots.reduce((a, s) => a + s.remove.length, 0),
-      createTotal: slots.filter(s => !s.exists && s.add.length).length
+      dropTotal: slots.reduce((a, s) => a + s.drop.length, 0),
+      createTotal: slots.filter(needCreate).length
     };
   }
 
@@ -1821,6 +1904,7 @@
     if (!lr.ok) throw new Error('读不到页面分组列表（' + (lr.error || '下拉框没有选项') + '），已中止未修改');
     const names = Array.from(new Set((lr.options || []).map(stripCount).filter(Boolean)));
     const fam = names.filter(n => familyIndex(n, base) >= 0).sort((a, b) => familyIndex(a, base) - familyIndex(b, base));
+    const others = names.filter(n => familyIndex(n, base) < 0 && !NOT_A_GROUP_RE.test(n));
     const cur = normGroup(groupName());
     const order = fam.slice().sort((a, b) => (normGroup(b) === cur) - (normGroup(a) === cur));   // 当前分组先读，省一次切换
     const contents = {};
@@ -1829,11 +1913,72 @@
       hudInfo(`读取「${g}」现有标的…`);
       contents[g] = await readGroupSymbols(g);
     }
-    const P = planFamily(src.symbols, base, fam, contents, cap, !!opts.strict, !!opts.wipe);
+    const P = planFamily(src.symbols, base, fam, contents, cap, !!opts.strict, !!opts.wipe, {
+      rebuild: CFG.groupRebuild !== false,
+      canRebuildBase: others.length > 0,
+      cost: { del: CFG.costDelSym, add: CFG.costAddSym, group: CFG.costGroupRebuild, minRemove: CFG.rebuildMinRemove }
+    });
     return Object.assign(P, {
-      src, fam, contents, cap, base,
+      src, fam, others, contents, cap, base,
       haveCount: Object.values(contents).reduce((a, x) => a + x.length, 0)
     });
+  }
+
+  /* ★ v11.3：删除「当前所在分组」前，先找一个不删的分组停靠 */
+  function pickParkGroup(P, delSet) {
+    const cand = [job.originGroup].concat(P.others || [], P.fam || []);
+    for (const c of cand) {
+      const g = stripCount(c || '');
+      if (g && !delSet.has(normGroup(g)) && !NOT_A_GROUP_RE.test(g)) return g;
+    }
+    return '';
+  }
+
+  /* ★ v11.4：可靠读取当前分组全表（复核专用）
+   *   - 先关弹层/菜单/下拉、确认分组名、等表格加载完成
+   *   - 读到数量 ≥ 表格行数，或连续两次读取结果完全一致，才算可信
+   *   - planned（本组计划内容）给出时：大量「计划外」标的 = 页面还显示着别的分组/旧缓存 → 判不可信 */
+  async function readCurrentGroupReliable(want, planned, tries) {
+    tries = tries || 3;
+    let last = { ok: false, why: '未读取' };
+    let prevSig = null;
+    for (let t = 0; t < tries; t++) {
+      if (halted()) return { ok: false, why: '已停止' };
+      try { pressEscape(); } catch (e) { }
+      if (menuRoots().length) { closeMenus(); await waitMenusClosed(); }
+      await closeGroupSelect();
+      if (want && normGroup(groupName()) !== normGroup(want)) {
+        const sr = await switchGroup(want);
+        if (!sr.ok) { last = { ok: false, why: `当前分组不是「${want}」且切回失败` }; await sleep(800); continue; }
+      }
+      await waitFor(() => !gridLoading(), 6000, 150);
+      await waitGridSettled();
+      const expect = dataRowsTotal();
+      const syms = Object.keys(await collectWatchlist());
+      const set = new Set(syms.map(normKey));
+      const sig = Array.from(set).sort().join(',');
+
+      if (planned && planned.size && set.size) {
+        const foreign = Array.from(set).filter(k => !planned.has(k));
+        if (foreign.length > Math.max(2, Math.floor(set.size / 2))) {
+          last = { ok: false, why: `读到 ${foreign.length}/${set.size} 只计划外标的（疑似表格仍显示旧分组/缓存）` };
+          prevSig = null;
+          await sleep(1200 + t * 800);
+          continue;
+        }
+      }
+      if (set.size && set.size >= expect) return { ok: true, set, count: set.size, expect };
+      if (set.size && prevSig !== null && sig === prevSig) return { ok: true, set, count: set.size, expect, stable: true };
+      if (!set.size) {
+        const ce = await confirmGroupEmpty(want, 4000);
+        if (ce.empty && prevSig === '') return { ok: true, set, count: 0, expect: 0 };
+        if (ce.rowsAppeared) { prevSig = null; continue; }
+      }
+      prevSig = sig;
+      last = { ok: false, why: `读到 ${set.size} 只，表格显示 ${expect} 行`, count: set.size, expect };
+      await sleep(900 + t * 600);
+    }
+    return last;
   }
 
   async function addIntoGroup(s) {
@@ -1880,26 +2025,92 @@
           renderHud(`⚠ 连续失败过多（最后: ${job.lastError}），已自动暂停，请人工检查`);
         }
         renderHud();
-        await sleep(RUN.perSymbolDelay + Math.random() * RUN.jitter);
+        if (!r.existed) await sleep(RUN.perSymbolDelay + Math.random() * RUN.jitter);
       }
       try { pressEscape(); } catch (e) { }
       cleanNavSearch();
     };
     await runList(s.add, true);
+
+    /* ★ v11.4 复核：只信「可靠读取」；已确认添加成功的标的需连续 2 次可靠读取都缺失才补加 */
+    const planned = new Set(s.keep.concat(s.add).map(normKey));
+    const missHits = Object.create(null);
     for (let pass = 2; pass <= RUN.maxPasses && !job.stop; pass++) {
       job.phase = 'verify'; job.pass = pass;
       renderHud(`复核「${s.name}」…`);
       await sleep(500);
-      const have = new Set(Object.keys(await collectWatchlist()).map(normKey));
+      const rd = await readCurrentGroupReliable(s.name, (s.rebuild || !s.existed) ? planned : null);
+      if (!rd.ok) {
+        console.warn(LOG, `复核「${s.name}」读取不可靠：${rd.why}，为防重复添加，跳过补加`);
+        renderHud(`⚠ 复核「${s.name}」读取不可靠（${rd.why}），为防重复添加已跳过补加`);
+        await sleep(900);
+        break;
+      }
+      const have = rd.set;
+      log(`复核「${s.name}」第 ${pass} 趟：读到 ${rd.count} 只（表格 ${rd.expect} 行${rd.stable ? '，两次一致' : ''}）`);
       s.add.forEach(x => { if (have.has(normKey(x)) && state[x] !== 'ok') mark(x, true); });
-      const miss = s.add.filter(x => !have.has(normKey(x)));
-      if (!miss.length) break;
+      const miss = [], pending = [];
+      s.add.forEach(x => {
+        if (have.has(normKey(x))) { delete missHits[x]; return; }
+        if (state[x] !== 'ok') { miss.push(x); return; }
+        missHits[x] = (missHits[x] || 0) + 1;
+        if (missHits[x] >= 2) miss.push(x); else pending.push(x);
+      });
+      if (!miss.length && !pending.length) break;
+      if (!miss.length) {
+        renderHud(`「${s.name}」有 ${pending.length} 只本次未读到（之前已确认添加），稍后再确认…`);
+        await sleep(1500);
+        continue;
+      }
       job.phase = 'add';
-      renderHud(`「${s.name}」仍缺 ${miss.length} 只，补加…`);
+      renderHud(`「${s.name}」确认仍缺 ${miss.length} 只，补加…`);
       await runList(miss, false);
     }
     job.queue = [];
     job.pass = 1;
+  }
+
+  /* ★ v11.5 收尾重试：添加完成后，对本次失败的「删分组 / 删标的」各重试 1 次。
+   *   重试仍失败才写入最终记录，并注明「两次尝试均失败」 */
+  async function retryFailedOps(base) {
+    const list = job.retry.splice(0);
+    if (!list.length) return;
+    for (const it of list) {
+      if (job.stop) {
+        // 用户已停止：不再尝试，保留第一次的失败记录
+        if (it.kind === 'group') job.clearFailed.push({ symbol: `[分组 ${it.name}]`, error: it.error || '未知' });
+        continue;
+      }
+      let ok = false, err = it.error || '未知';
+
+      if (it.kind === 'group') {
+        renderHud(`收尾重试：删除分组「${it.name}」…`);
+        await sleep(CFG.groupBetweenPause || 2500);       // ★ v11.5 重试前先停一下
+        const r = await deleteGroup(it.name, base);
+        if (r.ok) {
+          ok = true;
+          job.famDeleted.push(it.name);
+          bg({ action: 'FT_WL_MEMBERSHIP', payload: { group: it.name, drop: true } });
+        } else err = r.error || err;
+        if (!ok) job.clearFailed.push({ symbol: `[分组 ${it.name}]`, error: `两次尝试均失败：${err}` });
+      } else {
+        renderHud(`收尾重试：「${it.group}」中删除 ${it.sym}…`);
+        const sw = normGroup(groupName()) === normGroup(it.group) ? { ok: true } : await switchGroup(it.group);
+        if (!sw.ok) err = sw.error || err;
+        else {
+          await waitGridSettled();
+          job.clearFailed = job.clearFailed.filter(f => normKey(f.symbol) !== normKey(it.sym));
+          await runRemovePhase([it.sym], true);           // 成功会自动计入 cleared
+          const f = job.clearFailed.find(e => normKey(e.symbol) === normKey(it.sym));
+          if (!f) ok = true; else err = f.error || err;
+        }
+        if (!ok) {
+          const f = job.clearFailed.find(e => normKey(e.symbol) === normKey(it.sym));
+          if (f) f.error = `两次尝试均失败：${f.error || err}`;
+          else job.clearFailed.push({ symbol: it.sym, error: `两次尝试均失败：${err}` });
+        }
+      }
+    }
   }
 
   async function runFamilyPipeline() {
@@ -1921,32 +2132,82 @@
       P.overflow.forEach(x => job.failed.push({ symbol: x, error: `超出 ${CFG.maxFamilyGroups} 个分组上限，未写入` }));
       toast(`⚠ 有 ${P.overflow.length} 只超出分组上限未写入`);
     }
-    if (!P.addTotal && !P.removeTotal && !P.createTotal && !P.surplus.length) {
+    const delGroups = P.rebuild.concat(P.surplus).filter(g => isFamily(g, base));
+    if (!P.addTotal && !P.removeTotal && !P.createTotal && !delGroups.length) {
       toast(`✅ 「${base}」系列已与数据源完全一致，无需任何改动`);
       renderHud(`✅ 已一致：${P.text || '空'}，未做任何点击`);
       return finishJob();
     }
 
-    if (P.removeTotal || P.surplus.length) {
+    if (P.removeTotal || delGroups.length) {
       try { await storeSet({ [BACKUP_KEY]: buildMultiBackup(P.contents) }); job.backedUp = true; } catch (e) { }
-      if (P.src.symbols.length === 0) toast('⚠ 数据源在目标日期无数据（不回退）→ 将清空 Earning 系列');
+      if (P.src.symbols.length === 0) toast(`⚠ 数据源在目标日期无数据（不回退）→ 将清空 ${base} 系列`);
+      const parts = [];
+      if (P.rebuild.length) parts.push(`整组删除 ${P.rebuild.join('/')}（作废 ${P.dropTotal} 只，随后按今日数据重建）`);
+      if (P.surplus.length) parts.push(`删除分组 ${P.surplus.join('/')}`);
+      if (P.removeTotal) parts.push(`逐只删除 ${P.removeTotal} 只多余标的`);
       for (let i = RUN.clearCountdown; i > 0 && !job.stop; i--) {
-        renderHud(`⚠️ ${i} 秒后：删除 ${P.removeTotal} 只多余标的` +
-          (P.surplus.length ? `、删除分组 ${P.surplus.join('/')}` : '') + '…点「停止」可取消（已备份）');
+        renderHud(`⚠️ ${i} 秒后：${parts.join('、')}…点「停止」可取消（已备份）`);
         await sleep(1000);
       }
       if (job.stop) return finishJob();
     }
 
-    /* ① 新建缺少的分组 */
-    for (const s of P.slots) {
-      if (job.stop) break;
-      if (s.exists || !s.add.length) continue;
+    /* ① 先整组删除（作废分组 + 用不上的分组）：比逐只删快得多，也先腾出分组数量 */
+    if (delGroups.length && !job.stop) {
       job.phase = 'group';
-      renderHud(`新建分组「${s.name}」…`);
-      const r = await createGroup(s.name);
-      if (r.ok) { job.famCreated.push(s.name); s.exists = true; }
-      else {
+      const delSet = new Set(delGroups.map(normGroup));
+      if (delSet.has(normGroup(groupName()))) {
+        const park = pickParkGroup(P, delSet);
+        if (park) {
+          renderHud(`先切到「${park}」停靠，再删除分组…`);
+          const sr = await switchGroup(park);
+          if (sr.ok) job.group = groupName() || park;
+        }
+      }
+      for (const g of delGroups) {
+        if (job.stop) break;
+        const s = P.slots.find(x => x.rebuild && normGroup(x.name) === normGroup(g));
+        renderHud(s ? `整组删除「${g}」（${s.cur.length} 只，其中作废 ${s.drop.length}）…` : `删除用不上的分组「${g}」…`);
+        const r = normGroup(groupName()) === normGroup(g)
+          ? { ok: false, error: '无法切离该分组（没有可停靠的其它分组）' }
+          : await deleteGroup(g, base, { allowBase: !!s });
+        if (r.ok) {
+          job.famDeleted.push(g);
+          bg({ action: 'FT_WL_MEMBERSHIP', payload: { group: g, drop: true } });
+          job.cleared += s ? s.drop.length : (P.contents[g] || []).length;
+          renderHud();
+          await sleep(CFG.groupBetweenPause || 2500);   // ★ v11.5 两个分组删除之间停顿
+          continue;
+        }
+        job.lastError = r.error || '删除分组失败';
+        if (!s) { job.retry.push({ kind: 'group', name: g, error: job.lastError }); continue; }
+        /* 降级：整组删除失败 → 该组改为「逐只删多余 + 补缺失」，结果依然正确 */
+        const before = s.add.length;
+        const addK = new Set(s.add.map(normKey)), curK = new Set(s.cur.map(normKey));
+        s.rebuild = false; s.exists = true;
+        s.keep = s.cur.filter(x => addK.has(normKey(x)));
+        s.remove = s.cur.filter(x => !addK.has(normKey(x)));
+        s.add = s.add.filter(x => !curK.has(normKey(x)));
+        s.drop = [];
+        job.total -= (before - s.add.length);
+        toast(`⚠ 整组删除「${g}」失败，改为逐只删除：${job.lastError}`);
+      }
+    }
+
+    /* ② 新建 / 重建分组（基组 Earning 即使今日无数据、即使已停止也会建回，保证它永远存在） */
+    for (const s of P.slots) {
+      if (s.exists) continue;
+      if (!s.add.length && s.index !== 0) continue;
+      if (job.stop && s.index !== 0) continue;
+      job.phase = 'group';
+      renderHud(`${s.rebuild ? '重建' : '新建'}分组「${s.name}」…`);
+      let r = await createGroup(s.name);
+      if (!r.ok) { await sleep(1200); r = await createGroup(s.name); }
+      if (r.ok) {
+        job.famCreated.push(s.name); s.exists = true;
+        if (!s.add.length) snapshotEmpty(s.name);
+      } else {
         s.skip = true; job.lastError = r.error;
         s.add.forEach(x => job.failed.push({ symbol: x, error: `新建分组「${s.name}」失败：${r.error}` }));
         job.done += s.add.length;
@@ -1954,7 +2215,7 @@
       }
     }
 
-    /* ② 逐组：删多余 → 补缺失 → 复核 */
+    /* ③ 逐组：删多余（仅未整组重建的分组）→ 补缺失 → 复核 */
     for (const s of P.slots) {
       if (job.stop) break;
       if (s.skip || !s.exists || (!s.remove.length && !s.add.length)) continue;
@@ -1969,43 +2230,38 @@
       }
       job.group = groupName() || s.name;
       await waitGridSettled();
+      /* ★ v11.4：刚新建/整组重建的分组，应为空表；若先冒出行，多半是表格还挂着上一个分组/旧缓存 → 再等稳定 */
+      if (s.rebuild || !s.existed) {
+        const ce = await confirmGroupEmpty(s.name, 10000);
+        if (ce.rowsAppeared) {
+          log(`新分组「${s.name}」切入后出现行（疑似旧数据），额外等待表格稳定`);
+          await sleep(1500);
+          await waitGridSettled();
+        }
+      }
       if (s.remove.length) {
         const r = await runRemovePhase(s.remove, true);
         if (r === 'stopped') break;
+        s.remove.forEach(x => {                       // ★ v11.5 记下本组删失败的标的
+          const f = job.clearFailed.find(e => normKey(e.symbol) === normKey(x));
+          if (f) job.retry.push({ kind: 'sym', group: s.name, sym: x, error: f.error });
+        });
       }
       if (s.add.length && !job.stop) await addIntoGroup(s);
     }
-
-    /* ③ 删除用不上的分组（永不删 base / 非系列分组） */
-    if (!job.stop && P.surplus.length) {
-      job.phase = 'group';
-      if (familyIndex(groupName(), base) !== 0) await switchGroup(base);
-      for (const g of P.surplus) {
-        if (job.stop) break;
-        if (familyIndex(g, base) < 1) continue;
-        renderHud(`删除用不上的分组「${g}」…`);
-        const r = await deleteGroup(g, base);
-        if (r.ok) {
-          job.famDeleted.push(g);
-          bg({ action: 'FT_WL_MEMBERSHIP', payload: { group: g, drop: true } });
-        } else {
-          job.clearFailed.push({ symbol: `[${g}]`, error: r.error || '删除分组失败' });
-          job.lastError = r.error || '';
-        }
-      }
-    }
+    await retryFailedOps(base);          // ★ v11.5 添加完成后，收尾重试一次
     return finishJob();
   }
 
   function familyDiffResponse(P) {
     const adds = [].concat(...P.slots.map(s => s.add));
-    const rms = [].concat(...P.slots.map(s => s.remove));
+    const rms = [].concat(...P.slots.map(s => s.remove), ...P.slots.map(s => s.drop));
     return {
       ok: true, srcFrom: P.src.from, srcCount: P.src.symbols.length, srcDetail: P.src.detail,
       srcSymbols: P.src.symbols.slice(0, 60), haveCount: P.haveCount,
       missing: adds.length, extraCount: rms.length, extraSample: rms.slice(0, 20), sample: adds.slice(0, 20),
       group: groupName(), targetGroup: P.base, onTarget: isFamily(groupName(), P.base),
-      cap: P.cap, planText: P.text, surplus: P.surplus, overflow: P.overflow.length
+      cap: P.cap, planText: P.text, surplus: P.surplus, rebuild: P.rebuild || [], overflow: P.overflow.length
     };
   }
 
@@ -2030,6 +2286,7 @@
     job.multi = null;
     job.skipQuotes = !!opts.skipQuotes;
     job.family = false; job.famText = ''; job.famCreated = []; job.famDeleted = [];
+    job.retry = [];                 // ★ v11.5
     RUN = Object.assign({}, CFG);
     scanState.abort = false;
     syncBusy();
@@ -2251,7 +2508,8 @@
       else if (!job.stop && job.clearOnly && !job.multi) { try { await collectWatchlist(); } catch (e) { } }
 
       try {
-        const originGone = job.famDeleted.some(g => normGroup(g) === normGroup(job.originGroup));
+        const same = (g) => normGroup(g) === normGroup(job.originGroup);
+        const originGone = job.famDeleted.some(same) && !job.famCreated.some(same);   // ★ 删了又重建 → 照常切回
         if (TARGET.backToOrigin && job.originGroup && !originGone && normGroup(groupName()) !== normGroup(job.originGroup)) {
           renderHud(`正在切回原分组「${job.originGroup}」…`);
           await switchGroup(job.originGroup);
@@ -2488,11 +2746,12 @@
   function loadSettings() {
     chrome.storage.local.get(
       ['ftDebug', 'ftAutoWatchlist', 'ftWlCfg', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
-        'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlRestoreGroup', 'ftWlGroupCap'],
+        'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlRestoreGroup', 'ftWlGroupCap', 'ftWlGroupRebuild'],
       (res) => {
         DEBUG = !!res.ftDebug;
         AUTO_WATCHLIST = res.ftAutoWatchlist === true;
         if (res.ftWlCfg && typeof res.ftWlCfg === 'object') Object.assign(CFG, res.ftWlCfg);
+        CFG.groupRebuild = res.ftWlGroupRebuild !== false;
         const cap = parseInt(res.ftWlGroupCap, 10);
         if (Number.isFinite(cap) && cap > 0) CFG.groupCap = cap;
         SRC.mode = res.ftWlSource || 'earnings';
@@ -2513,7 +2772,7 @@
   chrome.storage.onChanged.addListener((c, area) => {
     if (area !== 'local') return;
     if (c.ftDebug || c.ftAutoWatchlist || c.ftWlCfg || c.ftWlSource || c.ftWlBack ||
-      c.ftWlAhead || c.ftWlTargetGroup || c.ftWlStrictSync || c.ftWlRestoreGroup || c.ftWlGroupCap) loadSettings();
+      c.ftWlAhead || c.ftWlTargetGroup || c.ftWlStrictSync || c.ftWlRestoreGroup || c.ftWlGroupCap || c.ftWlGroupRebuild) loadSettings();
   });
 
   async function bootstrap() {
@@ -2754,5 +3013,5 @@
   };
 
   bootstrap();
-  console.log(LOG, `watchlist.js v11 就绪（isWatchlist=${isWatchlistPage()}，系列基名 ${TARGET.group}）`);
+  console.log(LOG, `watchlist.js v11.3 就绪（isWatchlist=${isWatchlistPage()}，系列基名 ${TARGET.group}）`);
 })();

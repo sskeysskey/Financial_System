@@ -16,9 +16,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 import platform
-# import sys
-import tkinter as tk
-from tkinter import messagebox
 
 # ================= 全局配置区域 (跨平台修改) =================
 
@@ -57,6 +54,7 @@ else:
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+UNATTENDED = os.environ.get("FS_UNATTENDED") == "1"   # 由 run_pipeline.sh 设置
 
 # ================= 通用辅助函数 =================
 
@@ -116,7 +114,11 @@ def get_driver():
         return None
 
     service = Service(executable_path=CHROME_DRIVER_PATH)
-    return webdriver.Chrome(service=service, options=chrome_options)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    # 严重问题修复：原来没有页面加载超时，网站卡住时 driver.get 会无限等待，整个无人值守流程跟着卡死
+    driver.set_page_load_timeout(40)
+    driver.set_script_timeout(30)
+    return driver
 
 def get_db_connection():
     """获取数据库连接 (增加超时设置)"""
@@ -130,14 +132,21 @@ def check_is_workday():
     return datetime.now().weekday() not in [0, 6]
 
 def display_dialog(message):
-    """跨平台弹窗提示"""
+    """跨平台提示：无人值守时只发通知，绝不弹阻塞对话框；手动时对话框 60 秒自动关闭"""
+    logging.info(f"[提示] {message}")
     if platform.system() == 'Darwin':
+        safe = message.replace('\\', '\\\\').replace('"', '\\"')
+        if UNATTENDED:
+            script = f'display notification "{safe}" with title "TE_Merged"'
+        else:
+            script = f'display dialog "{safe}" buttons {{"OK"}} default button "OK" giving up after 60'
         try:
-            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-            subprocess.run(['osascript', '-e', applescript_code], check=True)
+            subprocess.run(['osascript', '-e', script], check=False, timeout=90, capture_output=True)
         except Exception as e:
             logging.error(f"弹窗失败: {e}")
-    else:
+    elif not UNATTENDED:
+        import tkinter as tk
+        from tkinter import messagebox
         root = tk.Tk()
         root.withdraw()
         messagebox.showinfo("提示", message)
@@ -260,6 +269,9 @@ def run_currency_cny2():
             return temp_data
         all_data = fetch_with_retry(driver, 'https://tradingeconomics.com/currencies?base=cny', extract_currency_list, task_name="Currency-CNY2")
         if all_data:
+            # 原来用纯 INSERT 且表没有唯一约束，同一天重跑会插入重复行；改为先删后插（幂等）
+            cursor.executemany('DELETE FROM Currencies WHERE date = ? AND name = ?',
+                               [(r[0], r[1]) for r in all_data])
             cursor.executemany('INSERT INTO Currencies (date, name, price) VALUES (?, ?, ?)', all_data)
             conn.commit()
             logging.info(f"Currency CNY2: 插入了 {len(all_data)} 条数据")
@@ -302,6 +314,9 @@ def run_currency_cny():
             result = fetch_with_retry(driver, url, extract_single_currency, task_name=f"Currency-{symbol}")
             all_data.extend(result)
         if all_data:
+            # 原来用纯 INSERT 且表没有唯一约束，同一天重跑会插入重复行；改为先删后插（幂等）
+            cursor.executemany('DELETE FROM Currencies WHERE date = ? AND name = ?',
+                               [(r[0], r[1]) for r in all_data])
             cursor.executemany('INSERT INTO Currencies (date, name, price) VALUES (?, ?, ?)', all_data)
             conn.commit()
             logging.info(f"Currency CNY: 插入了 {len(all_data)} 条数据")

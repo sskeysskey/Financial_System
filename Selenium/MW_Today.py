@@ -1733,30 +1733,33 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
 
 
 def run_check_yesterday_if_empty():
-    """只有在 Sectors_empty.json 文件存在且全部清空时才执行 Check_yesterday.py"""
+    """只有在 Sectors_empty.json 存在且全部清空时才执行 Check_yesterday.py（输出实时显示在终端）"""
     if not os.path.exists(SECTORS_JSON_PATH):
-        print(f"⚠️ 未找到任务文件 {SECTORS_JSON_PATH}，跳过执行 Check_yesterday.py。")
+        print(f"⚠️ 未找到任务文件 {SECTORS_JSON_PATH}，跳过执行 Check_yesterday.py。", flush=True)
         return
-
     final_tasks = load_tasks_from_json(SECTORS_JSON_PATH)
     if not isinstance(final_tasks, dict):
-        print("⚠️ 无法正确读取任务 JSON，跳过执行 Check_yesterday.py。")
+        print("⚠️ 无法正确读取任务 JSON，跳过执行 Check_yesterday.py。", flush=True)
         return
 
-    is_empty = all(len(v) == 0 for v in final_tasks.values())
+    if not all(not v for v in final_tasks.values()):
+        print("⚠️ Sectors_empty.json 中仍有未完成的任务，跳过执行 Check_yesterday.py。", flush=True)
+        return
 
-    if is_empty:
-        print("✅ Sectors_empty.json 已全部清空，开始执行 Check_yesterday.py...")
-        try:
-            subprocess.run([sys.executable, CHECK_YESTERDAY_SCRIPT_PATH, "--ignore_sectors"],
-                           check=True, capture_output=True, text=True, encoding='utf-8')
-            print("✅ Check_yesterday.py 执行完毕。")
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Check_yesterday 返回错误码 {e.returncode}:\n{(e.stderr or '')[-1000:]}")
-        except Exception as e:
-            print(f"❌ 调用 Check_yesterday 出错: {e}")
-    else:
-        print("⚠️ Sectors_empty.json 中仍有未完成的任务，跳过执行 Check_yesterday.py。")
+    print("✅ Sectors_empty.json 已全部清空，开始执行 Check_yesterday.py...", flush=True)
+    try:
+        # 原来用 capture_output：输出看不到，而且子进程一旦弹出对话框，会无人点击、永远卡住。
+        # 现在：输出直接显示在终端，加 --nopop 不弹窗，并设置超时兜底
+        r = subprocess.run([sys.executable, CHECK_YESTERDAY_SCRIPT_PATH, "--ignore_sectors", "--nopop"],
+                           timeout=900)
+        if r.returncode == 0:
+            print("✅ Check_yesterday.py 执行完毕。", flush=True)
+        else:
+            print(f"❌ Check_yesterday 返回错误码 {r.returncode}", flush=True)
+    except subprocess.TimeoutExpired:
+        print("❌ Check_yesterday 执行超时（900 秒），已终止。", flush=True)
+    except Exception as e:
+        print(f"❌ 调用 Check_yesterday 出错: {e}", flush=True)
 
 
 def parse_args():
@@ -1775,11 +1778,20 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     start_caffeinate()
+    exit_code = 0
     try:
-        scrape_marketwatch(headless=not args.headful, only_groups=args.groups,
-                           dry_run=args.dry_run, sanity=not args.no_sanity,
-                           auto_slider=not args.no_auto_slider, escalate=not args.no_escalate)
+        stats = scrape_marketwatch(headless=not args.headful, only_groups=args.groups,
+                                   dry_run=args.dry_run, sanity=not args.no_sanity,
+                                   auto_slider=not args.no_auto_slider, escalate=not args.no_escalate)
+        if stats.get("aborted"):
+            exit_code = 2
+        elif stats.get("failed"):
+            exit_code = 1
         if not args.no_check and not args.dry_run:
             run_check_yesterday_if_empty()
+    except KeyboardInterrupt:
+        print("\n⛔ 用户中断 MW_Today", flush=True)
+        exit_code = 130
     finally:
         stop_caffeinate()
+    sys.exit(exit_code)   # 返回真实退出码，流水线据此判断成功与否

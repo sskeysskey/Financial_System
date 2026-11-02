@@ -395,7 +395,8 @@
         "QRVO",
         "Russia",
         "CZR",
-        "PAG"
+        "PAG",
+        "CCC"
     ],
     "etf": [
         "VDE",
@@ -821,7 +822,8 @@
         "GRPM",
         "FTA",
         "GUSE",
-        "QVAL"
+        "QVAL",
+        "GAL"
     ],
     "Earning": [],
     "Options": [

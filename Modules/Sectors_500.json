@@ -199,8 +199,7 @@
         "NTRA",
         "BDX",
         "VEEV",
-        "EW",
-        "A"
+        "EW"
     ],
     "Industrials": [
         "GE",
@@ -243,9 +242,9 @@
         "FAST",
         "SPCX",
         "BE",
-        "HONA",
         "DAL",
-        "TRI"
+        "TRI",
+        "LHX"
     ],
     "Real_Estate": [
         "PLD",
@@ -315,11 +314,8 @@
         "GRMN",
         "LITE",
         "MSTR",
-        "TEAM",
         "ADSK",
-        "NOK",
-        "ALAB",
-        "CIEN"
+        "INFY"
     ],
     "Utilities": [
         "NEE",
