@@ -319,7 +319,7 @@ const fmtQuotes = (r) => r.empty
 
 const COMBOS = {
   combo_all: {
-    label: '一键全流程（持仓 → 订单 → 同步 Earning → 变更% → 分组归属）',
+    label: '一键全流程（持仓 → 订单 → 同步 Earning → 变更% → 清空非保留分组 → 分组归属）',
     steps: (o) => {
       const tg = o.targetGroup || DEFAULT_GROUP;
       return [
@@ -330,11 +330,23 @@ const COMBOS = {
           msg: { action: 'FT_WL_START', clearFirst: false, strictSync: o.strictSync !== false, targetGroup: tg, skipQuotes: true }
         },
         { page: 'watchlist', label: '④ 抓取 Earning 系列变更%', msg: { action: 'FT_WL_SCAN_QUOTES' }, fmt: fmtQuotes },
-        { page: 'watchlist', label: '⑤ 扫描全部分组归属', msg: { action: 'FT_MEMBER_SCAN' }, fmt: r => r.message || 'OK' }
+        {
+          // ★ 新增：清空除 Earning 系列 / Wrong 外的所有分组（只清空，不删分组）
+          page: 'watchlist', label: '⑤ 清空除 Earning 系列 / Wrong 外的分组', waitJob: true,
+          msg: { action: 'FT_WL_CLEAR_GROUPS', keep: Array.isArray(o.keepExtra) ? o.keepExtra : [] },
+          fmt: r => r.message || '无需清空'
+        },
+        { page: 'watchlist', label: '⑥ 扫描全部分组归属', msg: { action: 'FT_MEMBER_SCAN' }, fmt: r => r.message || 'OK' }
       ];
     }
   }
 };
+
+/* 续跑检查点是否仍有效（watchlist.js 写入 expires，finishJob 结束时删除） */
+async function wlResumeActive() {
+  const { ftWlFamilyResume: fr } = await chrome.storage.local.get(['ftWlFamilyResume']);
+  return !!(fr && fr.expires > Date.now());
+}
 
 async function waitWlJob(tabId, onTick) {
   const t0 = Date.now();
@@ -349,7 +361,7 @@ async function waitWlJob(tabId, onTick) {
         if (onTick) { try { await onTick(st); } catch (e) { } }
       } else {
         const saved = ((await chrome.storage.local.get(['ftWlJob'])).ftWlJob) || {};
-        if (saved.autoResume === true) idle = 0;
+        if (saved.autoResume === true || await wlResumeActive()) idle = 0;
         else if (++idle >= 2) break;
       }
     }
@@ -357,6 +369,15 @@ async function waitWlJob(tabId, onTick) {
   }
   if (!last) return { ok: false, msg: '无法读取自选股任务状态' };
   if (last.running || last.finishing) return { ok: false, msg: '等待任务结束超时' };
+  /* ★ 清空非保留分组任务（status 里带 multi） */
+  if (last.multi && last.multi.length) {
+    const cleared = last.cleared || 0;
+    const fail = last.clearFailed || 0;
+    let msg = `清空分组 ${last.multi.join('/')}｜删除 ${cleared}（失败 ${fail}）`;
+    if (cleared === 0 && fail === 0) msg += '（各分组本就为空）';
+    if (last.lastError) msg += `｜最后错误：${last.lastError}`;
+    return { ok: fail === 0, msg };
+  }
   const fails = (last.failed || 0) + (last.clearFailed || 0);
   const gDel = last.famDeleted || [], gNew = last.famCreated || [];
   const grpOps = gDel.length + gNew.length;
@@ -367,6 +388,15 @@ async function waitWlJob(tabId, onTick) {
   if (did === 0 && fails === 0 && !last.lastError) msg = '分组已与数据源一致，无需改动';
   if (last.lastError) msg += `｜最后错误：${last.lastError}`;
   return { ok, msg };
+}
+
+const STEP_ATTEMPTS = 2;        // ★ 每个步骤至少尝试两次
+const STEP_RETRY_GAP = 3000;    // 重试前等待(ms)
+
+async function reloadTabById(tabId) {
+  if (!tabId) return;
+  try { await chrome.tabs.reload(tabId); } catch (e) { }
+  await sleep(2000);
 }
 
 async function runCombo(msg) {
@@ -382,23 +412,54 @@ async function runCombo(msg) {
     id, kind, label: C.label, state: 'running', ts: Date.now(), steps: out.slice(),
     progress: `步骤 ${i + 1}/${steps.length}：${steps[i].label}${extra ? '｜' + extra : ''}`
   });
+  const waitTick = (i) => (st) => progress(i,
+    `${PHASE_TXT[st.phase] || st.phase}｜待删 ${st.toRemove}｜待加 ${st.toAdd}｜已删 ${st.cleared}｜已加 ${st.added}`);
+
   try {
     for (let i = 0; i < steps.length; i++) {
       const s = steps[i];
-      await progress(i);
-      const r = await execOnPage({ page: s.page, msg: s.msg, kind, readyTimeout: READY_TIMEOUT });
-      if (i === 0) origin = r.originTabId || null;
-      let ok = !!r.ok;
-      if (ok && r.resp && r.resp.server && r.resp.server.ok === false) ok = false;
-      let text = r.ok ? (s.fmt ? s.fmt(r.resp || {}) : 'OK') : (r.error || '失败');
-      if (r.ok && s.waitJob) {
-        const w = await waitWlJob(r.tabId, (st) => progress(i,
-          `${PHASE_TXT[st.phase] || st.phase}｜待删 ${st.toRemove}｜待加 ${st.toAdd}｜已删 ${st.cleared}｜已加 ${st.added}`));
-        ok = w.ok; text = w.msg;
+      let ok = false, text = '';
+
+      for (let attempt = 1; attempt <= STEP_ATTEMPTS && !ok; attempt++) {
+        if (attempt > 1) {
+          await progress(i, `第 ${attempt} 次尝试`);
+          await sleep(STEP_RETRY_GAP);
+        }
+
+        /* ① 已有续跑中的任务（刷新检查点）：不重发 FT_WL_START，直接接管等待 */
+        if (s.waitJob && await wlResumeActive()) {
+          const tab = await findPageTab('watchlist');
+          if (!tab) { ok = false; text = '自选股页已关闭，无法接管续跑任务'; continue; }
+          const w = await waitWlJob(tab.id, waitTick(i));
+          ok = w.ok; text = w.msg;
+          continue;
+        }
+
+        /* ② 正常执行 */
+        const r = await execOnPage({ page: s.page, msg: s.msg, kind, readyTimeout: READY_TIMEOUT });
+        if (i === 0 && attempt === 1) origin = r.originTabId || null;
+        const tabId = r.tabId || null;
+
+        ok = !!r.ok;
+        if (ok && r.resp && r.resp.server && r.resp.server.ok === false) ok = false;
+        text = r.ok ? (s.fmt ? s.fmt(r.resp || {}) : 'OK') : (r.error || '失败');
+
+        if (r.ok && s.waitJob && !(r.resp && r.resp.started === false)) {
+          const w = await waitWlJob(tabId, waitTick(i));
+          ok = w.ok; text = w.msg;
+        }
+
+        /* ③ 只有「页面没响应」才刷新；业务失败不刷新 */
+        if (!ok && attempt < STEP_ATTEMPTS) {
+          const pageDown = !r.resp || !!r.resp.noReceiver;
+          text += `｜第 ${attempt} 次未通过，准备重试`;
+          if (s.page === 'watchlist' && pageDown && tabId) await reloadTabById(tabId);
+        }
       }
       out.push({ label: s.label, ok, msg: text });
     }
   } finally { stop(); }
+
   const allOk = out.length === steps.length && out.every(x => x.ok);
   if (allOk && origin) await restoreTab(origin);
   const result = { ok: allOk, error: allOk ? '' : '部分步骤失败（见下方明细）', resp: { steps: out } };

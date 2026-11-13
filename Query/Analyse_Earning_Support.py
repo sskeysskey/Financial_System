@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import os
+from Analyse_run_mode import resolve_run_mode
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -8,11 +9,11 @@ USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # ================= 配置区域 =================
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "AOS"
-# TARGET_DATE = "2026-10-07"
+SYMBOL_TO_TRACE = "SBS"
+TARGET_DATE = "2026-11-03"
 
 MIN_SUPPORT_DAYS = 6
 SUPPORT_THRESHOLD_PCT = 2.6
@@ -51,7 +52,7 @@ ZONE_BREAK_MAX_PCT = 2.0
 ZONE_VOL_SPIKE_RATIO = 1.5        # 拐点附近放量倍数（相对前20日均量）
 ZONE_DECAY_FULL_DAYS = 90         # 最后触及90天内不衰减，之后线性衰减到0.6
 ZONE_MIN_SCORE = 30               # 低于此分的区不参与判定
-ZONE_STRONG_SCORE = 60            # 强支撑：可覆盖旧逻辑的 Over / 可中断顺延
+ZONE_STRONG_SCORE = 65            # 强支撑：可覆盖旧逻辑的 Over / 可中断顺延
 ZONE_OVERRIDE_CONFLICT = True     # 旧逻辑 Over 而强支撑区 Close 时，改判为 Close
 ZONE_INTERRUPT_INHERIT = True     # 顺延链上的 symbol 落入强支撑区时中断顺延（不作用于强制拉回的）
 ZONE_SUFFIX = "枢"                # 仅支撑区命中的后缀
@@ -1121,4 +1122,5 @@ def main():
 
 
 if __name__ == '__main__':
+    SYMBOL_TO_TRACE, TARGET_DATE = resolve_run_mode(SYMBOL_TO_TRACE, TARGET_DATE)
     main()

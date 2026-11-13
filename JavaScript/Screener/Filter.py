@@ -10,7 +10,12 @@ import sqlite3
 import subprocess
 from datetime import datetime, timedelta
 
+AUTO = os.environ.get("PIPELINE_AUTO") == "1"
+
 def show_alert(message):
+    if AUTO:
+        print(f"[AUTO] {message}")
+        return
     # AppleScript代码模板
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     

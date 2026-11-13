@@ -285,16 +285,18 @@
       });
     });
     grab();
-    const vp = document.querySelector('.ag-body-viewport');
-    if (scroll && vp && vp.scrollHeight > vp.clientHeight + 4) {
-      const original = vp.scrollTop;
-      const step = Math.max(150, vp.clientHeight - 60);
-      vp.scrollTop = 0; await sleep(200); grab();
+    const sc = scroll ? gridScroller() : null;     // ★ 与「一键抓取」使用同一个滚动容器
+    if (sc) {
+      const original = sc.scrollTop;
+      const step = Math.max(150, sc.clientHeight - 60);
+      sc.scrollTop = 0; await sleep(200); grab();
       let guard = 0;
-      while (guard++ < 200 && vp.scrollTop + vp.clientHeight < vp.scrollHeight - 2) {
-        vp.scrollTop += step; await sleep(180); grab();
+      while (guard++ < 200 && sc.scrollTop + sc.clientHeight < sc.scrollHeight - 2) {
+        const before = sc.scrollTop;
+        sc.scrollTop += step; await sleep(180); grab();
+        if (sc.scrollTop === before) break;        // 滚不动就停，避免空转
       }
-      vp.scrollTop = original;
+      sc.scrollTop = original;
     }
     Object.keys(out).forEach(k => {
       const r = out[k];
@@ -331,6 +333,57 @@
     return resp;
   }
 
+  /* ==================== ★ 滚动容器自适应（修复：只抓到第一屏） ==================== */
+  function gridScroller() {
+    // 1) 从第一条真实数据行向上找，第一个「真的能滚」的祖先就是滚动容器
+    const row = Array.from(document.querySelectorAll('[row-id]'))
+      .find(r => !r.closest('.ag-floating-top, .ag-floating-bottom'));
+    let el = row ? row.parentElement : null;
+    while (el && el !== document.body && el !== document.documentElement) {
+      const st = getComputedStyle(el);
+      if (/(auto|scroll)/.test(st.overflowY) && el.scrollHeight > el.clientHeight + 4) return el;
+      el = el.parentElement;
+    }
+    // 2) 兜底：AG Grid 的 viewport
+    const vp = document.querySelector('.ag-body-viewport');
+    if (vp && vp.scrollHeight > vp.clientHeight + 4) return vp;
+    // 3) 再兜底：整页滚动
+    const se = document.scrollingElement || document.documentElement;
+    return se.scrollHeight > se.clientHeight + 4 ? se : null;
+  }
+
+  /* 通用扫描：每滚一步就调用一次 collect()，返回滚动诊断信息 */
+  async function sweepGrid(collect) {
+    const sc = gridScroller();
+    const info = {
+      scroller: sc ? String(sc.className || sc.tagName).slice(0, 60) : 'none',
+      steps: 0, end: false
+    };
+    collect();
+    if (!sc) { info.end = true; return info; }   // 没有可滚动的容器，说明数据本来就在一屏内
+
+    const original = sc.scrollTop;
+    sc.scrollTop = 0;
+    await sleep(300);
+    collect();
+
+    let stuck = 0;
+    while (info.steps < 400) {
+      if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 2) { info.end = true; break; }
+      const before = sc.scrollTop;
+      sc.scrollTop = before + Math.max(150, sc.clientHeight - 60);
+      info.steps++;
+      await sleep(250);
+      collect();
+      stuck = (sc.scrollTop === before) ? stuck + 1 : 0;
+      if (stuck >= 3) break;                     // 连续 3 次滚不动，判定失败（info.end 保持 false）
+    }
+    await sleep(300);
+    collect();
+    sc.scrollTop = original;
+    return info;
+  }
+
   async function fullScan() {
     if (!canScrapePositions()) {
       return { ok: false, error: `当前页面不是持仓页（PAGE=${PAGE}），已拒绝抓取` };
@@ -338,30 +391,24 @@
     for (const sym of Object.keys(positionCache)) delete positionCache[sym];
     lastSentSig = '';
 
-    const vp = document.querySelector('.ag-body-viewport');
-    scrapeGridData();
-    if (!vp) return flushPositions(true, true);
-
-    const original = vp.scrollTop;
-    const step = Math.max(150, vp.clientHeight - 60);
-    let guard = 0;
-    vp.scrollTop = 0;
-    await sleep(250);
-    scrapeGridData();
-    while (guard++ < 400) {
-      if (vp.scrollTop + vp.clientHeight >= vp.scrollHeight - 2) break;
-      vp.scrollTop = vp.scrollTop + step;
-      await sleep(200);
-      scrapeGridData();
-    }
-    await sleep(250);
-    scrapeGridData();
-    vp.scrollTop = original;
-    await sleep(150);
-
+    const sweep = await sweepGrid(scrapeGridData);
     const r = await flushPositions(true, true);
-    flashToast(`✅ 已全量刷新并保存 ${Object.keys(positionCache).length} 只持仓`);
-    return r;
+    const n = Object.keys(positionCache).length;
+    flashToast(`${sweep.end ? '✅' : '⚠️'} 已抓取 ${n} 只持仓（滚动 ${sweep.steps} 次` +
+      `${sweep.end ? '' : '，未确认到底，请检查页面是否在前台'}）`);
+    return Object.assign({}, r, { sweep });
+  }
+
+  async function fullScanOrders() {
+    if (!canScrapeOrders()) {
+      return { ok: false, error: `当前页面不是订单页（PAGE=${PAGE}），已拒绝抓取` };
+    }
+    const sweep = await sweepGrid(scrapeOrderGrid);
+    const r = await flushOrders(true);
+    const n = Object.keys(orderCache).length;
+    flashToast(`${sweep.end ? '✅' : '⚠️'} 已抓取 ${n} 笔订单（滚动 ${sweep.steps} 次` +
+      `${sweep.end ? '' : '，未确认到底'}）`);
+    return Object.assign({}, r, { sweep });
   }
 
   /* ==================== 5. 订单痕迹抓取（仅 order-status 页，LEAN） ==================== */
@@ -512,35 +559,6 @@
     if (resp.ok) { lastOrderSig = sig; log('订单已追加:', resp.data); }
     else log('订单同步失败:', resp.error);
     return resp;
-  }
-
-  async function fullScanOrders() {
-    if (!canScrapeOrders()) {
-      return { ok: false, error: `当前页面不是订单页（PAGE=${PAGE}），已拒绝抓取` };
-    }
-    const vp = document.querySelector('.ag-body-viewport');
-    scrapeOrderGrid();
-    if (vp) {
-      const original = vp.scrollTop;
-      const step = Math.max(150, vp.clientHeight - 60);
-      let guard = 0;
-      vp.scrollTop = 0;
-      await sleep(250);
-      scrapeOrderGrid();
-      while (guard++ < 400) {
-        if (vp.scrollTop + vp.clientHeight >= vp.scrollHeight - 2) break;
-        vp.scrollTop = vp.scrollTop + step;
-        await sleep(200);
-        scrapeOrderGrid();
-      }
-      await sleep(250);
-      scrapeOrderGrid();
-      vp.scrollTop = original;
-      await sleep(150);
-    }
-    const r = await flushOrders(true);
-    flashToast(`✅ 已抓取 ${Object.keys(orderCache).length} 笔订单（${ORDER_VERBOSE ? '完整' : '精简'}追加写入）`);
-    return r;
   }
 
   /* ==================== 6. 标签匹配与注入（纯展示，仅点击看图） ==================== */

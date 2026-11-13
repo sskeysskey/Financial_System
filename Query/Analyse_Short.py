@@ -3,6 +3,7 @@ import sqlite3
 import logging
 import os
 import re
+from Analyse_run_mode import resolve_run_mode
 from wcwidth import wcswidth
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -16,22 +17,27 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # ============ 回测 / 追踪配置 ============
 # 如为空，则运行"今天"模式；填入日期（如 "2025-01-15"），则运行回测模式
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "ERIE"
-# TARGET_DATE = "2026-09-24"
+SYMBOL_TO_TRACE = "ROKT"
+TARGET_DATE = "2026-10-13"
 
 # 追踪日志路径
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
+# 是否将追踪日志写入文件（False = 仅输出到控制台，不生成文件）
+TRACE_LOG_TO_FILE = False
 # =========================================
 
 # 算法参数配置
 CONFIG = {
     "MA_PERIOD": 150,
     "RECENT_DAYS_LOOKBACK": 1,
-    "LOOKBACK_MONTHS_LONG": 12,
-    "RANK_THRESHOLD_LONG": 3,
+    # 成交额排名规则（任一满足即可），格式：(回看月数, 排名前N)
+    "TURNOVER_RANK_RULES": [
+        (12, 3),   # 12个月内前3天量
+        (4, 1),    # 4个月内第1天量
+    ],
     "M_TOP_HEIGHT_TOLERANCE": 0.038,
     "M_TOP_NECK_DEPTH": 0.025,
     "M_TOP_MIN_DAYS_GAP": 3,
@@ -370,6 +376,16 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
         return True
     return False
 
+def match_turnover_rank(cursor, sector_name, symbol, day_date, day_turnover):
+    """
+    依次检查 CONFIG["TURNOVER_RANK_RULES"] 中的每条规则。
+    命中则返回描述文字，全部未命中返回 None。
+    """
+    for lookback_months, rank_threshold in CONFIG["TURNOVER_RANK_RULES"]:
+        if check_turnover_rank(cursor, sector_name, symbol, day_date,
+                               day_turnover, lookback_months, rank_threshold):
+            return f"{lookback_months}个月内Top{rank_threshold}天量"
+    return None
 
 def check_double_top(cursor, symbol, sector, target_date=None):
     """检查是否形成 M 形态（双峰）。target_date 限制查询上界。"""
@@ -636,15 +652,15 @@ def run_short_logic(log_detail):
                     continue
 
                 date_suffix = f"({day_date})" if i > 0 else ""
-                if check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
-                                       CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"]):
+                rank_label = match_turnover_rank(cursor, sector, symbol, day_date, day_turnover)
+                if rank_label:
                     is_hit_base = True
-                    hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量{date_suffix}"
+                    hit_reason = f"{rank_label}{date_suffix}"
                     if is_tracing:
                         log_detail(f"    ✓ [命中] {hit_reason}")
                     break
                 elif is_tracing:
-                    log_detail(f"    - [成交额检查] {day_date} 成交额={day_turnover:,.0f} 未进入排名门槛。")
+                    log_detail(f"    - [成交额检查] {day_date} 成交额={day_turnover:,.0f} 未进入任何排名门槛。")
 
             # --- D2. [新增] 原生未命中 -> 尝试"追"（绕过成交额门槛） ---
             chase_info = None
@@ -773,19 +789,24 @@ def run_short_logic(log_detail):
 
 def main():
     if SYMBOL_TO_TRACE:
-        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
-        try:
-            with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
-                def log_detail_file(message):
-                    log_file.write(message + '\n')
-                    print(message)
-                run_short_logic(log_detail_file)
-        except IOError as e:
-            print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
+        if TRACE_LOG_TO_FILE:
+            print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
+            try:
+                with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
+                    def log_detail_file(message):
+                        log_file.write(message + '\n')
+                        print(message)
+                    run_short_logic(log_detail_file)
+            except IOError as e:
+                print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
+        else:
+            print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志仅输出到控制台（未写入文件）。")
+            run_short_logic(print)
     else:
         print("追踪模式未启用。日志仅输出到控制台。")
         run_short_logic(print)
 
 
 if __name__ == '__main__':
+    SYMBOL_TO_TRACE, TARGET_DATE = resolve_run_mode(SYMBOL_TO_TRACE, TARGET_DATE)
     main()

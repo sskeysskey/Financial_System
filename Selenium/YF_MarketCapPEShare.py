@@ -6,6 +6,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from tqdm import tqdm
 import os
 import re
+import sys
 import json
 import time
 import random
@@ -731,7 +732,7 @@ def main():
         if not check_empty_json_has_content(SECTORS_EMPTY_JSON):
             if not prepare_single_symbol():
                 stop_caffeinate()
-                return
+                return 1 
         json_file_path = SECTORS_EMPTY_JSON
         shares_target = build_target(get_repair_paths(SHARES_FILENAME), is_valid_shares_fields, True)
         mc_target = build_target(get_repair_paths(MARKETCAP_FILENAME), is_valid_marketcap_fields, True)
@@ -746,18 +747,19 @@ def main():
     db_conn = create_db_connection(DB_PATH)
     if not db_conn:
         stop_caffeinate()
-        return
+        return 1
 
     dm = DriverManager()
     if not dm.start():
         db_conn.close()
         stop_caffeinate()
-        return
+        return 1
 
     stock_symbols = get_stock_symbols_from_json(json_file_path)
     succeeded, failed, computed_mc, new_db_symbols = set(), {}, [], []
     skipped = processed = 0
 
+    interrupted = False
     try:
         for symbol in tqdm(stock_symbols, desc="Processing symbols", unit="sym"):
             # 正常模式断点续跑：两份文件都有效才跳过（不再逐个弹窗）
@@ -823,6 +825,7 @@ def main():
 
     except KeyboardInterrupt:
         log("用户中断。")
+        interrupted = True
     finally:
         dm.quit()
         try:
@@ -850,6 +853,9 @@ def main():
         log("数据抓取完成！\n" + msg)
         if repair_mode or failed or new_db_symbols:
             show_alert(msg)
+    if interrupted or failed:
+        return 1
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

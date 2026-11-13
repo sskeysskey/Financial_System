@@ -1,10 +1,11 @@
 #!/bin/bash
-# run_pipeline.sh —— 日更流水线：TE_Merged → Check_yesterday → MW_Today
+# run_pipeline.sh —— 日更流水线：TE_Merged → Check_yesterday → MW_Today → Verify_wrong(校验并纠正 wrong.txt) → 清理 wrong.txt
 # 用法:
-#   bash run_pipeline.sh                  # 手动完整执行
+#   bash run_pipeline.sh                  # 手动完整执行（第 4 步逐条确认）
 #   bash run_pipeline.sh --from check     # 从 Check_yesterday 开始
-#   bash run_pipeline.sh --from mw        # 只跑 MW_Today
-#   bash run_pipeline.sh --unattended     # 无人值守（定时器用）：所有弹窗改为通知，结束后熄屏锁定
+#   bash run_pipeline.sh --from mw        # 从 MW_Today 开始
+#   bash run_pipeline.sh --from verify    # 只跑第 4 步（校验并纠正 wrong.txt）
+#   bash run_pipeline.sh --unattended     # 无人值守（定时器用）：第 4 步自动模式，结束后熄屏锁定
 # 运行中随时 Ctrl+C 可终止整个流水线（会先让 Python 正常退出并关闭 Chrome）。
 set -u
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -16,10 +17,13 @@ FS_DIR="$HOME/Coding/Financial_System"
 TE_SCRIPT="$FS_DIR/Selenium/TE_Merged.py"
 CHECK_SCRIPT="$FS_DIR/Query/Check_yesterday.py"
 MW_SCRIPT="$FS_DIR/Selenium/MW_Today.py"
+VERIFY_SCRIPT="$FS_DIR/Selenium/Verify_wrong.py"
+WRONG_TXT="$HOME/Coding/News/wrong.txt"     # 与 Verify_wrong.py 的 WRONG_TXT_PATH 一致
 EMPTY_JSON="$FS_DIR/Modules/Sectors_empty.json"
 LOG_DIR="$HOME/Library/Logs/mw_daily"
 LOCK_DIR="/tmp/mw_daily.lock"
 KEEP_LOG_DAYS=30
+TOTAL=4                            # 流水线步骤总数
 RELOCK_AFTER_DONE=1                # 无人值守模式结束后熄屏（有密码时会自动锁屏），保证安全
 
 FROM="te"; UNATTENDED=0
@@ -27,13 +31,16 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --from)       FROM="${2:-te}"; shift 2 ;;
         --unattended) UNATTENDED=1; shift ;;
-        -h|--help)    sed -n '2,9p' "$0"; exit 0 ;;
+        -h|--help)    sed -n '2,10p' "$0"; exit 0 ;;
         *)            echo "未知参数: $1"; exit 2 ;;
     esac
 done
 case "$FROM" in
-    te) START=1 ;; check) START=2 ;; mw) START=3 ;;
-    *)  echo "--from 只能是 te / check / mw"; exit 2 ;;
+    te)     START=1 ;;
+    check)  START=2 ;;
+    mw)     START=3 ;;
+    verify) START=4 ;;
+    *)      echo "--from 只能是 te / check / mw / verify"; exit 2 ;;
 esac
 export FS_UNATTENDED="$UNATTENDED"   # Python 脚本据此把阻塞式弹窗改为通知
 
@@ -61,24 +68,49 @@ if ! acquire_lock; then
     exit 0
 fi
 trap release_lock EXIT
-trap 'log "⛔ 用户中断 (Ctrl+C)，流水线终止。重跑: bash $0 --from te|check|mw"; notify "流水线已被手动中断"; exit 130' INT TERM
+trap 'log "⛔ 用户中断 (Ctrl+C)，流水线终止。重跑: bash $0 --from te|check|mw|verify"; notify "流水线已被手动中断"; exit 130' INT TERM
 
 caffeinate -dimsu -w $$ >/dev/null 2>&1 &    # 整个流水线期间：不睡眠、屏幕常亮（避免锁屏影响滑块）
 
 SUMMARY=""
 ALL_OK=1
+LAST_RC=-1                                    # 最近一次 run_step 的退出码；-1 表示被跳过
 run_step() {
     local idx="$1" name="$2"; shift 2
-    if [ "$idx" -lt "$START" ]; then log "⏭  [$idx/3] 跳过 $name"; return 0; fi
-    log "▶▶▶ [$idx/3] 开始 $name"
+    LAST_RC=-1
+    if [ "$idx" -lt "$START" ]; then log "⏭  [$idx/$TOTAL] 跳过 $name"; return 0; fi
+    log "▶▶▶ [$idx/$TOTAL] 开始 $name"
     local t0; t0=$(date +%s)
     # tee 忽略 SIGINT：Ctrl+C 时 Python 还能把收尾日志写完并关闭 Chrome（否则会 BrokenPipe）
     "$@" 2>&1 | ( trap '' INT; exec tee -a "$LOG" )
     local rc=${PIPESTATUS[0]}
-    log "◀◀◀ [$idx/3] $name 结束，退出码 ${rc}，耗时 $(( $(date +%s) - t0 )) 秒"
+    log "◀◀◀ [$idx/$TOTAL] $name 结束，退出码 ${rc}，耗时 $(( $(date +%s) - t0 )) 秒"
     SUMMARY="$SUMMARY $name=$rc"
+    LAST_RC=$rc
     [ "$rc" -ne 0 ] && ALL_OK=0
     return 0      # 单步失败不中断后续（每一步都是幂等的，后续步骤仍有意义）
+}
+
+# ---------- 清理：wrong.txt 无有效条目时移入废纸篓（用 mv 而非 rm，可从废纸篓恢复） ----------
+trash_wrong_if_empty() {
+    if [ ! -f "$WRONG_TXT" ]; then
+        log "wrong.txt 不存在，无需清理"
+        return 0
+    fi
+    # 只统计有效行（忽略空行和 # 注释）
+    local n
+    n=$(grep -vcE '^[[:space:]]*(#|$)' "$WRONG_TXT" 2>/dev/null || true)
+    if [ "${n:-0}" -gt 0 ]; then
+        log "wrong.txt 仍有 $n 条未解决，保留在原位置"
+        return 0
+    fi
+    local dest="$HOME/.Trash/wrong_$(date +%F_%H%M%S).txt"
+    if mv "$WRONG_TXT" "$dest"; then
+        log "wrong.txt 已移入废纸篓：$dest"
+    else
+        log "⚠️ 移入废纸篓失败，wrong.txt 仍在原位置"
+        ALL_OK=0
+    fi
 }
 
 cd "$FS_DIR/Selenium" || exit 1
@@ -88,6 +120,22 @@ log "日志文件: $LOG    （Ctrl+C 可随时终止）"
 run_step 1 "TE_Merged"       "$PY" -u "$TE_SCRIPT" --skipetf
 run_step 2 "Check_yesterday" "$PY" -u "$CHECK_SCRIPT" --nopop
 run_step 3 "MW_Today"        "$PY" -u "$MW_SCRIPT" --headful
+
+# 第 4 步：校验并纠正 wrong.txt
+# 无人值守：小偏差自动替换，其余保留给人工；手动：逐条确认
+if [ "$UNATTENDED" -eq 1 ]; then
+    VERIFY_ARGS=(--unattended --mode auto)
+else
+    VERIFY_ARGS=(--mode confirm)
+fi
+run_step 4 "Verify_wrong" "$PY" -u "$VERIFY_SCRIPT" "${VERIFY_ARGS[@]}"
+
+# 仅当第 4 步成功执行（退出码 0）时才尝试清理；退出码 2 表示仍有剩余，不清理
+if [ "$LAST_RC" -eq 0 ]; then
+    trash_wrong_if_empty
+elif [ "$LAST_RC" -gt 0 ]; then
+    log "第 4 步未完全解决（退出码 $LAST_RC），wrong.txt 保留"
+fi
 
 EMPTY_OK=0
 if "$PY" -c 'import json,sys
@@ -105,7 +153,7 @@ if [ "$ALL_OK" -eq 1 ] && [ "$EMPTY_OK" -eq 1 ]; then
     log "✅ 今日数据全部完成"
 else
     notify "⚠️ 流水线有未完成项，请查看 Terminal / 日志"
-    log "⚠️ 有未完成项。可重跑: bash $0 --from mw"
+    log "⚠️ 有未完成项。可重跑: bash $0 --from mw   （只校验: bash $0 --from verify）"
 fi
 
 if [ "$UNATTENDED" -eq 1 ] && [ "$RELOCK_AFTER_DONE" -eq 1 ]; then

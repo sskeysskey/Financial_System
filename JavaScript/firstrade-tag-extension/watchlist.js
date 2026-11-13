@@ -17,6 +17,10 @@
   const JOB_KEY = 'ftWlJob';
   const MANUAL_KEY = 'ftWlManualList';
   const BACKUP_KEY = 'ftWlClearBackup';
+  const FAMILY_RESUME_KEY = 'ftWlFamilyResume';
+  const FAMILY_RESUME_TTL = 15 * 60 * 1000;
+  const ALWAYS_KEEP = ['Earning', 'Wrong'];
+  const NOT_A_GROUP_RE = /新建|创建|管理|编辑|重命名|删除|new|create|manage|edit|rename|delete/i;
 
   let DEBUG = false;
   let AUTO_WATCHLIST = false;
@@ -47,7 +51,12 @@
     costAddSym: 2.6,         // 估算：逐只添加 1 只（秒）
     costGroupRebuild: 16,     // 估算：删 1 个分组 + 建 1 个分组（秒）
     groupOpPause: 1200,      // ★ v11.5 删分组时，每个关键步骤之间的停顿（ms）
-    groupBetweenPause: 2500  // ★ v11.5 连续删两个分组之间的停顿（ms）
+    groupBetweenPause: 2500,  // ★ v11.5 连续删两个分组之间的停顿（ms）
+    /* ★ v11.6 切换 / 刷新 / 重试 */
+    switchRetry: 3,          // 切换分组最多尝试次数
+    switchSettle: 1000,      // 切换成功后固定停顿(ms)，让表格和下拉稳定
+    missingGroupWait: 3000,  // 下拉里找不到分组时，累计最多等它出现多久(ms)
+    reloadMax: 3             // 单次任务最多自动刷新页面次数（防死循环）
   };
   let RUN = Object.assign({}, CFG);
 
@@ -304,23 +313,37 @@
     const want = normGroup(target);
     if (!want) return { ok: false, error: '目标分组名为空' };
     if (normGroup(groupName()) === want) { await closeGroupSelect(); return { ok: true, changed: false }; }
-
     if (!groupTriggerEl()) return { ok: false, error: '页面上找不到分组选择器 [data-select-trigger]' };
 
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const tries = Math.max(1, RUN.switchRetry || 3);
+    let lastErr = '', missing = false;
+
+    for (let attempt = 0; attempt < tries; attempt++) {
       await closeGroupSelect();
       const trig = groupTriggerEl();
       if (!trig) return { ok: false, error: '页面上找不到分组选择器 [data-select-trigger]' };
+
       fireMouseSeq(trig);
       const opts = await waitFor(() => { const o = groupOptions(); return o.length ? o : null; }, 3500, 120);
-      if (!opts) { await closeGroupSelect(); await sleep(420); continue; }
+      if (!opts) {
+        lastErr = '分组下拉没有展开';
+        await closeGroupSelect();
+        await sleep(700 + attempt * 500);
+        continue;
+      }
 
       const m = matchOption(opts, target);
       if (!m) {
+        // ★ 新建分组后下拉常常还是旧列表：多等一会儿，每次都重新展开读取
         const names = opts.map(o => cleanText(o)).filter(Boolean);
+        lastErr = `分组「${target}」不存在（页面可选：${names.join(' / ') || '空'}）`;
+        missing = true;
         await closeGroupSelect();
-        return { ok: false, options: names, error: `分组「${target}」不存在（页面可选：${names.join(' / ') || '空'}）` };
+        await sleep(Math.max(800, (RUN.missingGroupWait || 3000) / tries));
+        continue;
       }
+
+      missing = false;
       const label = cleanText(m.el);
       fireMouseSeq(m.el);
       try { if (m.el.isConnected) m.el.click(); } catch (e) { }
@@ -328,16 +351,20 @@
         const cur = normGroup(groupName());
         return cur === want || (!m.exact && cur === normGroup(label));
       }, RUN.groupSwitchTimeout || 7000, 160);
+      await closeGroupSelect();
+
       if (ok) {
-        await closeGroupSelect();
         await waitGridSettled();
-        await sleep(300);
+        await sleep(RUN.switchSettle || 1000);      // ★ 切换后固定停顿
         return { ok: true, changed: true, group: groupName() };
       }
-      await closeGroupSelect();
-      await sleep(500);
+      lastErr = `切换到「${target}」后分组没有生效`;
+      await sleep(600 + attempt * 500);
     }
-    return { ok: false, error: `切换到分组「${target}」失败（重试 3 次）` };
+    return {
+      ok: false, missing,
+      error: lastErr || `切换到分组「${target}」失败（重试 ${tries} 次）`
+    };
   }
 
   /* ==========================================================================
@@ -494,26 +521,30 @@
     return buf;
   }
 
-  function scrollState() {
-    const vp = document.querySelector('main .ag-body-viewport') ||
-      document.querySelector('.ag-body-viewport');
-    const useVp = !!(vp && vp.scrollHeight > vp.clientHeight + 4);
-    if (useVp) {
-      return {
-        useVp: true,
-        get top() { return vp.scrollTop; },
-        set top(v) { vp.scrollTop = v; },
-        clientH: vp.clientHeight,
-        scrollH: vp.scrollHeight
-      };
+  function findGridScroller() {
+    // 从真实数据行向上找第一个能滚动的祖先（与 content.js 的 gridScroller 一致）
+    const row = Array.from(document.querySelectorAll('[row-id]'))
+      .find(r => !r.closest(ROW_EXCLUDE));
+    let el = row ? row.parentElement : null;
+    while (el && el !== document.body && el !== document.documentElement) {
+      const st = getComputedStyle(el);
+      if (/(auto|scroll)/.test(st.overflowY) && el.scrollHeight > el.clientHeight + 4) return el;
+      el = el.parentElement;
     }
+    const vp = document.querySelector('.ag-body-viewport');
+    if (vp && vp.scrollHeight > vp.clientHeight + 4) return vp;
     const se = document.scrollingElement || document.documentElement;
+    return se.scrollHeight > se.clientHeight + 4 ? se : se;
+  }
+
+  function scrollState() {
+    const sc = findGridScroller();
     return {
-      useVp: false,
-      get top() { return se.scrollTop; },
-      set top(v) { se.scrollTop = v; },
-      clientH: se.clientHeight,
-      scrollH: se.scrollHeight
+      useVp: sc !== (document.scrollingElement || document.documentElement),
+      get top() { return sc.scrollTop; },
+      set top(v) { sc.scrollTop = v; },
+      clientH: sc.clientHeight,
+      scrollH: sc.scrollHeight
     };
   }
 
@@ -1690,7 +1721,8 @@
     srcFrom: '', srcCount: 0, haveCount: 0,
     multi: null, skipQuotes: false,
     family: false, famText: '', famCreated: [], famDeleted: [],
-    retry: []                       // ★ v11.5 待收尾重试的失败项
+    retry: [],                       // ★ v11.5 待收尾重试的失败项
+    reloads: 0                      // ★ 本次任务已自动刷新页面的次数
   };
 
   const scanState = { running: false, abort: false };
@@ -2113,7 +2145,64 @@
     }
   }
 
-  async function runFamilyPipeline() {
+  /* 保存检查点 → 刷新页面 → bootstrap 读到检查点后自动续跑 */
+  async function checkpointReload(reason) {
+    const max = CFG.reloadMax || 3;
+    if ((job.reloads || 0) >= max) {
+      renderHud(`⚠ ${reason}，但已刷新 ${max} 次仍失败，不再刷新`);
+      return false;
+    }
+    job.reloads = (job.reloads || 0) + 1;
+    await storeSet({
+      [FAMILY_RESUME_KEY]: {
+        pending: true,                                  // ★ 待认领
+        expires: Date.now() + FAMILY_RESUME_TTL,        // ★ 过期时间，background 也读它
+        ts: Date.now(), reason, reloads: job.reloads,
+        base: job.targetGroup, strictSync: job.strictSync, originGroup: job.originGroup,
+        famCreated: job.famCreated, famDeleted: job.famDeleted,
+        cleared: job.cleared, added: job.added,
+        failed: job.failed, clearFailed: job.clearFailed, retry: job.retry
+      }
+    });
+    renderHud(`${reason}：页面将自动刷新（第 ${job.reloads}/${max} 次），刷新后自动续跑…`);
+    await sleep(1000);
+    location.reload();
+    return true;
+  }
+
+  /* 新建分组后，轮询下拉直到出现该分组 */
+  async function waitGroupVisible(name, tries = 2) {
+    for (let i = 0; i < tries; i++) {
+      if (await groupListHas(name) === true) return true;
+      await sleep(1200 * (i + 1));
+    }
+    return false;
+  }
+
+  function resumeFamily(fr) {
+    resetJob({ clearFirst: false, clearOnly: false, strictSync: fr.strictSync, targetGroup: fr.base });
+    job.originGroup = fr.originGroup || job.originGroup;
+    job.reloads = fr.reloads || 0;
+    job.cleared = fr.cleared || 0;
+    job.added = fr.added || 0;
+    job.famCreated = fr.famCreated || [];
+    job.famDeleted = fr.famDeleted || [];
+    job.failed = fr.failed || [];
+    job.clearFailed = fr.clearFailed || [];
+    job.retry = fr.retry || [];
+    ensureHud('job');
+    renderHud(`页面已刷新（第 ${job.reloads} 次），继续「${job.targetGroup}」系列同步…`);
+    runFamilyPipeline({ resumed: true }).catch(e => {
+      job.lastError = String((e && e.message) || e);
+      renderHud('❌ ' + job.lastError);
+      toast('❌ ' + job.lastError);
+      finishJob();
+    });
+    return true;
+  }
+
+  async function runFamilyPipeline(opts) {
+    opts = opts || {};
     job.family = true;
     RUN.reloadEvery = 0; RUN.clearReloadEvery = 0;
     const base = job.targetGroup || TARGET.group || 'Earning';
@@ -2139,7 +2228,8 @@
       return finishJob();
     }
 
-    if (P.removeTotal || delGroups.length) {
+    /* 备份与倒计时只在第一次运行时做；续跑时用户已确认过，也不能用刷新后的状态覆盖原备份 */
+    if ((P.removeTotal || delGroups.length) && !opts.resumed) {
       try { await storeSet({ [BACKUP_KEY]: buildMultiBackup(P.contents) }); job.backedUp = true; } catch (e) { }
       if (P.src.symbols.length === 0) toast(`⚠ 数据源在目标日期无数据（不回退）→ 将清空 ${base} 系列`);
       const parts = [];
@@ -2153,7 +2243,7 @@
       if (job.stop) return finishJob();
     }
 
-    /* ① 先整组删除（作废分组 + 用不上的分组）：比逐只删快得多，也先腾出分组数量 */
+    /* ① 整组删除（作废分组 + 用不上的分组） */
     if (delGroups.length && !job.stop) {
       job.phase = 'group';
       const delSet = new Set(delGroups.map(normGroup));
@@ -2177,12 +2267,12 @@
           bg({ action: 'FT_WL_MEMBERSHIP', payload: { group: g, drop: true } });
           job.cleared += s ? s.drop.length : (P.contents[g] || []).length;
           renderHud();
-          await sleep(CFG.groupBetweenPause || 2500);   // ★ v11.5 两个分组删除之间停顿
+          await sleep(CFG.groupBetweenPause || 2500);
           continue;
         }
         job.lastError = r.error || '删除分组失败';
         if (!s) { job.retry.push({ kind: 'group', name: g, error: job.lastError }); continue; }
-        /* 降级：整组删除失败 → 该组改为「逐只删多余 + 补缺失」，结果依然正确 */
+        /* 降级：整组删除失败 → 改为逐只删多余 + 补缺失 */
         const before = s.add.length;
         const addK = new Set(s.add.map(normKey)), curK = new Set(s.cur.map(normKey));
         s.rebuild = false; s.exists = true;
@@ -2195,17 +2285,24 @@
       }
     }
 
-    /* ② 新建 / 重建分组（基组 Earning 即使今日无数据、即使已停止也会建回，保证它永远存在） */
+    /* ② 新建 / 重建分组：每个至少尝试两次 */
+    const createdNow = [];
     for (const s of P.slots) {
       if (s.exists) continue;
       if (!s.add.length && s.index !== 0) continue;
       if (job.stop && s.index !== 0) continue;
       job.phase = 'group';
       renderHud(`${s.rebuild ? '重建' : '新建'}分组「${s.name}」…`);
-      let r = await createGroup(s.name);
-      if (!r.ok) { await sleep(1200); r = await createGroup(s.name); }
+      let r = null;
+      for (let a = 1; a <= 2; a++) {                          // ★ 至少两次
+        r = await createGroup(s.name);
+        if (r.ok) break;
+        renderHud(`新建「${s.name}」第 ${a} 次失败：${r.error}，重试…`);
+        await sleep(1500 * a);
+      }
       if (r.ok) {
-        job.famCreated.push(s.name); s.exists = true;
+        s.exists = true;
+        if (!r.existed) { job.famCreated.push(s.name); createdNow.push(s.name); }
         if (!s.add.length) snapshotEmpty(s.name);
       } else {
         s.skip = true; job.lastError = r.error;
@@ -2215,7 +2312,17 @@
       }
     }
 
-    /* ③ 逐组：删多余（仅未整组重建的分组）→ 补缺失 → 复核 */
+    /* ★ 新建后检查下拉是否可见；不可见则刷新页面，刷新后续跑（重新计划，结果依然正确） */
+    const invisible = [];
+    for (const name of createdNow) {
+      if (job.stop) break;
+      if (!(await waitGroupVisible(name))) invisible.push(name);
+    }
+    if (invisible.length && !job.stop) {
+      if (await checkpointReload(`新建分组 ${invisible.join('/')} 后下拉未刷新`)) return 'reload';
+    }
+
+    /* ③ 逐组：删多余 → 补缺失 → 复核 */
     for (const s of P.slots) {
       if (job.stop) break;
       if (s.skip || !s.exists || (!s.remove.length && !s.add.length)) continue;
@@ -2223,14 +2330,15 @@
       renderHud(`切到「${s.name}」…`);
       const sr = await switchGroup(s.name);
       if (!sr.ok) {
-        s.add.forEach(x => job.failed.push({ symbol: x, error: `切换到「${s.name}」失败` }));
+        // ★ 下拉里确实没有 → 刷新页面续跑，而不是直接跳过
+        if (sr.missing && await checkpointReload(`「${s.name}」在分组下拉里仍不可见`)) return 'reload';
+        s.add.forEach(x => job.failed.push({ symbol: x, error: `切换到「${s.name}」失败：${sr.error}` }));
         s.remove.forEach(x => job.clearFailed.push({ symbol: x, error: `切换到「${s.name}」失败` }));
         job.done += s.add.length; job.lastError = sr.error;
         continue;
       }
       job.group = groupName() || s.name;
       await waitGridSettled();
-      /* ★ v11.4：刚新建/整组重建的分组，应为空表；若先冒出行，多半是表格还挂着上一个分组/旧缓存 → 再等稳定 */
       if (s.rebuild || !s.existed) {
         const ce = await confirmGroupEmpty(s.name, 10000);
         if (ce.rowsAppeared) {
@@ -2242,14 +2350,15 @@
       if (s.remove.length) {
         const r = await runRemovePhase(s.remove, true);
         if (r === 'stopped') break;
-        s.remove.forEach(x => {                       // ★ v11.5 记下本组删失败的标的
+        s.remove.forEach(x => {
           const f = job.clearFailed.find(e => normKey(e.symbol) === normKey(x));
           if (f) job.retry.push({ kind: 'sym', group: s.name, sym: x, error: f.error });
         });
       }
       if (s.add.length && !job.stop) await addIntoGroup(s);
     }
-    await retryFailedOps(base);          // ★ v11.5 添加完成后，收尾重试一次
+
+    await retryFailedOps(base);
     return finishJob();
   }
 
@@ -2284,6 +2393,7 @@
     job.startedAt = Date.now(); job.sinceReload = 0; job.sinceReopen = 0;
     job.srcFrom = ''; job.srcCount = 0; job.haveCount = 0;
     job.multi = null;
+    job.reloads = 0;
     job.skipQuotes = !!opts.skipQuotes;
     job.family = false; job.famText = ''; job.famCreated = []; job.famDeleted = [];
     job.retry = [];                 // ★ v11.5
@@ -2517,15 +2627,13 @@
         }
       } catch (e) { log('切回原分组失败', e); }
     } finally {
+      try { await new Promise(r => chrome.storage.local.remove(FAMILY_RESUME_KEY, r)); } catch (e) { }
       job.finishing = false;
       syncBusy();
     }
   }
 
   /* ================= 一键清空非保留分组（Earning 系列整体保留） ================= */
-  const NOT_A_GROUP_RE = /新建|创建|管理|编辑|重命名|删除|new|create|manage|edit|rename|delete/i;
-  const ALWAYS_KEEP = ['Earning', 'Wrong'];
-
   function snapshotEmpty(g) {
     try { const M = window.__FT_WL_MEMBER__; if (M && g) M.snapshot(g, [], true, 'clear_groups'); } catch (e) { }
   }
@@ -2778,8 +2886,31 @@
   async function bootstrap() {
     loadSettings();
     if (!isWatchlistPage()) return;
-    await waitFor(() => (document.querySelector('.ag-root, [role="grid"], main') &&
+    const ready = await waitFor(() => (document.querySelector('.ag-root, [role="grid"], main') &&
       (findAddButton() || document.querySelector('[role="grid"]') || emptyStateEl())), 25000, 400);
+
+    if (ready) {
+      /* ★ 刷新检查点：页面就绪后才认领 */
+      const fr = (await storeGet([FAMILY_RESUME_KEY]))[FAMILY_RESUME_KEY];
+      if (fr) {
+        if (fr.pending && fr.expires > Date.now()) {
+          await storeSet({
+            [FAMILY_RESUME_KEY]: Object.assign({}, fr, {
+              pending: false,
+              expires: Date.now() + FAMILY_RESUME_TTL
+            })
+          });
+          resumeFamily(fr);      // resetJob 同步设置 running = true
+          return;
+        }
+        // 已过期，或已被认领过：清掉
+        await new Promise(r => chrome.storage.local.remove(FAMILY_RESUME_KEY, r));
+      }
+    } else {
+      // 25 秒内页面没就绪：放弃本次续跑，避免 background 误以为任务还在运行
+      await new Promise(r => chrome.storage.local.remove(FAMILY_RESUME_KEY, r));
+      console.warn(LOG, '页面未就绪，已放弃本次检查点续跑');
+    }
 
     const st = await storeGet([JOB_KEY]);
     const saved = st[JOB_KEY];

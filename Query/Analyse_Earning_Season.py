@@ -2,17 +2,18 @@ import sqlite3
 import json
 import os
 import datetime
+from Analyse_run_mode import resolve_run_mode
 from collections import defaultdict
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # [回测配置区]
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "PPG"
-# TARGET_DATE = "2025-11-06"
+SYMBOL_TO_TRACE = "PPG"
+TARGET_DATE = "2025-11-06"
 
 # --- 1. 配置文件和路径 ---
 PATHS = {
@@ -1113,4 +1114,5 @@ def main():
     print("\n程序运行结束。")
 
 if __name__ == "__main__":
+    SYMBOL_TO_TRACE, TARGET_DATE = resolve_run_mode(SYMBOL_TO_TRACE, TARGET_DATE)
     main()

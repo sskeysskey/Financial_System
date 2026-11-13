@@ -19,7 +19,7 @@ SECTORS_ALL_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", 
 SECTOR_EMPTY_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_empty.json")
 ERROR_FILE = os.path.join(BASE_CODING_DIR, "News", "Today_error2.txt")
 
-# 无人值守模式（由 run_pipeline.sh 设置 FS_UNATTENDED=1）：绝不弹阻塞式对话框
+# 无人值守模式（由 run_mw_yf_pipeline.sh 设置 FS_UNATTENDED=1）：绝不弹阻塞式对话框
 UNATTENDED = os.environ.get("FS_UNATTENDED") == "1"
 
 # -------- 排除特定板块的配置 -------- #

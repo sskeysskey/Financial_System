@@ -2,7 +2,8 @@ import json
 import sqlite3
 import os
 import datetime
-from collections import Counter   # 【新增】
+from Analyse_run_mode import resolve_run_mode
+from collections import Counter
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
@@ -10,11 +11,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 # --- 1. 配置文件和路径 ---
 BASE_PATH = USER_HOME
 
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "BLCO"
-# TARGET_DATE = "2026-10-12"
+SYMBOL_TO_TRACE = "BLCO"
+TARGET_DATE = "2026-10-12"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -1925,4 +1926,5 @@ def main():
     print("\n程序运行结束。")
 
 if __name__ == '__main__':
+    SYMBOL_TO_TRACE, TARGET_DATE = resolve_run_mode(SYMBOL_TO_TRACE, TARGET_DATE)
     main()

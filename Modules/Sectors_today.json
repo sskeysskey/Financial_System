@@ -315,7 +315,6 @@
         "EUFN",
         "IPKW",
         "EUAD",
-        "FMAT",
         "VNM",
         "EWH",
         "EWZ",
@@ -333,7 +332,6 @@
         "EIDO",
         "EPHE",
         "ASEA",
-        "EQL",
         "CGW",
         "ESPO",
         "RAAX",
@@ -354,11 +352,9 @@
         "INCO",
         "SLX",
         "POWR",
-        "FPA",
         "IHE",
         "GSG",
         "BWET",
-        "FLLA",
         "ROKT",
         "SBIO",
         "JETS",
@@ -384,7 +380,11 @@
         "ARKG",
         "FTMH",
         "SH",
-        "PSQ"
+        "PSQ",
+        "IYM",
+        "RSPT",
+        "FLLA",
+        "FLAX"
     ],
     "Basic_Materials": [
         "LIN",
@@ -515,7 +515,6 @@
         "WPP",
         "Z",
         "PSO",
-        "ROKU",
         "MTCH",
         "TKO",
         "NYT",
@@ -524,7 +523,6 @@
         "RDDT",
         "DJT",
         "LUMN",
-        "MSGS",
         "NBIS",
         "TIGO",
         "TTD",
@@ -669,7 +667,6 @@
         "CHH",
         "BC",
         "THO",
-        "MOD",
         "GME",
         "KBH",
         "M",
@@ -744,7 +741,6 @@
         "HSY",
         "KR",
         "GIS",
-        "KVUE",
         "ABEV",
         "SYY",
         "CCEP",
@@ -1189,7 +1185,6 @@
         "HALO",
         "BBIO",
         "BLCO",
-        "OPCH",
         "DOCS",
         "MDGL",
         "INSM",
@@ -1198,7 +1193,6 @@
         "TEM",
         "MMSI",
         "SMMT",
-        "LNTH",
         "CRSP",
         "TMDX",
         "INSP",
@@ -1260,7 +1254,9 @@
         "HAE",
         "CON",
         "BLTE",
-        "HTFL"
+        "HTFL",
+        "LIVN",
+        "SUPN"
     ],
     "Industrials": [
         "GE",
@@ -1439,7 +1435,6 @@
         "GTES",
         "MATX",
         "IESC",
-        "RXO",
         "ROAD",
         "BE",
         "KTOS",
@@ -1495,7 +1490,8 @@
         "UNF",
         "CAAP",
         "FOIL",
-        "HAFN"
+        "HAFN",
+        "MOD"
     ],
     "Real_Estate": [
         "PLD",
@@ -1645,7 +1641,6 @@
         "NTAP",
         "HPE",
         "IOT",
-        "PTC",
         "MSTR",
         "NOK",
         "TYL",
@@ -1742,7 +1737,6 @@
         "ENTG",
         "EXLS",
         "ITRI",
-        "VRNS",
         "CVLT",
         "CRDO",
         "ACLS",
@@ -1815,7 +1809,6 @@
         "KLIC",
         "NVTS",
         "VSH",
-        "SYNA",
         "WSE",
         "P",
         "CBRS",
@@ -1894,6 +1887,7 @@
         "AQN",
         "FLNC",
         "MWH",
-        "FRVO"
+        "FRVO",
+        "NWE"
     ]
 }

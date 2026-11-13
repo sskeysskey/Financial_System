@@ -1,15 +1,15 @@
 #!/bin/bash
-# run_mw_daily.sh —— launchd 入口：唤醒 → 解锁 → 等网络 → 在 Terminal 新窗口中启动 run_pipeline.sh
-# 本脚本只做"准备工作"，真正的抓取流程在 run_pipeline.sh 里（可见、可中断、可重跑）。
+# run_mw_daily.sh —— launchd 入口：唤醒 → 解锁 → 等网络 → 在 Terminal 新窗口中启动 run_mw_yf_pipeline.sh
+# 本脚本只做"准备工作"，真正的抓取流程在 run_mw_yf_pipeline.sh 里（可见、可中断、可重跑）。
 set -u
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export LANG="${LANG:-en_US.UTF-8}"
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PY="/Library/Frameworks/Python.framework/Versions/Current/bin/python3"   # 与快捷键使用同一个 python
-PIPELINE="$SELF_DIR/run_pipeline.sh"
+PIPELINE="$SELF_DIR/run_mw_yf_pipeline.sh"
 LOG_DIR="$HOME/Library/Logs/mw_daily"
-LOCK_DIR="/tmp/mw_daily.lock"           # 与 run_pipeline.sh 共用
+LOCK_DIR="/tmp/mw_daily.lock"           # 与 run_mw_yf_pipeline.sh 共用
 KEYCHAIN_SERVICE="mw_mac_login"
 ME="$(id -un)"
 NET_URLS=("https://www.marketwatch.com" "https://tradingeconomics.com")
@@ -134,7 +134,7 @@ if pipeline_running; then
     exit 0
 fi
 if [ -f "$LOG_DIR/.done_$(date +%F)" ]; then
-    log "今天的流水线已成功完成过，本次退出（如需重跑请手动执行 run_pipeline.sh）"
+    log "今天的流水线已成功完成过，本次退出（如需重跑请手动执行 run_mw_yf_pipeline.sh）"
     exit 0
 fi
 
@@ -149,7 +149,7 @@ case $st in
     0) log "屏幕已锁定，尝试自动解锁"
        if ! unlock_screen; then
            log "自动解锁失败，退出"
-           notify "自动解锁失败，请手动解锁后运行 run_pipeline.sh"
+           notify "自动解锁失败，请手动解锁后运行run_mw_yf_pipeline.sh"
            exit 1
        fi ;;
     1) log "屏幕未锁定，跳过解锁" ;;

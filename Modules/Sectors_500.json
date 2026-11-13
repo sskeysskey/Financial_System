@@ -52,7 +52,8 @@
         "ORLY",
         "ROST",
         "EBAY",
-        "AZO"
+        "AZO",
+        "CVNA"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -69,7 +70,9 @@
         "CL",
         "MNST",
         "TGT",
-        "DEO"
+        "DEO",
+        "KMB",
+        "CCEP"
     ],
     "Energy": [
         "XOM",
@@ -93,14 +96,13 @@
         "VLO",
         "SU",
         "MPC",
-        "BKR",
         "OKE",
         "TRGP",
         "LNG",
         "OXY",
-        "FANG",
         "CVE",
-        "DVN"
+        "DVN",
+        "FANG"
     ],
     "Financial_Services": [
         "JPM",
@@ -196,10 +198,12 @@
         "CAH",
         "TAK",
         "MRNA",
-        "NTRA",
         "BDX",
-        "VEEV",
-        "EW"
+        "EW",
+        "IDXX",
+        "HUM",
+        "TEVA",
+        "WAT"
     ],
     "Industrials": [
         "GE",
@@ -241,10 +245,11 @@
         "URI",
         "FAST",
         "SPCX",
-        "BE",
         "DAL",
-        "TRI",
-        "LHX"
+        "BE",
+        "HONA",
+        "LHX",
+        "WAB"
     ],
     "Real_Estate": [
         "PLD",
@@ -304,7 +309,6 @@
         "WDC",
         "SNDK",
         "MPWR",
-        "KEYS",
         "ASX",
         "NXPI",
         "DDOG",
@@ -312,10 +316,9 @@
         "HPE",
         "SKHY",
         "GRMN",
-        "LITE",
-        "MSTR",
         "ADSK",
-        "INFY"
+        "LITE",
+        "KEYS"
     ],
     "Utilities": [
         "NEE",
@@ -325,6 +328,7 @@
         "CEG",
         "AEP",
         "SRE",
-        "D"
+        "D",
+        "XEL"
     ]
 }

@@ -54,7 +54,7 @@ else:
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-UNATTENDED = os.environ.get("FS_UNATTENDED") == "1"   # 由 run_pipeline.sh 设置
+UNATTENDED = os.environ.get("FS_UNATTENDED") == "1"   # 由 run_mw_yf_pipeline.sh 设置
 
 # ================= 通用辅助函数 =================
 
@@ -502,27 +502,24 @@ def run_yahoo_indices():
                 if not symbol:
                     logging.warning(f"Yahoo Indices: 找不到 {name} 的 symbol 映射，跳过")
                     continue
-                
+
                 try:
-                    # 【关键修改 2】使用 normalize-space(.) 替代 text()，防止空格干扰
                     row_xpath = f"//tr[.//span[contains(@class, 'symbol') and normalize-space(.)='{symbol}']]"
-                    
-                    # 【关键修改 3】显式等待该特定行出现
                     row = WebDriverWait(d, 5).until(EC.presence_of_element_located((By.XPATH, row_xpath)))
-                    
-                    # 滚动到该行，确保它在视口内可被正常读取
                     d.execute_script("arguments[0].scrollIntoView({block: 'center'});", row)
-                    
-                    # 提取价格
-                    price_elem = row.find_element(By.XPATH, ".//td[@data-testid-cell='intradayprice']//span[@data-testid='change']")
-                    price_str = price_elem.text.strip().replace(',', '').replace('"', '')
-                    price = float(price_str)
-                    
-                    # 提取交易量
-                    vol_elem = row.find_element(By.XPATH, ".//td[@data-testid-cell='dayvolume']//span[@data-testid='change']")
-                    volume = parse_volume(vol_elem.text)
-                    
+
+                    # 价格：full_day_price（原来写的 intradayprice 不存在）
+                    price_elem = WebDriverWait(row, 5).until(
+                        lambda r: r.find_element(By.XPATH, ".//td[@data-testid-cell='full_day_price']//span[@data-testid='change']")
+                    )
+                    price = float(price_elem.text.strip().replace(',', '').replace('"', ''))
+
+                    # 成交量：dayvolume。直接取单元格文本，比依赖内部 span 更稳
+                    vol_cell = row.find_element(By.XPATH, ".//td[@data-testid-cell='dayvolume']")
+                    volume = parse_volume(vol_cell.text)
+
                     temp.append((yesterday_date, name, price, volume))
+
                 except Exception as e:
                     logging.warning(f"Yahoo Indices: 抓取 {name} ({symbol}) 失败: {e}")
             

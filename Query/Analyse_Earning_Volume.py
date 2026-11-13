@@ -4,6 +4,7 @@ import os
 import re
 import bisect
 import datetime
+from Analyse_run_mode import resolve_run_mode
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
@@ -13,11 +14,11 @@ BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
-SYMBOL_TO_TRACE = "" 
-TARGET_DATE = "" 
+# SYMBOL_TO_TRACE = "" 
+# TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "PPG"
-# TARGET_DATE = "2026-10-28"
+SYMBOL_TO_TRACE = "OKE"
+TARGET_DATE = "2026-11-06"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -52,6 +53,7 @@ CONFIG = {
     ],
     "COND_HIGH_JIA_REQUIRE_ER_INCREASING": False,  # True=甲类要求两次财报价格递增; False=不要求
     # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
+    "COND8_REQUIRE_TURNOVER_UP": True,   # 原生PE_Volume: 今日成交额必须 > 昨日成交额
     "COND8_VOLUME_LOOKBACK_MONTHS": 1.5,   # 过去 N 个月
     "COND8_VOLUME_RANK_THRESHOLD": 3,    # 成交量排名前 N 名
     "COND8_ALLOW_UP_PERCENT": 0.005,  # 允许小幅上涨的幅度，0.005 表示 0.5%
@@ -69,6 +71,9 @@ CONFIG = {
     "RETENTION_DEEP_WINDOW_TRADING_DAYS": 20,     # 起点之后多少个交易日内有效
     "RETENTION_DEEP_MIN_DROP_PERCENT": 0.08,      # 收盘价较起点收盘价下跌超过该比例 (0.10=10%)
     "RETENTION_DEEP_REQUIRE_VOLUME": False,       # True=深跌规则也要求成交量不低于起点量*(1-RETENTION_VOLUME_MAX_DROP)
+    
+    # ========== 策略2 (PE_Volume_up) 总开关 ==========
+    "ENABLE_PE_VOLUME_UP": False,   # True=启用策略2及其回溯追; False=全部屏蔽(计算/写入Panel/写入History/日志)
     
     # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
     "COND_UP_HISTORY_LOOKBACK_DAYS": 5,  # 历史记录回溯天数
@@ -91,6 +96,8 @@ CONFIG = {
 
     # ========== 策略6 (PE_Hot 白名单/超大市值) 参数 ==========
     "PE_HOT_MIN_MARKET_CAP": 150000000000,         # 超大市值门槛 (默认 1500亿)
+    "PE_HOT_MIN_TURNOVER": 200000000,                   # PE_Hot 最新成交额门槛 (默认 2亿)
+    "PE_HOT_CONTINUE_DOWN_TURNOVER_RATIO": 0.8,         # 前一日已在 PE_Hot 且今日继续下跌时, 门槛乘以该比例 (0.8 => 1.6亿)
 
     # ========== 动态白名单 参数 ==========
     "WHITELIST_LOOKBACK_DAYS": 365,   # 回溯自然日天数
@@ -108,7 +115,7 @@ CONFIG = {
 
     # ========== [新增] PE_Volume_up 回溯追 ==========
     "VOL_UP_CHASE_ENABLED": True,
-    "VOL_UP_CHASE_WINDOW_TRADING_DAYS": 15,       # 起点在 T-1 ~ T-15 内
+    "VOL_UP_CHASE_WINDOW_TRADING_DAYS": 20,       # 起点在 T-1 ~ T-15 内
     "VOL_UP_CHASE_DROP_PERCENT": 0.03,            # 今日收盘 < 起点前一交易日收盘 * (1-3%)
     "VOL_UP_CHASE_REQUIRE_TODAY_DOWN": False,     # 是否要求今日下跌
     "VOL_UP_CHASE_REQUIRE_POOL": False,           # 是否要求今日在池子中
@@ -367,9 +374,10 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     data['PE_Volume'] = build_group_dict(pe_vol_list, pe_vol_notes)
     data['PE_Volume_backup'] = build_group_dict(pe_vol_list, pe_vol_notes)
     
-    # 写入策略2
-    data['PE_Volume_up'] = build_group_dict(pe_vol_up_list, pe_vol_up_notes)
-    data['PE_Volume_up_backup'] = build_group_dict(pe_vol_up_list, pe_vol_up_notes)
+    # 写入策略2 (受开关控制；关闭时保留 Panel 中原有数据，不做覆盖)
+    if CONFIG.get("ENABLE_PE_VOLUME_UP", False):
+        data['PE_Volume_up'] = build_group_dict(pe_vol_up_list, pe_vol_up_notes)
+        data['PE_Volume_up_backup'] = build_group_dict(pe_vol_up_list, pe_vol_up_notes)
     
     # 写入策略3
     data['PE_Volume_high'] = build_group_dict(pe_vol_high_list, pe_vol_high_notes)
@@ -705,7 +713,7 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
             price_curr, vol_curr, open_curr = rows[0]
             price_prev, vol_prev, _ = rows[1]
 
-            if price_curr is None or price_prev is None or vol_curr is None or open_curr is None:
+            if price_curr is None or price_prev is None or vol_curr is None or vol_prev is None or open_curr is None:
                 if is_tracing: log_detail(f"    x [失败] 价格/成交量数据存在 None。")
                 continue
 
@@ -719,8 +727,14 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
                     log_detail(f"    x [失败] 价格未满足条件 (收盘{price_curr:.2f}, 昨收{price_prev:.2f}, 允许上限{price_prev * (1 + allow_up_pct):.2f}, 今开{open_curr:.2f})。")
                 continue
 
-            # --- 修改点：计算成交额并调用成交额排名函数 ---
             turnover_curr = price_curr * vol_curr
+            turnover_prev = price_prev * vol_prev
+
+            # 新增: 今日成交额必须大于昨日成交额 (仅作用于原生 PE_Volume)
+            if CONFIG.get("COND8_REQUIRE_TURNOVER_UP", False) and turnover_curr <= turnover_prev:
+                if is_tracing:
+                    log_detail(f"    x [失败] 成交额未放大 (今日{turnover_curr:,.0f} <= 昨日{turnover_prev:,.0f})。")
+                continue
             
             # 先判断从最近财报日到今天是否是成交额前三
             cursor.execute("SELECT date FROM Earning WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1", (symbol, dates[0]))
@@ -1889,8 +1903,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         # ================= 以下为甲乙丙逻辑，仍受成交额门槛限制 ===============
         
         # 门槛 (仅甲乙丙): 成交额门槛
-        turnover_threshold = 100000000
-        threshold_desc = "1亿"
+        turnover_threshold = 80000000
+        threshold_desc = "8千万"
         if has_hot_tag_t:
             turnover_threshold = 50000000
             threshold_desc = "0.5亿 (命中 HOT_TAGS_T)"
@@ -2367,71 +2381,68 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
     return is_top_n
 
 # ========== 修改：处理 PE_Hot 策略的独立函数 (接收动态白名单 + 增加市值维度 + 10天防暴涨过滤) ==========
-def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, history_json_path, exclude_symbols, whitelist_symbols, log_detail):
+def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, history_json_path,
+                   exclude_symbols, whitelist_symbols, prev_hot_symbols, log_detail):
     """
-    检索 sectors_panel 里的特定分组，如果发现白名单中的 symbol 在这些分组里，
-    或者该 symbol 的市值 >= 配置门槛，
-    且不在 exclude_symbols (PE_Volume等) 中，并且最新成交额 >= 2亿，
-    且过去10天内的最低收盘价没有比最新收盘价低超过3%，则将其提取出来。
+    检索候选池中，满足 (白名单 或 超大市值) 且不在 exclude_symbols 中的 symbol，并满足:
+    - 最新成交额 >= 门槛 (PE_HOT_MIN_TURNOVER, 默认2亿)
+      * 若前一交易日已在 PE_Hot 中，且今日继续下跌(收盘 < 昨收)，门槛放宽为 门槛 * PE_HOT_CONTINUE_DOWN_TURNOVER_RATIO
+    - 过去10天内的最低收盘价没有比最新收盘价低超过3%
     返回: pe_hot_list (list), pe_hot_notes (dict)
     """
-    # [修改点] 读取配置中的市值门槛，默认值为 1500亿
     min_mcap = CONFIG.get("PE_HOT_MIN_MARKET_CAP", 150000000000)
-    min_mcap_yi = min_mcap / 100000000  # 转换为“亿”用于日志显示
-    
-    log_detail(f"\n========== 开始执行 策略: PE_Hot (白名单/超大市值检索 + 2亿成交额过滤 + 10天防暴涨过滤) ==========")
+    min_mcap_yi = min_mcap / 100000000
+
+    min_turnover = CONFIG.get("PE_HOT_MIN_TURNOVER", 200000000)
+    continue_ratio = CONFIG.get("PE_HOT_CONTINUE_DOWN_TURNOVER_RATIO", 0.8)
+    relaxed_turnover = min_turnover * continue_ratio
+
+    log_detail(f"\n========== 开始执行 策略: PE_Hot (白名单/超大市值检索 + 成交额过滤 + 10天防暴涨过滤) ==========")
     log_detail(f"配置参数: 超大市值门槛 = {min_mcap_yi:.0f}亿")
-    
-    # === 修改区域：在这里添加你想要包含的所有深跌/回调池分组 ===
+    log_detail(f"配置参数: 成交额门槛 = {min_turnover/1e8:.2f}亿; "
+               f"前日在PE_Hot且今日继续下跌时放宽为 {relaxed_turnover/1e8:.2f}亿 (比例 {continue_ratio})")
+
     target_groups = [
-        "PE_Deep", 
-        "PE_Deeper", 
-        "PE_W", 
+        "PE_Deep",
+        "PE_Deeper",
+        "PE_W",
         "OverSell_W",
         "PE_valid",
         "PE_invalid",
         "season"
     ]
-    
+
     pe_hot_list = []
     pe_hot_notes = {}
 
-    # 确定基准日期
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
-    
-    # 连接数据库以获取成交额和市值
+
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
-    
-    # ========== 查询市值 >= min_mcap 的 symbol ==========
+
+    # 超大市值
     high_mcap_symbols = set()
     try:
-        # [修改点] 使用参数化查询替代硬编码
         cursor.execute("SELECT symbol FROM MNSPP WHERE marketcap >= ?", (min_mcap,))
-        rows = cursor.fetchall()
-        high_mcap_symbols = {r[0] for r in rows}
+        high_mcap_symbols = {r[0] for r in cursor.fetchall()}
         log_detail(f"从 MNSPP 表成功获取 {len(high_mcap_symbols)} 个市值 >= {min_mcap_yi:.0f}亿 的 Symbol。")
     except Exception as e:
         log_detail(f"警告: 无法读取 MNSPP 表的市值数据: {e}")
 
-    # ================= 核心修复：动态加载候选池 =================
+    # 候选池
     pool_symbols_with_notes = {}
     try:
-        # 1. 优先从 History 读取 (支持回测)
         with open(history_json_path, 'r', encoding='utf-8') as f:
             history_data = json.load(f)
-        
+
         history_loaded = False
         for group in target_groups:
             group_history = history_data.get(group, {})
             if base_date in group_history:
                 history_loaded = True
                 for sym_with_note in group_history[base_date]:
-                    clean_sym = clean_symbol(sym_with_note)
-                    # 历史记录中存的就是带备注的字符串，直接作为 note
-                    pool_symbols_with_notes[clean_sym] = sym_with_note
-        
-        # 2. 降级从 Panel 读取 (支持实盘)
+                    pool_symbols_with_notes[clean_symbol(sym_with_note)] = sym_with_note
+
         if not history_loaded and not target_date_override:
             with open(panel_json_path, 'r', encoding='utf-8') as f:
                 panel_data = json.load(f)
@@ -2439,63 +2450,67 @@ def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, h
                 if group in panel_data and isinstance(panel_data[group], dict):
                     for sym, note in panel_data[group].items():
                         pool_symbols_with_notes[sym] = note if note else sym
-                        
+
         log_detail(f"已加载 PE_Hot 候选池，共 {len(pool_symbols_with_notes)} 个 unique symbol。")
     except Exception as e:
         log_detail(f"错误: 读取候选池数据失败: {e}")
-    # ==========================================================
 
     try:
         for sym, note in pool_symbols_with_notes.items():
-            # 1. 检查是否在动态生成的白名单中，或者市值 >= min_mcap
             is_whitelist = sym in whitelist_symbols
             is_high_mcap = sym in high_mcap_symbols
-            
-            if is_whitelist or is_high_mcap:
-                # 2. 检查是否在排除列表(PE_Volume系列)中
-                if sym not in exclude_symbols:
-                    # 3. 获取板块信息以查询数据库
-                    sector = sector_map.get(sym)
-                    if not sector:
-                        continue
-                        
-                    # 4. 查询最新 10 天的价格和成交量
-                    query = f'SELECT price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 10'
-                    cursor.execute(query, (sym, base_date))
-                    rows = cursor.fetchall()
-                    
-                    if rows and rows[0][0] is not None and rows[0][1] is not None:
-                        latest_price, latest_volume = rows[0]
-                        turnover = latest_price * latest_volume
-                        
-                        # 5. 判断成交额是否大于等于 2 亿 (200,000,000)
-                        if turnover >= 200000000:
-                            # 6. 10天防暴涨过滤
-                            valid_prices = [r[0] for r in rows if r[0] is not None]
-                            min_price_10d = min(valid_prices) if valid_prices else latest_price
-                            
-                            if min_price_10d < latest_price * 0.97:
-                                log_detail(f"    x [过滤-PE_Hot] {sym} 10天内最低价({min_price_10d:.2f})比最新价({latest_price:.2f})低超过3%")
-                            else:
-                                if sym not in pe_hot_list:
-                                    pe_hot_list.append(sym)
-                                    pe_hot_notes[sym] = note
-                                    
-                                    reasons = []
-                                    if is_whitelist: reasons.append("白名单")
-                                    if is_high_mcap: reasons.append("超大市值")
-                                    reason_str = "+".join(reasons)
-                                    
-                                    log_detail(f"    ✅ [选中-PE_Hot] {sym} (理由: {reason_str}, 成交额: {turnover/100000000:.2f}亿, 10天最低: {min_price_10d:.2f})")
-                        else:
-                            log_detail(f"    x [过滤-PE_Hot] {sym} 成交额不足2亿 (仅 {turnover/100000000:.2f}亿)")
-                    else:
-                        log_detail(f"    x [过滤-PE_Hot] {sym} 无法获取最新交易数据")
+            if not (is_whitelist or is_high_mcap):
+                continue
+            if sym in exclude_symbols:
+                continue
+
+            sector = sector_map.get(sym)
+            if not sector:
+                continue
+
+            query = f'SELECT price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 10'
+            cursor.execute(query, (sym, base_date))
+            rows = cursor.fetchall()
+
+            if not rows or rows[0][0] is None or rows[0][1] is None:
+                log_detail(f"    x [过滤-PE_Hot] {sym} 无法获取最新交易数据")
+                continue
+
+            latest_price, latest_volume = rows[0]
+            turnover = latest_price * latest_volume
+
+            # 是否满足"前日在 PE_Hot 且今日继续下跌"的放宽条件
+            prev_price = rows[1][0] if len(rows) > 1 else None
+            was_in_prev_hot = sym in prev_hot_symbols
+            is_continue_down = prev_price is not None and latest_price < prev_price
+            relaxed = was_in_prev_hot and is_continue_down
+            threshold = relaxed_turnover if relaxed else min_turnover
+            threshold_desc = f"{threshold/1e8:.2f}亿" + ("(放宽: 前日在PE_Hot+今日继续下跌)" if relaxed else "")
+
+            if turnover < threshold:
+                log_detail(f"    x [过滤-PE_Hot] {sym} 成交额不足{threshold_desc} (仅 {turnover/1e8:.2f}亿)")
+                continue
+
+            # 10天防暴涨过滤
+            valid_prices = [r[0] for r in rows if r[0] is not None]
+            min_price_10d = min(valid_prices) if valid_prices else latest_price
+            if min_price_10d < latest_price * 0.97:
+                log_detail(f"    x [过滤-PE_Hot] {sym} 10天内最低价({min_price_10d:.2f})比最新价({latest_price:.2f})低超过3%")
+                continue
+
+            if sym not in pe_hot_list:
+                pe_hot_list.append(sym)
+                pe_hot_notes[sym] = note
+                reasons = []
+                if is_whitelist: reasons.append("白名单")
+                if is_high_mcap: reasons.append("超大市值")
+                log_detail(f"    ✅ [选中-PE_Hot] {sym} (理由: {'+'.join(reasons)}, 成交额: {turnover/1e8:.2f}亿, "
+                           f"门槛: {threshold_desc}, 10天最低: {min_price_10d:.2f})")
     except Exception as e:
         log_detail(f"错误: 执行 PE_Hot 策略失败: {e}")
     finally:
         conn.close()
-        
+
     pe_hot_list = sorted(pe_hot_list)
     log_detail(f"PE_Hot 筛选完成，共命中 {len(pe_hot_list)} 个: {pe_hot_list}")
     return pe_hot_list, pe_hot_notes
@@ -2577,20 +2592,30 @@ def run_pe_volume_logic(log_detail):
     volume_chase_info = dict(retention_info)
     volume_chase_info.update(backfill_info)
 
-    # ================= 策略 2 =================
-    raw_pe_volume_up_a, raw_pe_volume_up_b = process_pe_volume_up(
-        DB_FILE, EARNING_HISTORY_JSON_FILE, symbol_to_sector_map,
-        TARGET_DATE, SYMBOL_TO_TRACE, log_detail
-    )
-    vol_up_new = set(raw_pe_volume_up_a) | set(raw_pe_volume_up_b)
+    # ================= 策略 2 (受 ENABLE_PE_VOLUME_UP 控制) =================
+    ENABLE_UP = CONFIG.get("ENABLE_PE_VOLUME_UP", False)
+    raw_pe_volume_up_a, raw_pe_volume_up_b = [], []
+    vol_up_new = set()
+    vol_up_chase_info = {}
+    vol_up_chase_symbols = []
+    final_pe_volume_up = []
 
-    # [新增] PE_Volume_up 回溯追
-    vol_up_chase_info = check_pe_volume_up_retention(
-        DB_FILE, EARNING_HISTORY_JSON_FILE, PANEL_JSON_FILE, vol_up_new,
-        symbol_to_sector_map, TARGET_DATE, SYMBOL_TO_TRACE, log_detail
-    )
-    vol_up_chase_symbols = sorted(vol_up_chase_info.keys())
-    final_pe_volume_up = sorted(list(vol_up_new | set(vol_up_chase_symbols)))
+    if ENABLE_UP:
+        raw_pe_volume_up_a, raw_pe_volume_up_b = process_pe_volume_up(
+            DB_FILE, EARNING_HISTORY_JSON_FILE, symbol_to_sector_map,
+            TARGET_DATE, SYMBOL_TO_TRACE, log_detail
+        )
+        vol_up_new = set(raw_pe_volume_up_a) | set(raw_pe_volume_up_b)
+
+        # PE_Volume_up 回溯追
+        vol_up_chase_info = check_pe_volume_up_retention(
+            DB_FILE, EARNING_HISTORY_JSON_FILE, PANEL_JSON_FILE, vol_up_new,
+            symbol_to_sector_map, TARGET_DATE, SYMBOL_TO_TRACE, log_detail
+        )
+        vol_up_chase_symbols = sorted(vol_up_chase_info.keys())
+        final_pe_volume_up = sorted(list(vol_up_new | set(vol_up_chase_symbols)))
+    else:
+        log_detail("\n[策略2 PE_Volume_up] 已屏蔽 (ENABLE_PE_VOLUME_UP=False)，跳过计算与输出。")
 
     # ================= 策略 3 =================
     raw_pe_volume_high_jia, raw_pe_volume_high_yi, raw_pe_volume_high_bing, raw_pe_volume_high_chaodi = process_pe_volume_high(
@@ -2702,29 +2727,35 @@ def run_pe_volume_logic(log_detail):
             suffix += "黑"
         pe_vol_high_notes[sym] = f"{sym}{suffix}"
 
-    # ================= PE_Hot =================
-    exclude_symbols_for_hot = set()
-    pe_hot_list, pe_hot_notes = process_pe_hot(
-        DB_FILE, symbol_to_sector_map, TARGET_DATE, PANEL_JSON_FILE,
-        EARNING_HISTORY_JSON_FILE, exclude_symbols_for_hot, whitelist_symbols, log_detail
-    )
-
-    # PE_Hot 连续命中追加"追" ([修复] 用实际交易日比较，避免把同一交易日当成"上一期")
+    # ================= 读取前一交易日 PE_Hot 名单 (供 PE_Hot 放宽规则 & 连续命中追字 共用) =================
+    prev_hot_date = None
+    prev_hot_symbols = set()
     try:
         with open(EARNING_HISTORY_JSON_FILE, 'r', encoding='utf-8') as f:
             history_data = json.load(f)
         hist_pe_hot = history_data.get("PE_Hot", {})
         if hist_pe_hot:
-            prev_date = next((d for d in sorted(hist_pe_hot.keys(), reverse=True) if d < history_date_str), None)
-            if prev_date:
-                prev_symbols = {clean_symbol(s) for s in hist_pe_hot[prev_date]}
-                for sym in pe_hot_list:
-                    if sym in prev_symbols and sym in pe_hot_notes:
-                        pe_hot_notes[sym] = strip_chase(pe_hot_notes[sym]) + "追"
-                        if SYMBOL_TO_TRACE == sym:
-                            log_detail(f"    - [PE_Hot连续命中] {sym} 在上一期({prev_date})也存在，追加'追'字。")
+            prev_hot_date = next((d for d in sorted(hist_pe_hot.keys(), reverse=True) if d < history_date_str), None)
+            if prev_hot_date:
+                prev_hot_symbols = {clean_symbol(s) for s in hist_pe_hot[prev_hot_date]}
     except Exception as e:
-        log_detail(f"读取历史文件追加 PE_Hot '追'字失败: {e}")
+        log_detail(f"读取前一日 PE_Hot 名单失败: {e}")
+        
+    # ================= PE_Hot =================
+    exclude_symbols_for_hot = set()
+    pe_hot_list, pe_hot_notes = process_pe_hot(
+        DB_FILE, symbol_to_sector_map, TARGET_DATE, PANEL_JSON_FILE,
+        EARNING_HISTORY_JSON_FILE, exclude_symbols_for_hot, whitelist_symbols,
+        prev_hot_symbols, log_detail
+    )
+
+    # ================= PE_Hot 连续命中追加"追" =================
+    if prev_hot_date:
+        for sym in pe_hot_list:
+            if sym in prev_hot_symbols and sym in pe_hot_notes:
+                pe_hot_notes[sym] = strip_chase(pe_hot_notes[sym]) + "追"
+                if SYMBOL_TO_TRACE == sym:
+                    log_detail(f"    - [PE_Hot连续命中] {sym} 在上一期({prev_hot_date})也存在，追加'追'字。")
 
     # ================= 追踪汇总 =================
     if SYMBOL_TO_TRACE:
@@ -2734,8 +2765,9 @@ def run_pe_volume_logic(log_detail):
         log_detail(f"  策略1 PE_Volume (放量下跌):     {'✅ 命中' if T in filtered_pe_volume else '❌ 未命中'}")
         log_detail(f"  策略1 回溯保留 (Retention):     {'✅ 被捞回' if T in retention_symbols else '❌ 未捞回'}")
         log_detail(f"  策略1 补捞 (Backfill):          {'✅ 补出' if T in backfill_symbols else '❌ 未补出'}")
-        log_detail(f"  策略2 PE_Volume_up (活跃上涨):  {'✅ 命中' if T in filtered_pe_volume_up else '❌ 未命中'}")
-        log_detail(f"  策略2 回溯追 (Up Chase):        {'✅ 追' if T in vol_up_chase_symbols else '❌ 未追'}")
+        if ENABLE_UP:
+            log_detail(f"  策略2 PE_Volume_up (活跃上涨):  {'✅ 命中' if T in filtered_pe_volume_up else '❌ 未命中'}")
+            log_detail(f"  策略2 回溯追 (Up Chase):        {'✅ 追' if T in vol_up_chase_symbols else '❌ 未追'}")
         high_parts = []
         if T in filtered_pe_volume_high_jia: high_parts.append("甲")
         if T in filtered_pe_volume_high_yi: high_parts.append("乙")
@@ -2753,7 +2785,8 @@ def run_pe_volume_logic(log_detail):
         log_detail("\n" + "="*60)
         log_detail(f"🛑 [安全拦截] 回测模式 (Date: {TARGET_DATE}) 已启用。")
         log_detail(f"📊 [策略1] PE_Volume 命中: {len(filtered_pe_volume)} 个 (回溯 {len(retention_symbols)}, 补捞 {len(backfill_symbols)})")
-        log_detail(f"📊 [策略2] PE_Volume_up 命中: {len(filtered_pe_volume_up)} 个 (回溯追 {len(vol_up_chase_symbols)})")
+        if ENABLE_UP:
+            log_detail(f"📊 [策略2] PE_Volume_up 命中: {len(filtered_pe_volume_up)} 个 (回溯追 {len(vol_up_chase_symbols)})")
         log_detail(f"📊 [策略3] PE_Volume_high 总计命中: {len(filtered_pe_volume_high)} 个")
         log_detail(f"    - 甲类: {len(filtered_pe_volume_high_jia)} 个")
         log_detail(f"    - 乙类: {len(filtered_pe_volume_high_yi)} 个")
@@ -2779,7 +2812,8 @@ def run_pe_volume_logic(log_detail):
     # 7. 写入 History ([修复] 使用实际交易日作为 key)
     log_detail(f"\n正在更新 History 文件 (日期: {history_date_str})...")
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", sorted(pe_volume_notes.values()), log_detail, history_date_str)
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", sorted(pe_volume_up_notes.values()), log_detail, history_date_str)
+    if ENABLE_UP:
+        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", sorted(pe_volume_up_notes.values()), log_detail, history_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", sorted(pe_vol_high_notes.values()), log_detail, history_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Hot", sorted(pe_hot_notes.values()), log_detail, history_date_str)
 
@@ -2797,4 +2831,5 @@ def main():
     run_pe_volume_logic(log_detail_console)
 
 if __name__ == '__main__':
+    SYMBOL_TO_TRACE, TARGET_DATE = resolve_run_mode(SYMBOL_TO_TRACE, TARGET_DATE)
     main()

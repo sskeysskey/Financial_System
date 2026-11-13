@@ -162,8 +162,12 @@ def auto_resolve_confirmed_symbol(symbol: str, confirmed_line: str, confirmed_fi
         print(f"    - 将确认的行插入到匹配日期的主文件中。")
         insert_line_into_main_file(confirmed_line, main_files)
 
+AUTO = os.environ.get("PIPELINE_AUTO") == "1"
 
 def show_alert(message):
+    if AUTO:
+        print(f"[AUTO] {message}")
+        return
     """使用 AppleScript 显示一个系统对话框"""
     try:
         applescript_code = f'display dialog "{message}" with title "处理结果" buttons {{"OK"}} default button "OK"'

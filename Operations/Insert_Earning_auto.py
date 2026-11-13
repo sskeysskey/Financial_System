@@ -3,6 +3,8 @@ import json
 import sqlite3
 import subprocess
 import os
+import re
+import math
 import tempfile
 from contextlib import closing
 from datetime import date, datetime, timedelta
@@ -13,7 +15,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
     QPushButton, QMessageBox, QLabel,
-    QMenu
+    QMenu, QGraphicsDropShadowEffect
 )
 from PyQt6.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor, QShortcut, QAction
 from PyQt6.QtCore import Qt, QTimer
@@ -39,6 +41,10 @@ PANEL_CONFIG_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_
 POLYMARKET_TXT_PATH = os.path.join(HOME, "Coding/News/earning_polymarket.txt")
 # Firstrade 盘前/盘后涨跌数据路径
 FIRSTRADE_JSON_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/firstrade_watchlist_earning.json")
+LIVE_QUOTES_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/firstrade_quotes_live.json")
+
+POSITIONS_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/firstrade_positions.json")
+HELD_GLOW_COLOR = QColor(255, 215, 0)   # 金色光晕
 
 PERIOD_DISPLAY = {"BMO": "↩︎", "AMC": "↪︎", "TNS": "？"}
 PERIOD_CN_MAP = {"BMO": "前", "AMC": "后", "TNS": "未"}  # 用于标题显示的中文映射
@@ -227,55 +233,89 @@ def load_text_data(path):
     return data
 
 
-def load_premarket_data(path):
-    """
-    读取 Firstrade 盘前/盘后 JSON。
-    返回: (quotes_dict, meta_dict)
-      quotes_dict: {SYMBOL: {"text": "-2.50%", "num": -2.50, "last": "1,706.40"}}
-    文件缺失/损坏时返回空字典，不影响主程序运行。
-    """
-    if not os.path.exists(path):
-        return {}, {}
+def _to_epoch(v):
+    """秒 / 毫秒时间戳 -> 秒；无效返回 0"""
     try:
-        with open(path, 'r', encoding='utf-8') as f:
-            raw = json.load(f)
-    except (OSError, json.JSONDecodeError) as e:
-        print(f"[警告] 读取盘前数据失败: {path}\n{e}")
-        return {}, {}
-    if not isinstance(raw, dict):
-        return {}, {}
+        t = float(v)
+    except (TypeError, ValueError):
+        return 0.0
+    return t / 1000.0 if t > 1e11 else max(t, 0.0)
 
-    meta = raw.get("_meta") or {}
-    quotes = raw.get("quotes") or {}
-    result = {}
-    if not isinstance(quotes, dict):
-        return result, meta
 
-    for key, q in quotes.items():
-        if not isinstance(q, dict):
-            continue
-        sym = str(q.get("symbol") or key).strip().upper()
-        if not sym:
-            continue
-        text = str(q.get("change_pct") or "").strip()
-
-        num = q.get("change_pct_num")
+def _parse_quote_record(key, q):
+    if not isinstance(q, dict):
+        return None
+    sym = str(q.get("symbol") or key).strip().upper()
+    if not sym:
+        return None
+    text = str(q.get("change_pct") or "").strip()
+    num = q.get("change_pct_num")
+    try:
+        num = float(num) if num not in (None, "") else None
+    except (TypeError, ValueError):
+        num = None
+    if num is None and text:
         try:
-            num = float(num) if num is not None and num != "" else None
-        except (TypeError, ValueError):
+            num = float(text.replace('%', '').replace(',', '').replace('+', '').strip())
+        except ValueError:
             num = None
-        if num is None and text:
-            try:
-                num = float(text.replace('%', '').replace(',', '').replace('+', '').strip())
-            except ValueError:
-                num = None
-        if not text and num is not None:
-            text = f"{num:+.2f}%"
-        if not text:
-            continue
+    if not text and num is not None:
+        text = f"{num:+.2f}%"
+    if not text:
+        return None
+    return sym, {"text": text, "num": num, "last": str(q.get("last", "") or "")}
 
-        result[sym] = {"text": text, "num": num, "last": str(q.get("last", "") or "")}
-    return result, meta
+
+def load_premarket_data(path, live_path=LIVE_QUOTES_PATH):
+    """
+    合并 Earning 快照（watchlist_earning）与 G 键实时取数（quotes_live）。
+    同一 symbol 取 updated_at 最新的一条。返回 (quotes_dict, main_meta)
+    quotes_dict: {SYM: {"text", "num", "last", "ts", "live"}}
+    """
+    result, main_meta = {}, {}
+    for p, is_live in ((path, False), (live_path, True)):
+        if not os.path.exists(p):
+            continue
+        try:
+            with open(p, 'r', encoding='utf-8') as f:
+                raw = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"[警告] 读取行情失败: {p}\n{e}")
+            continue
+        if not isinstance(raw, dict):
+            continue
+        meta = raw.get("_meta") or {}
+        if not is_live:
+            main_meta = meta
+        quotes = raw.get("quotes") or {}
+        if not isinstance(quotes, dict):
+            continue
+        file_ts = _to_epoch(meta.get("updated_at"))
+        for key, q in quotes.items():
+            parsed = _parse_quote_record(key, q)
+            if not parsed:
+                continue
+            sym, info = parsed
+            info["ts"] = _to_epoch(q.get("updated_at")) or file_ts
+            info["live"] = is_live
+            old = result.get(sym)
+            if old is None or info["ts"] >= old["ts"]:
+                result[sym] = info
+    return result, main_meta
+
+
+def is_ts_today(ts, today):
+    return ts <= 0 or date.fromtimestamp(ts) == today
+
+
+def is_ts_after_close(ts, session_day):
+    if ts <= 0:
+        return True
+    if US_EASTERN is not None:
+        cutoff = datetime(session_day.year, session_day.month, session_day.day,
+                          16, 0, tzinfo=US_EASTERN)
+        return datetime.fromtimestamp(ts, tz=US_EASTERN) >= cutoff
+    return date.fromtimestamp(ts) >= session_day
 
 
 def _meta_str_date(meta):
@@ -328,6 +368,35 @@ def fetch_mnspp_data_from_db(db_path, symbol):
         result = cursor.fetchone()
     return result if result else ("N/A", None, "N/A", "--")
 
+def _norm_sym(s):
+    """BRK.B / BRK-B / brk b 统一成 BRKB，用于匹配"""
+    return re.sub(r'[^A-Z0-9]', '', str(s or '').upper())
+
+
+def load_held_symbols(path=POSITIONS_PATH):
+    """读取持仓文件，返回数量不为 0 的 symbol 集合（已归一化）；数量缺失时按持仓处理"""
+    if not os.path.exists(path):
+        return set()
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"[警告] 读取持仓失败: {e}")
+        return set()
+    if not isinstance(raw, dict):
+        return set()
+    held = set()
+    for key, rec in raw.items():
+        if str(key).startswith('_') or not isinstance(rec, dict):
+            continue
+        try:
+            qty = float(str(rec.get('quantity', '')).replace(',', '').strip())
+            is_held = qty != 0
+        except ValueError:
+            is_held = True
+        if is_held:
+            held.add(_norm_sym(key))
+    return held
 
 class SymbolButton(QPushButton):
     def __init__(self, text):
@@ -439,7 +508,34 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self).activated.connect(self.close)
         QShortcut(QKeySequence(Qt.Key.Key_Slash), self).activated.connect(self.show_search_dialog)
         self._init_ui()
+        self.held_symbols = set()
         self.refresh_data()
+        self._quote_sig = self._quotes_sig()
+        self._quote_timer = QTimer(self)
+        self._quote_timer.timeout.connect(self._reload_quotes_if_changed)
+        self._quote_timer.start(3000)
+
+    def _quotes_sig(self):
+        return tuple(os.path.getmtime(p) if os.path.exists(p) else 0.0
+                    for p in (FIRSTRADE_JSON_PATH, LIVE_QUOTES_PATH, POSITIONS_PATH))
+
+    def _refresh_quote_cells(self):
+        """只刷新盘前/盘后两列，不重建表格，避免打断导航索引"""
+        self._load_premarket()
+        for table, col, kind in ((self.table1, T1_COL_POST, "post"),
+                                (self.table_today, T0_COL_PRE, "pre")):
+            for row in range(table.rowCount()):
+                w = table.cellWidget(row, COL_SYMBOL)
+                if isinstance(w, SymbolButton):      # 跳过标签行
+                    self._set_quote_cell(table, row, col, w.text(), kind)
+
+    def _reload_quotes_if_changed(self):
+        sig = self._quotes_sig()
+        if sig != self._quote_sig:
+            self._quote_sig = sig
+            self._refresh_quote_cells()
+            self.held_symbols = load_held_symbols()   # ★ 新增
+            self._apply_held_marks()                  # ★ 新增
 
     def _bucket_for(self, d):
         """把发布日期映射到分栏：非交易日归入其后的第一个交易日所在分栏"""
@@ -520,22 +616,49 @@ class MainWindow(QMainWindow):
                 return self.premarket_data[k]
         return None
 
-    def _set_quote_cell(self, table, row, col, symbol, is_fresh):
+    def _set_quote_cell(self, table, row, col, symbol, kind):
+        """kind: 'pre' 盘前（今天）/ 'post' 盘后（上一交易日收盘后）"""
         info = self._lookup_premarket(symbol)
         item = QTableWidgetItem(info["text"] if info else "")
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         item.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         if info:
-            if not is_fresh:
+            ts = info.get("ts", 0)
+            if kind == "pre":
+                fresh = is_ts_today(ts, self.today)
+            else:
+                fresh = is_ts_after_close(ts, self.date1_d)
+            if not fresh:
                 item.setForeground(QBrush(COLOR_STALE))
             elif info["num"] is not None:
                 item.setForeground(QBrush(pct_color(info["num"])))
-            tip = f"最新价: {info['last'] or 'N/A'}\n更新时间: {self.premarket_meta.get('updated_at_str', '未知')}"
-            if not is_fresh:
+            when = datetime.fromtimestamp(ts).strftime("%m-%d %H:%M") if ts else "未知"
+            src = "实时取数(G)" if info.get("live") else "Earning 快照"
+            tip = f"最新价: {info['last'] or 'N/A'}\n来源: {src}\n更新时间: {when}"
+            if not fresh:
                 tip += "\n⚠️ 数据可能已过期"
             item.setToolTip(tip)
         table.setItem(row, col, item)
+
+    def _set_held_style(self, btn, held):
+        """持仓股：通过动态属性 held 触发窗口级样式里的黄色边框"""
+        value = "true" if held else "false"
+        if btn.property("held") != value:
+            btn.setProperty("held", value)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+        note = self.symbol_note.get(btn.text(), "")
+        btn.setToolTip(("★ 持仓股\n" + note).strip() if held else note)
+
+    def _apply_held_marks(self):
+        """遍历三个表格的 symbol 按钮，按当前持仓集合打标记（幂等，可重复调用）"""
+        for table in (self.table2, self.table1, self.table_today):
+            for row in range(table.rowCount()):
+                w = table.cellWidget(row, COL_SYMBOL)
+                if not isinstance(w, SymbolButton):
+                    continue
+                self._set_held_style(w, _norm_sym(w.text()) in self.held_symbols)
 
     def _set_pred_cell(self, table, row, symbol):
         pred_val = self.polymarket_data.get(symbol.upper(), "")
@@ -620,6 +743,7 @@ class MainWindow(QMainWindow):
         self.count_today = 0
 
         self._load_premarket()
+        self.held_symbols = load_held_symbols()
 
         self.table2.setRowCount(0)
         self.table1.setRowCount(0)
@@ -627,6 +751,7 @@ class MainWindow(QMainWindow):
         self.process_date2()
         self.process_date1()
         self.process_today()
+        self._apply_held_marks()
 
     # ------------------------------------------------------------------
     # 核心导航逻辑
@@ -710,6 +835,7 @@ class MainWindow(QMainWindow):
             QPushButton#SymbolButton[period="BMO"] { background-color: #7C9B67; color: black; }
             QPushButton#SymbolButton[period="AMC"] { background-color: #3498db; color: black; }
             QPushButton#SymbolButton[period="TNS"] { background-color: #2c3e50; color: white; }
+            QPushButton#SymbolButton[held="true"] { border: 3px solid #FFD700; }
             QPushButton#ReplaceButton { background-color: #555555; color: white; border: none; padding: 5px 15px; border-radius: 4px; }
             QPushButton#ReplaceButton:disabled { background-color: #333333; color: #888888; }
         """)
@@ -755,7 +881,7 @@ class MainWindow(QMainWindow):
             table.insertRow(row)
             self._make_symbol_button(table, row, symbol, period, idx)
             self._set_pred_cell(table, row, symbol)
-            self._set_quote_cell(table, row, T0_COL_PRE, symbol, self.premarket_is_fresh)
+            self._set_quote_cell(table, row, T0_COL_PRE, symbol, "pre")
 
             tags_to_add.append(get_tags_for_symbol(symbol, self.description_data))
 
@@ -781,7 +907,7 @@ class MainWindow(QMainWindow):
 
             self._make_symbol_button(table, row, symbol, period, idx)
             self._set_pred_cell(table, row, symbol)
-            self._set_quote_cell(table, row, T1_COL_POST, symbol, self.postmarket_is_fresh)
+            self._set_quote_cell(table, row, T1_COL_POST, symbol, "post")
             table.setItem(row, T1_COL_PCT, self._make_pct_item(pct))
 
             rep_btn = QPushButton("写入")

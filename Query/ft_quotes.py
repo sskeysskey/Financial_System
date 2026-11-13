@@ -436,3 +436,40 @@ def build_membership_items(symbol, theme):
     if age is not None and age > FT_MEMBER_STALE_HOURS:
         items.append((f"(最旧{age/24:.0f}天前,按M刷新)", theme['border'], 'normal'))
     return items
+
+# ----------------------------------------------------------------------
+# G 键取数来源判定：持仓 / Earning 系列；都不是则返回 ''（调用方改走 Z）
+# ----------------------------------------------------------------------
+_EARN_GROUP_RE = re.compile(r'^EARNING\d*$')
+
+
+def _is_earning_group(g):
+    return bool(_EARN_GROUP_RE.match(re.sub(r'\s+', '', str(g or '')).upper()))
+
+
+def is_held(symbol):
+    """在持仓文件里且数量不为 0（数量字段缺失时按持仓处理）"""
+    pos = get_firstrade_position(symbol)
+    if not pos:
+        return False
+    q = position_num(pos, 'quantity')
+    return q is None or q != 0
+
+
+def is_in_earning(symbol):
+    """属于 Earning 系列分组；归属数据没扫过时，用 Earning 行情快照兜底"""
+    m = get_watchlist_membership(symbol)
+    if m and any(_is_earning_group(g) for g in m.get('groups', [])):
+        return True
+    data = _load_json_cached(FIRSTRADE_WATCHLIST_FILE)
+    q = _find_in_quotes(data, symbol) if data else None
+    return bool(q) and _is_earning_group(q.get('group') or 'Earning')
+
+
+def has_quote_source(symbol):
+    """返回 'positions' / 'earning' / ''（'' = 两者都不是，G 键应改走 Z）"""
+    if is_held(symbol):
+        return 'positions'
+    if is_in_earning(symbol):
+        return 'earning'
+    return ''

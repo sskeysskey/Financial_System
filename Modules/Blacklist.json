@@ -396,7 +396,16 @@
         "Russia",
         "CZR",
         "PAG",
-        "CCC"
+        "CCC",
+        "MSGS",
+        "KVUE",
+        "VRNS",
+        "OPCH",
+        "PTC",
+        "LNTH",
+        "SYNA",
+        "RXO",
+        "ROKU"
     ],
     "etf": [
         "VDE",
@@ -823,7 +832,13 @@
         "FTA",
         "GUSE",
         "QVAL",
-        "GAL"
+        "GAL",
+        "FLN",
+        "FMAT",
+        "EQL",
+        "FPA",
+        "JHEM",
+        "RJCA"
     ],
     "Earning": [],
     "Options": [

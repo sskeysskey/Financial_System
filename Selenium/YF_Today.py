@@ -5,9 +5,13 @@ import sys
 import json
 import datetime
 import subprocess
-import platform
-import subprocess
 import atexit
+import tempfile
+import contextlib
+try:
+    import fcntl
+except ImportError:      # Windows
+    fcntl = None
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -31,6 +35,8 @@ DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
 # 具体业务文件路径
 DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 SECTORS_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_empty.json")
+# Sectors_empty.json 的跨进程锁（与 MW_Today 使用同一路径才能互斥）
+JSON_LOCK_PATH = os.path.join(tempfile.gettempdir(), "Financial_System_Sectors_empty.lock")
 SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping.json") # 新增映射文件路径
 CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
 
@@ -67,6 +73,7 @@ def stop_caffeinate():
     if _caffeinate_proc:
         try:
             _caffeinate_proc.terminate()
+            _caffeinate_proc = None
             print(">>> [系统] 已关闭防休眠模式")
         except Exception as e:
             print(f">>> [系统] 关闭 caffeinate 时出错: {e}")
@@ -210,16 +217,49 @@ def load_alias_mapping(json_path):
         tqdm.write(f"⚠️ 读取映射文件出错: {e}")
         return {}
 
-def remove_symbol_from_json(json_path, group_name, symbol):
-    """抓取成功后，从 JSON 中移除该 Symbol"""
+@contextlib.contextmanager
+def json_file_lock():
+    """跨进程互斥锁（MW_Today / YF_Today 同时改 Sectors_empty.json 时防止互相覆盖）"""
+    if fcntl is None:
+        yield
+        return
+    with open(JSON_LOCK_PATH, "a") as lf:
+        fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+
+
+def atomic_write_json(json_path, data):
+    dir_name = os.path.dirname(json_path) or "."
     try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        if group_name in data and symbol in data[group_name]:
-            data[group_name].remove(symbol)
-            with open(json_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-            return True
+        mode = os.stat(json_path).st_mode & 0o777
+    except OSError:
+        mode = 0o644
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp_path, mode)   # mkstemp 默认 0600，保持原文件权限
+        os.replace(tmp_path, json_path)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
+
+def remove_symbol_from_json(json_path, group_name, symbol):
+    try:
+        with json_file_lock():
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if group_name in data and symbol in data[group_name]:
+                data[group_name] = [s for s in data[group_name] if s != symbol]
+                atomic_write_json(json_path, data)
+                return True
     except Exception as e:
         tqdm.write(f"⚠️ 更新 JSON 失败 [{symbol}]: {e}")
     return False
@@ -227,22 +267,15 @@ def remove_symbol_from_json(json_path, group_name, symbol):
 # ================= 2. 核心抓取逻辑 =================
 
 def get_last_valid_trading_date():
-    """获取美股最近的一个有效开盘日（严格小于今天）"""
-    nyse = mcal.get_calendar('NYSE')
-    today = datetime.datetime.now().date()
-    # 往前推15天，确保能覆盖到长假
-    start_date = today - datetime.timedelta(days=15)
-    
-    # 获取这段时间内的所有交易日
-    schedule = nyse.schedule(start_date=start_date, end_date=today)
-    valid_days = schedule.index.date
-    
-    # 筛选出严格小于今天的日期
-    past_days = [d for d in valid_days if d < today]
-    
-    if past_days:
-        return past_days[-1].strftime('%Y-%m-%d')
-    return None
+    try:
+        nyse = mcal.get_calendar('NYSE')
+        today = datetime.datetime.now().date()
+        schedule = nyse.schedule(start_date=today - datetime.timedelta(days=15), end_date=today)
+        past_days = [d for d in schedule.index.date if d < today]
+        return past_days[-1].strftime('%Y-%m-%d') if past_days else None
+    except Exception as e:
+        tqdm.write(f"⚠️ 计算交易日失败: {e}")
+        return None
 
 def extract_data_via_js(driver, symbol):
     """使用注入 JS 的方式快速提取表格数据 (提取最新的前两条数据)"""
@@ -474,15 +507,15 @@ def scrape_history():
                                 row_list = list(data_rows[1])
                                 row_list[0] = last_valid_date  # 强行替换为正确的日期
                                 selected_row = tuple(row_list)
-                            # else:
-                            #     tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，跳过。")
-                            #     skip_symbol = True
-                            #     break # 跳出重试循环，不再重试
                             else:
-                                tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，临时使用最新数据并修改日期为 {last_valid_date} 写入。")
-                                row_list = list(data_rows[0])
-                                row_list[0] = last_valid_date  # 强行替换为正确的日期
-                                selected_row = tuple(row_list)
+                                tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，跳过。")
+                                skip_symbol = True
+                                break # 跳出重试循环，不再重试
+                            # else:
+                            #     tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，临时使用最新数据并修改日期为 {last_valid_date} 写入。")
+                            #     row_list = list(data_rows[0])
+                            #     row_list[0] = last_valid_date  # 强行替换为正确的日期
+                            #     selected_row = tuple(row_list)
                     else:
                         # 如果无法计算 last_valid_date，默认取第一条
                         selected_row = data_rows[0]
@@ -531,27 +564,20 @@ def scrape_history():
     run_check_yesterday_if_empty()
 
 def run_check_yesterday_if_empty():
-    """检查 JSON 文件是否已清空，如果清空则执行 Check_yesterday.py"""
     final_tasks = load_tasks_from_json(SECTORS_JSON_PATH)
-    
-    # 检查字典中所有的列表是否都为空
-    is_empty = True
-    if final_tasks:
-        for group, symbols in final_tasks.items():
-            if len(symbols) > 0:
-                is_empty = False
-                break
-                
-    if is_empty:
-        print("✅ Sectors_empty.json 已全部清空，开始执行 Check_yesterday.py...")
-        try:
-            # 在这里增加了 "--ignore_sectors" 参数
-            subprocess.run([sys.executable, CHECK_YESTERDAY_SCRIPT_PATH, "--ignore_sectors"], check=True, capture_output=True, text=True, encoding='utf-8')
-            print("✅ Check_yesterday.py 执行完毕。")
-        except Exception as e:
-            print(f"❌ 调用 Check_yesterday 出错: {e}")
-    else:
-        print("⚠️ Sectors_empty.json 中仍有未完成的任务，跳过执行 Check_yesterday.py。")
+    if not isinstance(final_tasks, dict) or any(final_tasks.values()):
+        print("⚠️ Sectors_empty.json 中仍有未完成的任务（或读取失败），跳过执行 Check_yesterday.py。")
+        return
+    print("✅ Sectors_empty.json 已全部清空，开始执行 Check_yesterday.py...")
+    try:
+        r = subprocess.run([sys.executable, CHECK_YESTERDAY_SCRIPT_PATH, "--ignore_sectors", "--nopop"],
+                           timeout=900)
+        print("✅ Check_yesterday.py 执行完毕。" if r.returncode == 0
+              else f"❌ Check_yesterday 返回错误码 {r.returncode}")
+    except subprocess.TimeoutExpired:
+        print("❌ Check_yesterday 执行超时（900 秒），已终止。")
+    except Exception as e:
+        print(f"❌ 调用 Check_yesterday 出错: {e}")
 
 if __name__ == "__main__":
     # 获取当前日期 (0=周一, 1=周二, ..., 5=周六, 6=周日)

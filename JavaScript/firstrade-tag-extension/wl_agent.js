@@ -11,8 +11,7 @@
   const POLL_MS = 2000;
   const FORBIDDEN = 'header, #app-header, nav, #app-quote-bar';
   const ROW_EXCLUDE = '.ag-floating-top, .ag-floating-bottom, #app-quote-bar, header, #app-header';
-  const TEMP_GROUP = 'temp';
-  const SRC_TXT = { positions: '持仓页', current: '当前分组', group: '自选分组', temp: '临时分组' };
+  const SRC_TXT = { positions: '持仓页', current: '当前分组', group: '自选分组' };
 
   let ENABLED = true;
   let RESTORE = true;
@@ -334,47 +333,13 @@
     return { q, batch };
   }
 
-  async function quoteViaTemp(sym, grp, say) {
-    const a = api();
-    const sr = await switchGroup(grp);
-    if (!sr.ok) throw new Error(`临时分组「${grp}」不可用：${sr.error}（请先在自选股页新建名为 ${grp} 的分组）`);
-    await waitGridSettled(4000);
-    const onTemp = () => sameGroup(currentGroup(), grp);
-    let q = null;
-    try {
-      q = await a.findRowQuote(sym, false);
-      if (!q) {
-        say(`➕ 临时加入「${grp}」…`);
-        const r = await a.addOneSymbol(sym);
-        if (!r || r.status !== 'added') throw new Error(`临时添加失败：${(r && (r.error || r.status)) || '未知'}`);
-        await waitGridSettled(3000);
-      }
-      say('⏳ 等待行情刷新…');
-      q = await waitQuote(sym, 9000);
-      if (!q) throw new Error('添加后没在表格里看到该股票');
-    } finally {
-      /* ★ 只在确认身处 temp 分组时才删，绝不误删其它分组 */
-      if (onTemp()) {
-        say('🧹 清理临时分组…');
-        try { await a.deleteSymbol(sym); } catch (e) { }
-        for (let i = 0; i < 15 && onTemp(); i++) {
-          const left = visibleSyms();
-          if (!left.length) break;
-          const r = await a.deleteSymbol(left[0]);
-          if (!r || (r.status !== 'removed' && r.status !== 'missing')) break;
-        }
-      }
-    }
-    return q;
-  }
-
   async function handleQuoteTask(t) {
     const a = api();
     const sym = String(t.symbol || '').trim().toUpperCase();
     const p = t.params || {};
     const origin = currentGroup();
     const say = (x) => { try { a.renderScan(`📈 ${sym}：${x}`, 'task'); } catch (e) { } };
-    let plan = Array.isArray(p.plan) && p.plan.length ? p.plan.slice() : [{ src: 'temp', group: TEMP_GROUP }];
+    const plan = Array.isArray(p.plan) ? p.plan.slice() : [];
     let pi = plan.findIndex(s => s.src !== 'positions');
     if (pi < 0) pi = plan.length;
     plan.splice(pi, 0, { src: 'current' });               // 当前分组可见行 = 零切换最快
@@ -399,7 +364,6 @@
               positions = r.records || null;
             } else err = (r && r.error) || '持仓页没有这只股票';
           } else if (step.src === 'current') {
-            if (sameGroup(currentGroup(), TEMP_GROUP)) continue;
             q = a.rowQuote(sym);
             if (q && !quoteReady(q)) q = await waitQuote(sym, 1500);
             if (!q) continue;
@@ -409,8 +373,8 @@
             say(`切到「${step.group}」读取（整组一起缓存）…`);
             const res = await quoteInGroup(sym, step.group);
             q = res.q; batch = res.batch;
-          } else if (step.src === 'temp') {
-            q = await quoteViaTemp(sym, step.group || TEMP_GROUP, say);
+          } else {
+            err = `不支持的取数来源：${step.src}`;
           }
         } catch (e) { err = String((e && e.message) || e); }
         if (quoteReady(q)) {

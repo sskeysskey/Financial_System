@@ -306,7 +306,11 @@ setInterval(refreshAgentStatus, 3000);
 
 /* ---------- ⚡ 一键组合 ---------- */
 $('comboAllBtn').addEventListener('click', () =>
-  runCombo('combo_all', { strictSync: $('wlStrict').checked, targetGroup: targetGroupVal() }));
+  runCombo('combo_all', {
+    strictSync: $('wlStrict').checked,
+    targetGroup: targetGroupVal(),
+    keepExtra: keepExtraList()   // ★ 新增：与“额外保留”输入框一致
+  }));
 
 /* ---------- JSON 处理 ---------- */
 function buildMap(json) {

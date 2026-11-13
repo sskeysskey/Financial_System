@@ -3,6 +3,7 @@ import json
 import logging
 import platform
 import os
+import sys
 import glob
 import time
 import subprocess
@@ -53,8 +54,12 @@ def open_file_externally(file_path):
     except Exception as e:
         logging.error(f"打开文件失败: {e}")
 
+AUTO = os.environ.get("PIPELINE_AUTO") == "1"
 
 def display_dialog(message):
+    if AUTO:
+        logging.info(f"[AUTO] {message}")
+        return
     """跨平台弹窗提示"""
     if platform.system() == 'Darwin':
         try:
@@ -287,15 +292,18 @@ def run_etf_processing():
     except Exception as e:
         logging.error(f"删除文件时发生错误: {e}")
 
-    # 7. 打开结果
-    if os.path.exists(OUTPUT_TXT_FILE):
+    # 7. 打开结果（只有本次出现新 ETF 才打开文件）
+    if new_etfs_to_file:
         open_file_externally(OUTPUT_TXT_FILE)
-    else:
-        display_dialog("所有 ETF 数据已同步，没有发现新的 ETF。")
+        return "new"          # 有新 ETF，需要人工处理
+    logging.info("所有 ETF 数据已同步，没有发现新的 ETF。")
+    return "synced"           # 本次无新 ETF
 
 
 def main():
-    run_etf_processing()
+    result = run_etf_processing()
+    # 0 = 已同步无新 ETF；2 = 有新 ETF；1 = 错误/未完成
+    sys.exit({"synced": 0, "new": 2}.get(result, 1))
 
 
 if __name__ == "__main__":

@@ -49,8 +49,8 @@ table = 'ETFs'                                      # 配置表名
 #     "Rice", "Soybeans"
 # ]
 names_to_delete = [
-    "EMLC"
+    "SOXX"
 ]
-date_to_delete = '2026-10-30'
+date_to_delete = '2026-11-04'
 
 delete_records_by_name_and_date(db_path, table, names_to_delete, date_to_delete)

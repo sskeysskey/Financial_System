@@ -37,8 +37,7 @@ TRADE_LOG_MAX_BYTES = int(os.environ.get("FT_TRADE_LOG_MAX_BYTES", str(1024 * 10
 QUOTE_FRESH_MIN = float(os.environ.get("FT_QUOTE_FRESH_MIN", "30"))   # ★ G 键缓存有效期（分钟）
 _LAST_AGENT_VISIBLE = [False]
 _QUOTE_SRC_LABEL = {"positions": "持仓页", "group": "自选分组", "current": "当前分组",
-                    "temp": "临时分组", "earning": "Earning 快照", "live": "实时取数"}
-TEMP_GROUP = os.environ.get("FT_TEMP_GROUP", "temp")
+                    "earning": "Earning 快照", "live": "实时取数"}
 _LIVE_LOCK = threading.Lock()
 MEMBER_RECENT_MAX = 200
 _MEM_LOCK = threading.Lock()
@@ -1054,24 +1053,50 @@ def drop_membership_group(group):
     return {"status": "ok", "group": g, "dropped": existed}
 
 
+_EARNING_GROUP_RE = re.compile(r"^EARNING\d*$", re.I)
+
+
+def _is_earning_group(g):
+    return bool(_EARNING_GROUP_RE.match(re.sub(r"\s+", "", _clean_group(g))))
+
+
+def _is_held(rec):
+    """数量不为 0 才算持仓；没有数量字段时按持仓处理"""
+    if not isinstance(rec, dict):
+        return False
+    raw = str(rec.get("quantity", "")).replace(",", "").strip()
+    try:
+        return float(raw) != 0
+    except ValueError:
+        return True
+
+
 def build_quote_plan(symbol):
-    """持仓页 → 所在自选分组（成员少的优先，最多 2 个）→ temp 临时分组"""
+    """持仓页 → 所在 Earning 系列分组（成员少的优先，最多 2 个）。两者都没有 → 空列表（调用方走 Z）"""
     k = _sym_key(symbol)
     plan = []
     pos = _load_json(POSITIONS_JSON_PATH)
-    if any(_sym_key(s) == k for s in pos.keys() if not str(s).startswith("_")):
+    if any(_sym_key(s) == k and _is_held(r) for s, r in pos.items() if not str(s).startswith("_")):
         plan.append({"src": "positions"})
+
     mem = _load_json(WL_MEMBERSHIP_JSON_PATH)
     groups = mem.get("groups") if isinstance(mem.get("groups"), dict) else {}
     hits = []
     for g, r in groups.items():
-        if not isinstance(r, dict) or _clean_group(g).lower() == TEMP_GROUP.lower():
+        if not isinstance(r, dict) or not _is_earning_group(g):
             continue
         if any(_sym_key(s) == k for s in (r.get("symbols") or [])):
             hits.append((int(r.get("count") or 0), _clean_group(g)))
-    for _, g in sorted(hits)[:2]:
-        plan.append({"src": "group", "group": g})
-    plan.append({"src": "temp", "group": TEMP_GROUP})
+    names = [g for _, g in sorted(hits)[:2]]
+
+    if not names:      # 归属数据没扫过时，用 Earning 行情快照兜底
+        snap = _load_json(WATCHLIST_JSON_PATH).get("quotes")
+        if isinstance(snap, dict):
+            for key, rec in snap.items():
+                if _sym_key(key) == k and isinstance(rec, dict) and _is_earning_group(rec.get("group") or "Earning"):
+                    names.append(_clean_group(rec.get("group") or "Earning"))
+                    break
+    plan += [{"src": "group", "group": g} for g in names]
     return plan
 
 def launch_chart(symbol):
@@ -1340,13 +1365,20 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
-        # ★ G 键：先查缓存（默认 30 分钟有效），过期才让浏览器抓（持仓页 → 自选分组 → temp）
+        # ★ G 键：持仓/Earning 先查缓存，过期才让浏览器抓；两者都不是 → 返回 fallback，由客户端走 Z
         if path == "/ft_quote":
             try:
                 body = self._read_json_body()
                 symbol = str(body.get("symbol", "")).strip().upper()
                 if not symbol:
                     self._reply(400, {"status": "error", "ok": False, "message": "no symbol"})
+                    return
+                plan = build_quote_plan(symbol)
+                if not plan:
+                    _log(f"[取数] {symbol} 既非持仓也非 Earning → 不走浏览器，交给客户端 Z")
+                    self._reply(200, {"status": "no_source", "ok": False, "fallback": "futu",
+                                      "action": "quote", "id": "",
+                                      "message": f"{symbol} 既非持仓也非 Earning 系列分组，请改用 Z（Futu）"})
                     return
                 wait = float(body.get("wait", 0) or 0)
                 force = bool(body.get("force", False))
@@ -1367,7 +1399,6 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                                                                    "group": hit["group"], "change_pct": hit["change_pct"],
                                                                    "last": hit["last"], "age_min": age}})
                         return
-                plan = build_quote_plan(symbol)
                 agent_ok = _LAST_AGENT_VISIBLE[0] and (time.time() - _LAST_AGENT_POLL[0]) < AGENT_ALIVE_SEC
                 tab = "agent_visible" if agent_ok else ensure_watchlist_tab()
                 t = find_active_task("quote", symbol)

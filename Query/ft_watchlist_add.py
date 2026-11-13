@@ -157,6 +157,7 @@ def quote_symbol(symbol, wait=120, force=False, max_age_min=None):
     out["ok"] = bool(r.get("ok"))
     out["cached"] = bool(r.get("cached"))
     out["data"] = r.get("data") or {}
+    out["fallback"] = r.get("fallback") or ""      # bridge 判定“无可用来源”时为 'futu'
     out["message"] = r.get("message") or ("已取到最新变更%" if out["ok"] else "未收到浏览器回报")
     out["raw"] = r
     return out

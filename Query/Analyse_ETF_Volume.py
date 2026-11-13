@@ -5,6 +5,7 @@ import re
 import bisect
 import heapq
 import datetime
+from Analyse_run_mode import resolve_run_mode
 
 # --- 1. 配置文件和路径 ---
 USER_HOME = os.path.expanduser("~")
@@ -12,13 +13,14 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "BWET"
-# TARGET_DATE = "2026-09-25"
+SYMBOL_TO_TRACE = "THD"
+TARGET_DATE = "2026-11-06"
 
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "ETF_Volume_trace_log.txt")
+ENABLE_TRACE_LOG_FILE = False   # 临时关闭日志文件; 需要时改为 True
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -1110,7 +1112,7 @@ def run_etf_volume_logic(log_detail):
 
 
 def main():
-    if SYMBOL_TO_TRACE:
+    if SYMBOL_TO_TRACE and ENABLE_TRACE_LOG_FILE:
         print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志: {LOG_FILE_PATH}")
         try:
             with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
@@ -1121,11 +1123,16 @@ def main():
         except IOError as e:
             print(f"错误：无法写入日志文件: {e}")
     else:
-        print("追踪模式未启用。")
+        if SYMBOL_TO_TRACE:
+            print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}（未写入日志文件）")
+        else:
+            print("追踪模式未启用。")
+
         def log_detail_console(message):
             print(message)
         run_etf_volume_logic(log_detail_console)
 
 
 if __name__ == '__main__':
+    SYMBOL_TO_TRACE, TARGET_DATE = resolve_run_mode(SYMBOL_TO_TRACE, TARGET_DATE)
     main()

@@ -76,7 +76,7 @@ try:
                            FT_DEBUG, FT_SHOW_MISS,
                            FIRSTRADE_POSITIONS_FILE, FIRSTRADE_WATCHLIST_FILE,
                            build_membership_items, membership_signature,
-                           get_watchlist_membership)
+                           get_watchlist_membership, has_quote_source)
 except Exception as _e:
     print(f"[FT] 加载 ft_quotes 失败（持仓/自选行情将不显示）: {_e}")
     FT_DEBUG, FT_SHOW_MISS = False, False
@@ -88,6 +88,7 @@ except Exception as _e:
     def build_membership_items(_s, _t): return []
     def membership_signature(): return 0.0
     def get_watchlist_membership(_s): return None
+    def has_quote_source(_s): return 'unknown'     # ft_quotes 加载失败时：交给 bridge 判断
 
 # --- Firstrade 一键加入自选股分组 ---
 try:
@@ -165,6 +166,11 @@ TIME_OPTIONS = {"1m": 0.08, "3m": 0.25, "6m": 0.5, "1Y": 1, "2Y": 2,
                 "3Y": 3, "5Y": 5, "10Y": 10, "All": 0}
 HOVER_THROTTLE = 1 / 90.0
 REBUILD_THROTTLE = 0.15
+
+# 顶部子标题两组字段的位置（想调整只改这里）
+MARKET_ROW_X0   = 0.60    # 行情字段（成本/损益/变更/现价/自选…）起点，原来在 0.045
+MARKET_ROW_XMAX = 0.945   # 行情字段右侧截止（右边是 0.95 以后的 RadioButtons 列）
+STAT_ROW_X0     = 0.045   # P/A、Max、Min、ER、Polymarket 起点，原来在右侧
 
 
 # ======================================================================
@@ -832,7 +838,7 @@ class ChartWindow:
 
         # 一键加自选：状态提示行 + 后台线程结果队列
         self.wl_status_artist = self.fig.text(
-            0.5, 0.885, "", ha='center', va='top', fontsize=13, fontweight='bold',
+            0.5, 0.853, "", ha='center', va='top', fontsize=13, fontweight='bold',
             color=NORD_THEME['accent_yellow'], visible=False,
             transform=self.fig.transFigure, fontname='Arial Unicode MS')
         self._wl_results = []
@@ -1582,7 +1588,8 @@ class ChartWindow:
 
         ft_items = build_market_items(name, NORD_THEME, show_miss=FT_SHOW_MISS)
         if ft_items:
-            self.subtitle_artists.extend(_ft_layout_text_row(fig, 0.045, 0.915, ft_items, fontsize=12))
+            self.subtitle_artists.extend(_ft_layout_text_row(
+                fig, MARKET_ROW_X0, 0.915, ft_items, fontsize=12, x_limit=MARKET_ROW_XMAX))
 
         er_pct_str, max_pct_str, min_pct_str = "--", "--", "--"
         er_color = NORD_THEME['text_bright']
@@ -1609,7 +1616,7 @@ class ChartWindow:
         y_pos = 0.915
         center_x = 0.35
         spacing_outer = 0.16
-        base_x = center_x + spacing_outer + 0.08
+        base_x = STAT_ROW_X0 + 0.08   # P/A 位于 base_x - 0.08，即 STAT_ROW_X0
 
         pre_after_str = "--"
         pa_color = NORD_THEME['text_bright']
@@ -2145,6 +2152,10 @@ class ChartWindow:
             if res.get('action') == 'quote':
                 qsym = str(res.get('symbol', '')).upper()
                 self._quote_pending.discard(qsym)
+                if res.get('fallback') == 'futu':            # bridge 判定无来源 → 走 Z
+                    if self.name and _ft_norm_sym(self.name) == _ft_norm_sym(qsym):
+                        self._fallback_to_z(qsym)
+                    continue
                 if ok and self.name and _ft_norm_sym(self.name) == _ft_norm_sym(qsym):
                     try:
                         self.draw_subtitle(current_prices=self.current_filtered_prices,
@@ -2192,7 +2203,8 @@ class ChartWindow:
             print(f"[FT] 分组归属读取失败: {e}")
             items = []
         if items:
-            self.member_artists.extend(_ft_layout_text_row(self.fig, 0.045, 0.884, items, fontsize=12, x_limit=0.34))
+            self.member_artists.extend(_ft_layout_text_row(
+                self.fig, MARKET_ROW_X0, 0.884, items, fontsize=12, x_limit=MARKET_ROW_XMAX))
         return True
 
     def _refresh_membership(self):
@@ -2213,13 +2225,25 @@ class ChartWindow:
                 return f"自选「{m['groups'][0]}」"
         except Exception:
             pass
-        return "临时分组 temp"
+        return "Earning 分组"
+
+    def _fallback_to_z(self, sym):
+        """既非持仓也非 Earning：效果与按 Z 完全一致"""
+        self._quote_pending.discard(str(sym).upper())
+        self._show_wl_status(f"ℹ {sym} 既非持仓也非 Earning → 改用 Z（Futu）查询",
+                             NORD_THEME['accent_cyan'], ttl=4.0)
+        execute_external_script('check_futu', self.name)
 
     def _refresh_ft_quote(self, force=False):
-        """G 键：优先用 bridge 缓存（默认 30 分钟），⇧G 强制让浏览器重抓"""
-        if not FT_WL_ADD_OK or not self.name:
+        """G 键：持仓 / Earning 走浏览器取数（30 分钟缓存，⇧G 强制）；其余直接走 Z"""
+        if not self.name:
             return
         sym = str(self.name).upper()
+        if has_quote_source(sym) == '':          # 'unknown'（模块加载失败）时继续走 bridge，由它兜底
+            self._fallback_to_z(sym)
+            return
+        if not FT_WL_ADD_OK:
+            return
         if sym in self._quote_pending:
             self._show_wl_status(f"⏳ {sym} 正在取数中，请稍候…", NORD_THEME['accent_yellow'], ttl=5)
             return
