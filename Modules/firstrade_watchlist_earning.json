@@ -1,129 +1,16 @@
 {
  "_meta": {
-  "updated_at": 1794553160.886994,
-  "updated_at_str": "2026-11-13 14:59:20",
-  "count": 14,
+  "updated_at": 1794631195.448475,
+  "updated_at_str": "2026-11-14 12:39:55",
+  "count": 0,
   "mode": "overwrite",
   "group": "Earning",
   "groups": {
    "Earning": {
-    "updated_at": 1794553160.886994,
-    "count": 14
+    "updated_at": 1794631195.448475,
+    "count": 0
    }
   }
  },
- "quotes": {
-  "AMAT": {
-   "symbol": "AMAT",
-   "change_pct": "+0.45%",
-   "change_pct_num": 0.45,
-   "last": "382.65",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "ANDG": {
-   "symbol": "ANDG",
-   "change_pct": "-2.69%",
-   "change_pct_num": -2.69,
-   "last": "63.66",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "ARWR": {
-   "symbol": "ARWR",
-   "change_pct": "-1.93%",
-   "change_pct_num": -1.93,
-   "last": "46.24",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "CBRS": {
-   "symbol": "CBRS",
-   "change_pct": "+18.50%",
-   "change_pct_num": 18.5,
-   "last": "115.83",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "CIG": {
-   "symbol": "CIG",
-   "change_pct": "+2.17%",
-   "change_pct_num": 2.17,
-   "last": "1.88",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "CSCO": {
-   "symbol": "CSCO",
-   "change_pct": "-1.07%",
-   "change_pct_num": -1.07,
-   "last": "100.92",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "FLO": {
-   "symbol": "FLO",
-   "change_pct": "-7.82%",
-   "change_pct_num": -7.82,
-   "last": "5.54",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "HTFL": {
-   "symbol": "HTFL",
-   "change_pct": "-1.64%",
-   "change_pct_num": -1.64,
-   "last": "58.94",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "KOD": {
-   "symbol": "KOD",
-   "change_pct": "+0.43%",
-   "change_pct_num": 0.43,
-   "last": "108.72",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "NU": {
-   "symbol": "NU",
-   "change_pct": "+2.62%",
-   "change_pct_num": 2.62,
-   "last": "12.14",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "STNE": {
-   "symbol": "STNE",
-   "change_pct": "-3.50%",
-   "change_pct_num": -3.5,
-   "last": "7.45",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "TMC": {
-   "symbol": "TMC",
-   "change_pct": "+0.87%",
-   "change_pct_num": 0.87,
-   "last": "2.32",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "WSE": {
-   "symbol": "WSE",
-   "change_pct": "+5.22%",
-   "change_pct_num": 5.22,
-   "last": "11.50",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  },
-  "YSS": {
-   "symbol": "YSS",
-   "change_pct": "-5.45%",
-   "change_pct_num": -5.45,
-   "last": "6.24",
-   "group": "Earning",
-   "updated_at": 1794553160.886994
-  }
- }
+ "quotes": {}
 }

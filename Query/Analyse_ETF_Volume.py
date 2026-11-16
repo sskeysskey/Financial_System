@@ -16,8 +16,8 @@ BASE_PATH = USER_HOME
 # SYMBOL_TO_TRACE = ""
 # TARGET_DATE = ""
 
-SYMBOL_TO_TRACE = "THD"
-TARGET_DATE = "2026-11-06"
+SYMBOL_TO_TRACE = "XLE"
+TARGET_DATE = "2026-10-08"
 
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "ETF_Volume_trace_log.txt")
 ENABLE_TRACE_LOG_FILE = False   # 临时关闭日志文件; 需要时改为 True
@@ -46,12 +46,12 @@ CONFIG = {
     "AUTO_CREATE_DB_INDEX": True,      # 【新增】自动为 ETFs(name, date) 建索引 (IF NOT EXISTS, 不改数据)
 
     # ========== 策略1 (ETF_Volume_high 放量突破) 参数 ==========
-    "ETF_COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月
+    "ETF_COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 6,  # 成交额回溯12个月
     "ETF_COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前3名
 
     # ========== 策略1 附加："追" 规则 参数 【新增】 ==========
-    "ETF_COND_HIGH_CHASE_LOOKBACK_TRADING_DAYS": 15,  # T日之前 N 个交易日内(不含T日)出现过原始 high 信号
-    "ETF_COND_HIGH_CHASE_DROP_THRESHOLD": 0.12,       # 今日收盘较 high 当日收盘下跌 >= 12%
+    "ETF_COND_HIGH_CHASE_LOOKBACK_TRADING_DAYS": 56,  # T日之前 N 个交易日内(不含T日)出现过原始 high 信号
+    "ETF_COND_HIGH_CHASE_DROP_THRESHOLD": 0.031,       # 今日收盘较 high 当日收盘下跌 >= 12%
     "ETF_COND_HIGH_CHASE_USE_DB_RECALC": True,        # 信号源①: 用数据库按策略1原规则重算历史 high
     "ETF_COND_HIGH_CHASE_USE_HISTORY": True,          # 信号源②: Earning_History.json 中 ETF_Volume_high (不带追)
     "ETF_HIGH_CHASE_MARK": "追",                      # Panel/History 中的标记
@@ -61,6 +61,11 @@ CONFIG = {
     "ETF_COND_LOW_DROP_THRESHOLD": 0.06,           # 距最高点跌幅 (原逻辑的常规跌幅)
     "ETF_COND_LOW_TURNOVER_MONTHS": 2,             # 成交额回溯月份
     "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 3,     # 成交额排名前 N 名
+
+    # ========== 策略2 附加："追" 规则 【新增】 ==========
+    "ETF_COND_LOW_CHASE_LOOKBACK_TRADING_DAYS": 56,   # 09-09 是 T 日前第 16 个交易日
+    "ETF_COND_LOW_CHASE_DROP_THRESHOLD": 0.031,
+    "ETF_COND_LOW_CHASE_USE_HISTORY": True,           # 信号源: History 中 ETF_Volume_low (不带"追")
 
     # ========== 策略2 附加：年度成交额前三 "甲" 标记 参数 ==========
     "ETF_COND_LOW_YEARLY_TURNOVER_LOOKBACK_MONTHS": 12,  # 年度成交额回溯12个月
@@ -868,6 +873,164 @@ def process_etf_deep_drop(db_path, base_date, symbol_to_trace, log_detail):
     log_detail(f"\n策略3 筛选完成，共命中 {len(results)} 个 ETF: {results}")
     return results, detail_map
 
+# --- 策略2 附加【新增】: ETF_Volume_low "追" ---
+def process_etf_volume_low_chase(db_path, base_date, history_json_path, exclude_symbols,
+                                 symbol_to_trace, log_detail):
+    """
+    规则:
+      1) T 日收盘价 < T-1 收盘价 (今日下跌)
+      2) T 日之前 N 个交易日内 (默认16, 不含T日) 出现过原始 ETF_Volume_low 信号 (History 中不带"追")
+      3) T 日收盘价 <= 信号日收盘价 × (1 - 阈值)
+    返回 (results, detail_map)
+    """
+    lookback_td = CONFIG.get("ETF_COND_LOW_CHASE_LOOKBACK_TRADING_DAYS", 16)
+    drop_threshold = CONFIG.get("ETF_COND_LOW_CHASE_DROP_THRESHOLD", 0.031)
+    use_hist = CONFIG.get("ETF_COND_LOW_CHASE_USE_HISTORY", True)
+    chase_mark = CONFIG.get("ETF_HIGH_CHASE_MARK", "追")
+    max_stale_days = CONFIG.get("ETF_MAX_STALE_DAYS", 15)
+
+    log_detail(f"\n========== 开始执行 策略2附加 (ETF_Volume_low '{chase_mark}') ==========")
+    log_detail(f"参数: 回溯 {lookback_td} 个交易日 | 较信号日跌幅 >= {drop_threshold:.2%}")
+    log_detail(f"基准日期: {base_date}")
+
+    try:
+        base_dt = _parse_date(base_date)
+    except Exception as e:
+        log_detail(f"错误: 基准日期解析失败: {e}")
+        return [], {}
+
+    if not use_hist:
+        log_detail("未启用 History 信号源, 跳过。")
+        return [], {}
+
+    data, ok = _load_json_safe(history_json_path, log_detail)
+    if not ok or not data:
+        log_detail("无法加载 History JSON 或为空，跳过。")
+        return [], {}
+
+    exclude_symbols = set(exclude_symbols or [])
+    coarse_days = lookback_td * 4 + 30
+    data_start_str = (base_dt - datetime.timedelta(days=coarse_days)).strftime("%Y-%m-%d")
+
+    # 构建 symbol -> {date_str}, 只取不带"追"的原始 low 信号
+    hist_index = {}
+    for date_str, syms in (data.get("ETF_Volume_low", {}) or {}).items():
+        try:
+            hd = _parse_date(date_str)
+        except Exception:
+            continue
+        if hd >= base_dt or (base_dt - hd).days > coarse_days:
+            continue
+        for raw in syms or []:
+            sym, suffix = _split_hist_symbol(raw)
+            if not sym or chase_mark in suffix:
+                continue
+            hist_index.setdefault(sym, set()).add(date_str)
+    log_detail(f"History 中近期原始 low 记录涉及 ETF 数: {len(hist_index)}")
+
+    results, detail_map = [], {}
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    cursor = conn.cursor()
+
+    for symbol in sorted(hist_index):
+        if symbol in exclude_symbols:
+            continue
+        is_tracing = (symbol == symbol_to_trace)
+        if is_tracing:
+            log_detail(f"\n--- [{chase_mark}规则-low] 检查 ETF {symbol} ---")
+
+        # Step1: 今日下跌判断
+        cursor.execute(
+            'SELECT date, price FROM "ETFs" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2',
+            (symbol, base_date)
+        )
+        last2 = cursor.fetchall()
+        if len(last2) < 2 or last2[0][1] is None or last2[1][1] is None:
+            if is_tracing: log_detail("    x 无当前或前一日价格数据")
+            continue
+
+        latest_date, latest_price = last2[0]
+        prev_date, prev_price = last2[1]
+
+        if _is_stale(latest_date, base_dt, max_stale_days):
+            if is_tracing:
+                log_detail(f"    x 数据停更: 最新 {latest_date}, 距基准日 {_stale_days(latest_date, base_dt)} 天")
+            continue
+
+        if not (latest_price < prev_price):
+            if is_tracing: log_detail(f"    x T日未下跌 ({latest_price:.4f} >= {prev_price:.4f})")
+            continue
+        if is_tracing:
+            log_detail(f"    - T日下跌: [{prev_date}] {prev_price:.4f} -> [{latest_date}] {latest_price:.4f}")
+
+        # Step2: 拉取价格序列, 把 History 日期映射到交易日
+        cursor.execute(
+            'SELECT date, price FROM "ETFs" WHERE name = ? AND date >= ? AND date <= ? ORDER BY date ASC',
+            (symbol, data_start_str, latest_date)
+        )
+        rows = cursor.fetchall()
+        if not rows or rows[-1][0] != latest_date:
+            if is_tracing: log_detail("    x 数据异常, 跳过")
+            continue
+
+        dates = [r[0] for r in rows]
+        t_idx = len(rows) - 1
+        win_start = max(0, t_idx - lookback_td)
+        if is_tracing:
+            log_detail(f"    - 回溯窗口: [{dates[win_start]} ~ {dates[t_idx - 1]}] 共 {t_idx - win_start} 个交易日")
+
+        signals = {}
+        for hd in sorted(hist_index[symbol]):
+            k = bisect.bisect_right(dates, hd) - 1   # 映射到 <= hd 的最近交易日
+            if win_start <= k < t_idx:
+                signals[k] = "History"
+            elif is_tracing:
+                log_detail(f"    - History 记录 {hd} 不在窗口内 (或映射到T日自身), 忽略")
+
+        if not signals:
+            if is_tracing: log_detail(f"    x 近 {lookback_td} 个交易日内无原始 low 信号")
+            continue
+
+        best = None
+        for i in sorted(signals):
+            sig_date, sig_price = rows[i]
+            if sig_price is None or sig_price <= 0:
+                continue
+            drop_pct = 1 - latest_price / sig_price
+            ok_drop = latest_price <= sig_price * (1 - drop_threshold)
+            if is_tracing:
+                log_detail(f"    - 信号日 [{sig_date}] ({t_idx - i}个交易日前) 收盘 {sig_price:.4f} "
+                           f"-> 今日 {latest_price:.4f}, 跌幅 {drop_pct:.2%} = {ok_drop}")
+            if ok_drop and (best is None or drop_pct > best["drop_pct"]):
+                best = {
+                    "signal_date": sig_date,
+                    "signal_price": sig_price,
+                    "signal_source": signals[i],
+                    "days_ago": t_idx - i,
+                    "latest_date": latest_date,
+                    "latest_price": latest_price,
+                    "drop_pct": drop_pct,
+                }
+
+        if best is None:
+            continue
+
+        results.append(symbol)
+        detail_map[symbol] = best
+        if is_tracing:
+            log_detail(f"    ✅ [选中] 今日下跌 + 较 [{best['signal_date']}] 下跌 {best['drop_pct']:.2%} "
+                       f">= {drop_threshold:.2%} -> 标记 '{chase_mark}'")
+
+    conn.close()
+    results = sorted(set(results))
+
+    log_detail(f"\n--- '{chase_mark}'(low) 命中明细 ---")
+    for sym in sorted(results, key=lambda s: detail_map[s]["drop_pct"], reverse=True):
+        d = detail_map[sym]
+        log_detail(f"  {sym:<8} 跌 {d['drop_pct']:>7.2%} | 信号日 [{d['signal_date']}] {d['signal_price']:.4f} "
+                   f"({d['days_ago']}日前) -> [{d['latest_date']}] {d['latest_price']:.4f}")
+    log_detail(f"\n'{chase_mark}'(low) 规则筛选完成，共命中 {len(results)} 个 ETF: {results}")
+    return results, detail_map
 
 def process_etf_volume_low_continuation(db_path, base_date, history_json_path, symbol_to_trace, log_detail):
     """
@@ -1010,7 +1173,7 @@ def run_etf_volume_logic(log_detail):
                f"=> 合并后 {len(final_etf_high)} 个")
 
     # ===== 策略2 + 延续 + 策略3 =====
-    final_etf_low = process_etf_volume_low(DB_FILE, base_date_str, SYMBOL_TO_TRACE, log_detail)
+    final_etf_low_raw = process_etf_volume_low(DB_FILE, base_date_str, SYMBOL_TO_TRACE, log_detail)
     final_etf_low_cont = process_etf_volume_low_continuation(
         DB_FILE, base_date_str, EARNING_HISTORY_JSON_FILE, SYMBOL_TO_TRACE, log_detail
     )
@@ -1019,15 +1182,25 @@ def run_etf_volume_logic(log_detail):
     )
     deep_drop_set = set(final_etf_deep_drop)
 
-    before_merge = len(final_etf_low)
-    merged = set(final_etf_low) | set(final_etf_low_cont) | deep_drop_set
-    only_deep = sorted(deep_drop_set - set(final_etf_low) - set(final_etf_low_cont))
-    final_etf_low = sorted(list(merged))
+    before_merge = len(final_etf_low_raw)
+    merged = set(final_etf_low_raw) | set(final_etf_low_cont) | deep_drop_set
+    only_deep = sorted(deep_drop_set - set(final_etf_low_raw) - set(final_etf_low_cont))
+    merged_pre_chase = sorted(merged)
+
+    # ===== 策略2 附加: 追 (新增) =====
+    final_etf_low_chase, low_chase_detail = process_etf_volume_low_chase(
+        DB_FILE, base_date_str, EARNING_HISTORY_JSON_FILE,
+        merged_pre_chase, SYMBOL_TO_TRACE, log_detail
+    )
+    low_chase_set = set(final_etf_low_chase) - set(merged_pre_chase)
+    final_etf_low = sorted(set(merged_pre_chase) | low_chase_set)
 
     log_detail(f"\n========== ETF_Volume_low 合并结果 ==========")
     log_detail(f"  原策略2: {before_merge} 个")
     log_detail(f"  延续规则: {len(final_etf_low_cont)} 个")
     log_detail(f"  深跌规则(策略3): {len(deep_drop_set)} 个 (其中仅由深跌规则新增: {len(only_deep)} 个)")
+    log_detail(f"  追规则(low): {len(low_chase_set)} 个")
+    log_detail(f"  => 合并后共 {len(final_etf_low)} 个")
     if only_deep:
         log_detail(f"  仅深跌新增清单: {only_deep}")
     log_detail(f"  => 去重合并后共 {len(final_etf_low)} 个")
@@ -1059,7 +1232,7 @@ def run_etf_volume_logic(log_detail):
         return note_map
 
     etf_high_notes = build_notes(final_etf_high, chase=chase_set)
-    etf_low_notes = build_notes(final_etf_low, etf_low_jia_set, deep_drop_set)
+    etf_low_notes = build_notes(final_etf_low, etf_low_jia_set, deep_drop_set, chase=low_chase_set)
 
     if SYMBOL_TO_TRACE:
         log_detail(f"\n{'='*60}")
@@ -1070,7 +1243,12 @@ def run_etf_volume_logic(log_detail):
             c = chase_detail[SYMBOL_TO_TRACE]
             log_detail(f"        └─ 信号日[{c['signal_date']}] {c['signal_price']:.4f} ({c['signal_source']}) -> "
                        f"[{c['latest_date']}] {c['latest_price']:.4f}, 跌 {c['drop_pct']:.2%}")
-        log_detail(f"  策略2 ETF_Volume_low:       {'✅' if SYMBOL_TO_TRACE in final_etf_low else '❌'}")
+        log_detail(f"  策略2 ETF_Volume_low:       {'✅' if SYMBOL_TO_TRACE in final_etf_low_raw else '❌'}")
+        log_detail(f"  策略2附加 '{chase_mark}'(low):  {'✅' if SYMBOL_TO_TRACE in low_chase_set else '❌'}")
+        if SYMBOL_TO_TRACE in low_chase_detail:
+            c = low_chase_detail[SYMBOL_TO_TRACE]
+            log_detail(f"        └─ 信号日[{c['signal_date']}] {c['signal_price']:.4f} -> "
+                       f"[{c['latest_date']}] {c['latest_price']:.4f}, 跌 {c['drop_pct']:.2%}")
         log_detail(f"  策略3 半年深跌(标'{deep_mark}'):    {'✅' if SYMBOL_TO_TRACE in deep_drop_set else '❌'}")
         if SYMBOL_TO_TRACE in deep_drop_detail:
             d = deep_drop_detail[SYMBOL_TO_TRACE]

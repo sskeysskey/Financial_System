@@ -248,8 +248,7 @@
         "DAL",
         "BE",
         "HONA",
-        "LHX",
-        "WAB"
+        "LHX"
     ],
     "Real_Estate": [
         "PLD",
@@ -318,7 +317,8 @@
         "GRMN",
         "ADSK",
         "LITE",
-        "KEYS"
+        "KEYS",
+        "XYZ"
     ],
     "Utilities": [
         "NEE",

@@ -1,8 +1,8 @@
 {
  "_meta": {
-  "updated_at": 1794570054.9280908,
-  "updated_at_str": "2026-11-13 19:40:54",
-  "count": 30
+  "updated_at": 1794575507.448489,
+  "updated_at_str": "2026-11-13 21:11:47",
+  "count": 46
  },
  "quotes": {
   "CRWV": {
@@ -183,15 +183,6 @@
    "source": "group",
    "group": "Earning"
   },
-  "NBIS": {
-   "symbol": "NBIS",
-   "updated_at": 1794485862.13954,
-   "change_pct": "+1.76%",
-   "change_pct_num": 1.761006,
-   "last": "157.41",
-   "source": "group",
-   "group": "Earning"
-  },
   "OCTV": {
    "symbol": "OCTV",
    "updated_at": 1794485862.13954,
@@ -270,6 +261,156 @@
    "change_pct": "-0.97%",
    "change_pct_num": -0.9743,
    "last": "146.36",
+   "source": "positions"
+  },
+  "NBIS": {
+   "symbol": "NBIS",
+   "updated_at": 1794572714.999208,
+   "change_pct": "-1.20%",
+   "change_pct_num": -1.197139,
+   "last": "127.10",
+   "source": "positions"
+  },
+  "AMAT": {
+   "symbol": "AMAT",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-0.35%",
+   "change_pct_num": -0.35,
+   "last": "379.60",
+   "source": "group",
+   "group": "Earning"
+  },
+  "ANDG": {
+   "symbol": "ANDG",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-4.71%",
+   "change_pct_num": -4.71,
+   "last": "62.34",
+   "source": "group",
+   "group": "Earning"
+  },
+  "ARWR": {
+   "symbol": "ARWR",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-0.85%",
+   "change_pct_num": -0.85,
+   "last": "46.75",
+   "source": "group",
+   "group": "Earning"
+  },
+  "CBRS": {
+   "symbol": "CBRS",
+   "updated_at": 1794572797.155822,
+   "change_pct": "+16.16%",
+   "change_pct_num": 16.16,
+   "last": "113.55",
+   "source": "group",
+   "group": "Earning"
+  },
+  "CIG": {
+   "symbol": "CIG",
+   "updated_at": 1794572797.155822,
+   "change_pct": "+2.17%",
+   "change_pct_num": 2.17,
+   "last": "1.88",
+   "source": "group",
+   "group": "Earning"
+  },
+  "CSCO": {
+   "symbol": "CSCO",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-3.44%",
+   "change_pct_num": -3.44,
+   "last": "98.50",
+   "source": "group",
+   "group": "Earning"
+  },
+  "FLO": {
+   "symbol": "FLO",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-8.82%",
+   "change_pct_num": -8.82,
+   "last": "5.48",
+   "source": "group",
+   "group": "Earning"
+  },
+  "HTFL": {
+   "symbol": "HTFL",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-1.54%",
+   "change_pct_num": -1.54,
+   "last": "59.00",
+   "source": "group",
+   "group": "Earning"
+  },
+  "KOD": {
+   "symbol": "KOD",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-2.97%",
+   "change_pct_num": -2.97,
+   "last": "105.03",
+   "source": "group",
+   "group": "Earning"
+  },
+  "NU": {
+   "symbol": "NU",
+   "updated_at": 1794572797.155822,
+   "change_pct": "+3.97%",
+   "change_pct_num": 3.97,
+   "last": "12.30",
+   "source": "group",
+   "group": "Earning"
+  },
+  "STNE": {
+   "symbol": "STNE",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-4.27%",
+   "change_pct_num": -4.27,
+   "last": "7.39",
+   "source": "group",
+   "group": "Earning"
+  },
+  "TMC": {
+   "symbol": "TMC",
+   "updated_at": 1794572797.155822,
+   "change_pct": "+0.87%",
+   "change_pct_num": 0.87,
+   "last": "2.32",
+   "source": "group",
+   "group": "Earning"
+  },
+  "WSE": {
+   "symbol": "WSE",
+   "updated_at": 1794572797.155822,
+   "change_pct": "+7.23%",
+   "change_pct_num": 7.23,
+   "last": "11.72",
+   "source": "group",
+   "group": "Earning"
+  },
+  "YSS": {
+   "symbol": "YSS",
+   "updated_at": 1794572797.155822,
+   "change_pct": "-6.06%",
+   "change_pct_num": -6.06,
+   "last": "6.20",
+   "source": "group",
+   "group": "Earning"
+  },
+  "PATH": {
+   "symbol": "PATH",
+   "updated_at": 1794574605.322142,
+   "change_pct": "+0.58%",
+   "change_pct_num": 0.575573,
+   "last": "13.18",
+   "source": "positions"
+  },
+  "QQQ": {
+   "symbol": "QQQ",
+   "updated_at": 1794575507.448489,
+   "change_pct": "+0.11%",
+   "change_pct_num": 0.110293,
+   "last": "688.93",
    "source": "positions"
   }
  }

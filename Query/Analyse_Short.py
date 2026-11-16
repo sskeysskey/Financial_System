@@ -20,8 +20,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 # SYMBOL_TO_TRACE = ""
 # TARGET_DATE = ""
 
-SYMBOL_TO_TRACE = "ROKT"
-TARGET_DATE = "2026-10-13"
+SYMBOL_TO_TRACE = "EIDO"
+TARGET_DATE = "2026-11-03"
 
 # 追踪日志路径
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
@@ -51,7 +51,7 @@ CONFIG = {
     # ---------- [新增] ETF 特殊规则 ----------
     "ETF_RELAXED_ENABLED": True,          # ETF 特殊规则总开关
     "ETF_SECTOR_NAME": "ETFs",            # ETF 所在板块名
-    "ETF_CHASE_MIN_DROP_PCT": 0.035,   # None=不限回落幅度；0=收盘需低于锚点；0.035=回落需>3.5%
+    "ETF_CHASE_MIN_DROP_PCT": 0.028,   # None=不限回落幅度；0=收盘需低于锚点；0.035=回落需>3.5%
 }
 
 # 动态路径生成
