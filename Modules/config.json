@@ -892,9 +892,9 @@
             "control",
             "option"
         ],
-        "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"deepseek_api@2,qianwen_api,doubao_ui\"}",
-        "message": "正在执行 News (DeepSeekAPI起始, Force)..."
+        "actionType": "runInTerminal",
+        "target": "/bin/bash /Users/yanzhang/Coding/Financial_System/Selenium/run_mw_daily.sh",
+        "message": "正在启动 run_mw_daily 序列..."
     },
     {
         "key": "z",

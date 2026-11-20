@@ -99,10 +99,7 @@
         "OKE",
         "TRGP",
         "LNG",
-        "OXY",
-        "CVE",
-        "DVN",
-        "FANG"
+        "OXY"
     ],
     "Financial_Services": [
         "JPM",
@@ -201,8 +198,6 @@
         "BDX",
         "EW",
         "IDXX",
-        "HUM",
-        "TEVA",
         "WAT"
     ],
     "Industrials": [
@@ -245,10 +240,7 @@
         "URI",
         "FAST",
         "SPCX",
-        "DAL",
-        "BE",
-        "HONA",
-        "LHX"
+        "DAL"
     ],
     "Real_Estate": [
         "PLD",
@@ -316,9 +308,7 @@
         "SKHY",
         "GRMN",
         "ADSK",
-        "LITE",
-        "KEYS",
-        "XYZ"
+        "ANT"
     ],
     "Utilities": [
         "NEE",
@@ -327,7 +317,6 @@
         "NGG",
         "CEG",
         "AEP",
-        "SRE",
         "D",
         "XEL"
     ]

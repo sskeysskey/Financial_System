@@ -405,7 +405,8 @@
         "LNTH",
         "SYNA",
         "RXO",
-        "ROKU"
+        "ROKU",
+        "NWE"
     ],
     "etf": [
         "VDE",
@@ -838,7 +839,9 @@
         "EQL",
         "FPA",
         "JHEM",
-        "RJCA"
+        "RJCA",
+        "IMCB",
+        "GSSC"
     ],
     "Earning": [],
     "Options": [

@@ -514,7 +514,7 @@ $('wlStrict').addEventListener('change', () => {
 $('wlRebuild').addEventListener('change', () => {
   const v = $('wlRebuild').checked;
   chrome.storage.local.set({ ftWlGroupRebuild: v }, () =>
-    setWl(v ? '✅ 整组重建已开：作废标的多的分组会直接整组删除再按今日数据新建（删前备份 + 5 秒倒计时）'
+    setWl(v ? '✅ 整组重建已开：Earning1/2/3… 作废标的多时整组删除再按今日数据新建（基组 Earning 始终逐只删；删前备份 + 5 秒倒计时）'
       : 'ℹ️ 整组重建已关：恢复逐只删除多余标的'));
 });
 

@@ -15,6 +15,8 @@ import platform
 
 # --- 配置部分 ---
 USER_HOME = os.path.expanduser("~")
+sys.path.insert(0, os.path.join(USER_HOME, "Coding", "python_code"))
+from doubao_pair import load_template, click_paired_copy
 
 # 统一路径定义
 JSON_FILE_PATH = os.path.join(USER_HOME, "Coding/Financial_System/Modules/description.json")
@@ -261,46 +263,14 @@ def main():
 
     activate_chrome()
     
-    # --- 修正：使用动态路径引用模板 ---
-    template_paths = {
-        # "poesuccess": "/Users/yanzhang/Coding/python_code/Resource/poe_copy_success.png",
-        # "poethumb": "/Users/yanzhang/Coding/python_code/Resource/poe_thumb.png",
-        "doubaocopy": os.path.join(RESOURCE_DIR, "doubao_copy.png"),
-        # "poecopy": "/Users/yanzhang/Coding/python_code/Resource/poe_copy.png",
-    }
-    templates = {key: cv2.imread(path, cv2.IMREAD_COLOR) for key, path in template_paths.items()}
+    copy_tpl = load_template("doubao_copy.png")
+    regen_tpl = load_template("doubao_regenerate.png")
 
-    def find_and_click(template_key, offset_y=0):
-        if templates[template_key] is None:
-            print(f"警告：无法加载图片 {template_paths[template_key]}")
-            return False
-        location, shape = find_image_on_screen(templates[template_key])
-        if location:
-            # 注意：pyautogui 在 Retina 屏上可能需要坐标减半，这里保留你的逻辑
-            center_x = (location[0] + shape[1] // 2) // 2
-            center_y = (location[1] + shape[0] // 2) // 2 - offset_y
-            pyautogui.click(center_x, center_y)
-            return True
-        return False
-
-    def find_image(template_key):
-        if templates[template_key] is None:
-            return False
-        location, shape = find_image_on_screen(templates[template_key])
-        return bool(location)
-
-    # found_poe = find_and_click("poethumb", 40)
-    # if found_poe:
-    #     pyautogui.click(button='right')
-    #     sleep(1)
-    #     if find_and_click("poecopy"):
-    #         print("找到图片位置")
-    # else:
-    #     if find_and_click("doubaocopy"):
-    #         print("找到copy图了，准备点击copy...")
-    
-    if find_and_click("doubaocopy"):
-        print("找到copy图了，准备点击copy...")
+    pair = click_paired_copy(regen_tpl, copy_tpl)
+    if not pair:
+        show_alert("未找到与 regenerate 配对的 copy 按钮，已中止。")
+        return
+    print(f"已点击与 regenerate 配对的 copy: {pair}")
     found_poe = False
 
     time.sleep(1)

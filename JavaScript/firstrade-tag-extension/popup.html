@@ -247,7 +247,7 @@
   <div class="row">
     <label for="wlCap"><b>每组上限</b></label>
     <input type="number" id="wlCap" min="1" max="38" value="35" style="width:52px;">
-    <span class="small">只｜超出写 Earning1/2/3…，不够自动新建；作废多的分组（含 Earning）整组删除后按今日数据重建</span>
+    <span class="small">只｜超出写 Earning1/2/3…，不够自动新建；Earning1/2/3… 作废多时整组删除重建；基组 Earning 始终保留、逐只删</span>
   </div>
   <div class="row">
     <input type="checkbox" id="wlStrict" style="width:auto;">
@@ -255,10 +255,10 @@
   </div>
   <div class="row">
     <input type="checkbox" id="wlRebuild" style="width:auto;">
-    <label for="wlRebuild"><b>整组重建</b>：分组里作废标的多时直接删整个分组再按今日数据新建（比逐只删快很多；改动很少时仍逐只删）</label>
+    <label for="wlRebuild"><b>整组重建</b>：（基组 Earning 除外）分组里作废标的多时直接删整个分组再按今日数据新建（比逐只删快很多；改动很少时仍逐只删）</label>
   </div>
   <div class="ok">流程：读取各系列分组 → 比对差集 → <b>作废多的分组整组删除</b>（少量多余仍逐只删）→ 按今日数量新建/重建 Earning、Earning1… → 逐只添加 → 复核 → 切回原分组。<br>
-    若分组内容与数据源<b>完全一致，则零点击直接结束</b>；Earning 被删后一定会重建（今日无数据时重建为空分组）。<br>
+    若分组内容与数据源<b>完全一致，则零点击直接结束</b>；基组 Earning 永不整组删除。<br>
     ⚠ 财报日历<b>不回退</b>：今日目标日期无数据时，严格同步会清空 Earning 系列（删前备份 + 5 秒倒计时可取消）。</div>
 
   <div class="row">

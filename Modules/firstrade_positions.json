@@ -1,1358 +1,1758 @@
 {
- "AJG": {
-  "symbol": "AJG",
-  "quantity": "4",
-  "cost": "1,110.41",
-  "last_price": "282.94",
-  "day_change": "+2.04%",
-  "gainloss": "+1.92%",
-  "gainloss_amount": "+21.35",
-  "allocation": "0.00%"
- },
- "AMD": {
-  "symbol": "AMD",
-  "quantity": "2",
-  "cost": "863.12",
-  "last_price": "521.24",
-  "day_change": "-10.94%",
-  "gainloss": "+20.78%",
-  "gainloss_amount": "+179.36",
-  "allocation": "0.00%"
- },
- "CAT": {
-  "symbol": "CAT",
-  "quantity": "2",
-  "cost": "1,164.09",
-  "last_price": "595.60",
-  "day_change": "-1.60%",
-  "gainloss": "+2.33%",
-  "gainloss_amount": "+27.11",
-  "allocation": "0.00%"
- },
- "CLH": {
-  "symbol": "CLH",
-  "quantity": "3",
-  "cost": "870.69",
-  "last_price": "293.81",
-  "day_change": "-0.01%",
-  "gainloss": "+1.23%",
-  "gainloss_amount": "+10.74",
-  "allocation": "0.00%"
- },
- "CPAY": {
-  "symbol": "CPAY",
-  "quantity": "2",
-  "cost": "883.08",
-  "last_price": "462.59",
-  "day_change": "+1.44%",
-  "gainloss": "+4.77%",
-  "gainloss_amount": "+42.10",
-  "allocation": "0.00%"
- },
- "EME": {
-  "symbol": "EME",
-  "quantity": "1",
-  "cost": "730.24",
-  "last_price": "653.00",
-  "day_change": "-1.47%",
-  "gainloss": "-10.58%",
-  "gainloss_amount": "-77.24",
-  "allocation": "0.00%"
- },
- "META": {
-  "symbol": "META",
-  "quantity": "2",
-  "cost": "1,250.28",
-  "last_price": "637.01",
-  "day_change": "+2.15%",
-  "gainloss": "+1.90%",
-  "gainloss_amount": "+23.74",
-  "allocation": "0.00%"
- },
- "MSI": {
-  "symbol": "MSI",
-  "quantity": "2",
-  "cost": "1,027.26",
-  "last_price": "532.00",
-  "day_change": "+0.30%",
-  "gainloss": "+3.58%",
-  "gainloss_amount": "+36.74",
-  "allocation": "0.00%"
- },
- "STX": {
-  "symbol": "STX",
-  "quantity": "2",
-  "cost": "984.06",
-  "last_price": "520.17",
-  "day_change": "-4.58%",
-  "gainloss": "+5.72%",
-  "gainloss_amount": "+56.28",
-  "allocation": "0.00%"
- },
- "LLY": {
-  "symbol": "LLY",
-  "quantity": "2.77334",
-  "cost": "3,157.19",
-  "last_price": "1,440.00",
-  "day_change": "+1.01%",
-  "gainloss": "+26.49%",
-  "gainloss_amount": "+836.42",
-  "allocation": "0.00%"
- },
- "EQIX": {
-  "symbol": "EQIX",
-  "quantity": "3",
-  "cost": "2,970.62",
-  "last_price": "1,053.79",
-  "day_change": "-1.77%",
-  "gainloss": "+6.42%",
-  "gainloss_amount": "+190.75",
-  "allocation": "0.00%"
- },
- "ETN": {
-  "symbol": "ETN",
-  "quantity": "3",
-  "cost": "1,032.00",
-  "last_price": "350.21",
-  "day_change": "-2.46%",
-  "gainloss": "+1.81%",
-  "gainloss_amount": "+18.63",
-  "allocation": "0.00%"
- },
- "GOOGL": {
-  "symbol": "GOOGL",
-  "quantity": "3",
-  "cost": "884.09",
-  "last_price": "294.05",
-  "day_change": "-1.56%",
-  "gainloss": "-0.22%",
-  "gainloss_amount": "-1.94",
-  "allocation": "0.00%"
- },
- "HII": {
-  "symbol": "HII",
-  "quantity": "3",
-  "cost": "866.49",
-  "last_price": "306.24",
-  "day_change": "-0.68%",
-  "gainloss": "+6.03%",
-  "gainloss_amount": "+52.23",
-  "allocation": "0.00%"
- },
- "VMC": {
-  "symbol": "VMC",
-  "quantity": "3",
-  "cost": "861.87",
-  "last_price": "278.63",
-  "day_change": "-0.55%",
-  "gainloss": "-3.01%",
-  "gainloss_amount": "-25.98",
-  "allocation": "0.00%"
- },
- "MLM": {
-  "symbol": "MLM",
-  "quantity": "4",
-  "cost": "2,102.20",
-  "last_price": "512.85",
-  "day_change": "-0.87%",
-  "gainloss": "-2.42%",
-  "gainloss_amount": "-50.80",
-  "allocation": "0.00%"
- },
- "MUSA": {
-  "symbol": "MUSA",
-  "quantity": "4",
-  "cost": "2,032.63",
-  "last_price": "543.88",
-  "day_change": "+1.71%",
-  "gainloss": "+7.03%",
-  "gainloss_amount": "+142.89",
-  "allocation": "0.00%"
- },
- "NUE": {
-  "symbol": "NUE",
-  "quantity": "4",
-  "cost": "999.38",
-  "last_price": "252.94",
-  "day_change": "-3.00%",
-  "gainloss": "+1.24%",
-  "gainloss_amount": "+12.38",
-  "allocation": "0.00%"
- },
- "PRAX": {
-  "symbol": "PRAX",
-  "quantity": "4",
-  "cost": "983.99",
-  "last_price": "321.00",
-  "day_change": "-1.16%",
-  "gainloss": "+30.49%",
-  "gainloss_amount": "+300.01",
-  "allocation": "0.00%"
- },
- "STE": {
-  "symbol": "STE",
-  "quantity": "4",
-  "cost": "999.36",
-  "last_price": "264.32",
-  "day_change": "+4.29%",
-  "gainloss": "+5.80%",
-  "gainloss_amount": "+57.92",
-  "allocation": "0.00%"
- },
- "GKOS": {
-  "symbol": "GKOS",
-  "quantity": "5",
-  "cost": "1,117.11",
-  "last_price": "246.75",
-  "day_change": "+0.29%",
-  "gainloss": "+10.44%",
-  "gainloss_amount": "+116.64",
-  "allocation": "0.00%"
- },
- "ICLR": {
-  "symbol": "ICLR",
-  "quantity": "5",
-  "cost": "992.73",
-  "last_price": "194.65",
-  "day_change": "-2.92%",
-  "gainloss": "-1.96%",
-  "gainloss_amount": "-19.48",
-  "allocation": "0.00%"
- },
- "JAZZ": {
-  "symbol": "JAZZ",
-  "quantity": "5",
-  "cost": "1,069.44",
-  "last_price": "241.55",
-  "day_change": "+0.49%",
-  "gainloss": "+12.93%",
-  "gainloss_amount": "+138.31",
-  "allocation": "0.00%"
- },
- "OKTA": {
-  "symbol": "OKTA",
-  "quantity": "5",
-  "cost": "931.40",
-  "last_price": "182.30",
-  "day_change": "-0.13%",
-  "gainloss": "-2.14%",
-  "gainloss_amount": "-19.90",
-  "allocation": "0.00%"
- },
- "TM": {
-  "symbol": "TM",
-  "quantity": "5",
-  "cost": "1,069.08",
-  "last_price": "212.70",
-  "day_change": "+1.44%",
-  "gainloss": "-0.52%",
-  "gainloss_amount": "-5.58",
-  "allocation": "0.00%"
- },
- "CDW": {
-  "symbol": "CDW",
-  "quantity": "6",
-  "cost": "949.04",
-  "last_price": "172.07",
-  "day_change": "-0.42%",
-  "gainloss": "+8.79%",
-  "gainloss_amount": "+83.38",
-  "allocation": "0.30%"
- },
- "CVLT": {
-  "symbol": "CVLT",
-  "quantity": "6",
-  "cost": "944.00",
-  "last_price": "150.16",
-  "day_change": "-9.63%",
-  "gainloss": "-4.56%",
-  "gainloss_amount": "-43.04",
-  "allocation": "0.26%"
- },
- "EPAM": {
-  "symbol": "EPAM",
-  "quantity": "6",
-  "cost": "962.33",
-  "last_price": "163.15",
-  "day_change": "-0.42%",
-  "gainloss": "+1.72%",
-  "gainloss_amount": "+16.57",
-  "allocation": "0.29%"
- },
- "MRVL": {
-  "symbol": "MRVL",
-  "quantity": "6",
-  "cost": "1,041.75",
-  "last_price": "152.59",
-  "day_change": "-7.21%",
-  "gainloss": "-12.12%",
-  "gainloss_amount": "-126.21",
-  "allocation": "0.27%"
- },
- "MTZ": {
-  "symbol": "MTZ",
-  "quantity": "6",
-  "cost": "923.93",
-  "last_price": "180.00",
-  "day_change": "-2.76%",
-  "gainloss": "+16.89%",
-  "gainloss_amount": "+156.07",
-  "allocation": "0.31%"
- },
- "WCC": {
-  "symbol": "WCC",
-  "quantity": "6",
-  "cost": "1,954.85",
-  "last_price": "321.20",
-  "day_change": "-1.84%",
-  "gainloss": "-1.41%",
-  "gainloss_amount": "-27.65",
-  "allocation": "0.56%"
- },
- "ENTG": {
-  "symbol": "ENTG",
-  "quantity": "7",
-  "cost": "980.02",
-  "last_price": "147.41",
-  "day_change": "-3.79%",
-  "gainloss": "+5.29%",
-  "gainloss_amount": "+51.85",
-  "allocation": "0.30%"
- },
- "PODD": {
-  "symbol": "PODD",
-  "quantity": "7",
-  "cost": "1,044.61",
-  "last_price": "152.70",
-  "day_change": "+2.28%",
-  "gainloss": "+2.33%",
-  "gainloss_amount": "+24.29",
-  "allocation": "0.31%"
- },
- "SMTC": {
-  "symbol": "SMTC",
-  "quantity": "7",
-  "cost": "981.17",
-  "last_price": "112.45",
-  "day_change": "-5.85%",
-  "gainloss": "-19.77%",
-  "gainloss_amount": "-194.02",
-  "allocation": "0.23%"
- },
- "TFX": {
-  "symbol": "TFX",
-  "quantity": "7",
-  "cost": "1,050.00",
-  "last_price": "155.10",
-  "day_change": "+1.27%",
-  "gainloss": "+3.40%",
-  "gainloss_amount": "+35.70",
-  "allocation": "0.32%"
- },
- "TSM": {
-  "symbol": "TSM",
-  "quantity": "7",
-  "cost": "2,935.91",
-  "last_price": "394.50",
-  "day_change": "-2.71%",
-  "gainloss": "-5.94%",
-  "gainloss_amount": "-174.41",
-  "allocation": "0.80%"
- },
- "APP": {
-  "symbol": "APP",
-  "quantity": "8",
-  "cost": "2,076.50",
-  "last_price": "405.21",
-  "day_change": "+2.93%",
-  "gainloss": "+56.11%",
-  "gainloss_amount": "+1,165.18",
-  "allocation": "0.94%"
- },
- "DELL": {
-  "symbol": "DELL",
-  "quantity": "8",
-  "cost": "3,653.17",
-  "last_price": "339.13",
-  "day_change": "-8.63%",
-  "gainloss": "-25.73%",
-  "gainloss_amount": "-940.13",
-  "allocation": "0.79%"
- },
- "KMB": {
-  "symbol": "KMB",
-  "quantity": "9",
-  "cost": "965.70",
-  "last_price": "109.50",
-  "day_change": "+2.16%",
-  "gainloss": "+2.05%",
-  "gainloss_amount": "+19.80",
-  "allocation": "0.29%"
- },
- "SNOW": {
-  "symbol": "SNOW",
-  "quantity": "9",
-  "cost": "2,818.87",
-  "last_price": "290.00",
-  "day_change": "-2.91%",
-  "gainloss": "-7.41%",
-  "gainloss_amount": "-208.87",
-  "allocation": "0.76%"
- },
- "VST": {
-  "symbol": "VST",
-  "quantity": "9",
-  "cost": "1,040.42",
-  "last_price": "130.58",
-  "day_change": "-2.92%",
-  "gainloss": "+12.96%",
-  "gainloss_amount": "+134.80",
-  "allocation": "0.34%"
- },
- "AGCO": {
-  "symbol": "AGCO",
+ "CBRS": {
+  "symbol": "CBRS",
   "quantity": "10",
-  "cost": "1,033.20",
-  "last_price": "111.94",
-  "day_change": "+0.46%",
-  "gainloss": "+8.34%",
-  "gainloss_amount": "+86.20",
-  "allocation": "0.33%"
- },
- "ICVT": {
-  "symbol": "ICVT",
-  "quantity": "10",
-  "cost": "1,022.73",
-  "last_price": "102.30",
-  "day_change": "-0.88%",
-  "gainloss": "+0.03%",
-  "gainloss_amount": "+0.27",
-  "allocation": "0.30%"
- },
- "TTWO": {
-  "symbol": "TTWO",
-  "quantity": "10",
-  "cost": "2,069.72",
-  "last_price": "228.20",
-  "day_change": "+0.55%",
-  "gainloss": "+10.26%",
-  "gainloss_amount": "+212.28",
-  "allocation": "0.66%"
- },
- "IXUS": {
-  "symbol": "IXUS",
-  "quantity": "11",
-  "cost": "1,031.09",
-  "last_price": "92.57",
-  "day_change": "-0.02%",
-  "gainloss": "-1.24%",
-  "gainloss_amount": "-12.82",
-  "allocation": "0.30%"
- },
- "NET": {
-  "symbol": "NET",
-  "quantity": "11",
-  "cost": "2,982.01",
-  "last_price": "307.00",
-  "day_change": "-3.61%",
-  "gainloss": "+13.25%",
-  "gainloss_amount": "+394.99",
-  "allocation": "0.98%"
- },
- "AKAM": {
-  "symbol": "AKAM",
-  "quantity": "12",
-  "cost": "1,039.05",
-  "last_price": "86.32",
-  "day_change": "-0.28%",
-  "gainloss": "-0.31%",
-  "gainloss_amount": "-3.21",
-  "allocation": "0.30%"
- },
- "EMR": {
-  "symbol": "EMR",
-  "quantity": "12",
-  "cost": "1,991.96",
-  "last_price": "166.38",
-  "day_change": "+0.03%",
-  "gainloss": "+0.23%",
-  "gainloss_amount": "+4.60",
-  "allocation": "0.58%"
- },
- "OGS": {
-  "symbol": "OGS",
-  "quantity": "12",
-  "cost": "985.80",
-  "last_price": "83.86",
-  "day_change": "+1.54%",
-  "gainloss": "+2.08%",
-  "gainloss_amount": "+20.52",
-  "allocation": "0.29%"
- },
- "PG": {
-  "symbol": "PG",
-  "quantity": "12",
-  "cost": "1,942.16",
-  "last_price": "169.95",
-  "day_change": "+1.14%",
-  "gainloss": "+5.01%",
-  "gainloss_amount": "+97.24",
-  "allocation": "0.59%"
- },
- "VEU": {
-  "symbol": "VEU",
-  "quantity": "12",
-  "cost": "982.80",
-  "last_price": "81.00",
-  "day_change": "+0.05%",
-  "gainloss": "-1.10%",
-  "gainloss_amount": "-10.80",
-  "allocation": "0.28%"
- },
- "DXCM": {
-  "symbol": "DXCM",
-  "quantity": "13",
-  "cost": "1,030.64",
-  "last_price": "83.30",
-  "day_change": "+2.35%",
-  "gainloss": "+5.07%",
-  "gainloss_amount": "+52.26",
-  "allocation": "0.32%"
- },
- "RDVY": {
-  "symbol": "RDVY",
-  "quantity": "13",
-  "cost": "1,018.93",
-  "last_price": "78.60",
-  "day_change": "-1.40%",
-  "gainloss": "+0.28%",
-  "gainloss_amount": "+2.87",
-  "allocation": "0.30%"
- },
- "APH": {
-  "symbol": "APH",
-  "quantity": "14",
-  "cost": "1,010.07",
-  "last_price": "77.82",
-  "day_change": "-2.26%",
-  "gainloss": "+7.86%",
-  "gainloss_amount": "+79.41",
-  "allocation": "0.32%"
- },
- "EXEL": {
-  "symbol": "EXEL",
-  "quantity": "14",
-  "cost": "993.37",
-  "last_price": "68.71",
-  "day_change": "-1.62%",
-  "gainloss": "-3.16%",
-  "gainloss_amount": "-31.43",
-  "allocation": "0.28%"
- },
- "FLEX": {
-  "symbol": "FLEX",
-  "quantity": "14",
-  "cost": "992.82",
-  "last_price": "72.49",
-  "day_change": "-7.21%",
-  "gainloss": "+2.22%",
-  "gainloss_amount": "+22.04",
-  "allocation": "0.30%"
- },
- "LNT": {
-  "symbol": "LNT",
-  "quantity": "14",
-  "cost": "1,011.12",
-  "last_price": "73.43",
-  "day_change": "+0.52%",
-  "gainloss": "+1.67%",
-  "gainloss_amount": "+16.90",
-  "allocation": "0.30%"
- },
- "SIMO": {
-  "symbol": "SIMO",
-  "quantity": "14",
-  "cost": "2,966.47",
-  "last_price": "167.95",
-  "day_change": "-6.43%",
-  "gainloss": "-20.74%",
-  "gainloss_amount": "-615.17",
-  "allocation": "0.68%"
- },
- "FRPT": {
-  "symbol": "FRPT",
-  "quantity": "15",
-  "cost": "983.12",
-  "last_price": "67.44",
-  "day_change": "+4.35%",
-  "gainloss": "+2.90%",
-  "gainloss_amount": "+28.48",
-  "allocation": "0.29%"
- },
- "IESC": {
-  "symbol": "IESC",
-  "quantity": "15",
-  "cost": "3,924.53",
-  "last_price": "170.00",
-  "day_change": "-2.39%",
-  "gainloss": "-35.02%",
-  "gainloss_amount": "-1,374.53",
-  "allocation": "0.74%"
- },
- "MEOH": {
-  "symbol": "MEOH",
-  "quantity": "15",
-  "cost": "999.37",
-  "last_price": "70.51",
-  "day_change": "+0.57%",
-  "gainloss": "+5.83%",
-  "gainloss_amount": "+58.28",
-  "allocation": "0.31%"
- },
- "TMDX": {
-  "symbol": "TMDX",
-  "quantity": "15",
-  "cost": "1,027.50",
-  "last_price": "90.35",
-  "day_change": "-1.79%",
-  "gainloss": "+31.90%",
-  "gainloss_amount": "+327.75",
-  "allocation": "0.39%"
- },
- "GS": {
-  "symbol": "GS",
-  "quantity": "16.60701",
-  "cost": "15,441.06",
-  "last_price": "913.11",
-  "day_change": "-0.05%",
-  "gainloss": "-1.79%",
-  "gainloss_amount": "-277.03",
-  "allocation": "4.42%"
- },
- "NTNX": {
-  "symbol": "NTNX",
-  "quantity": "17",
-  "cost": "1,004.42",
-  "last_price": "60.38",
-  "day_change": "-0.81%",
-  "gainloss": "+2.19%",
-  "gainloss_amount": "+22.04",
-  "allocation": "0.30%"
- },
- "OXY": {
-  "symbol": "OXY",
-  "quantity": "17",
-  "cost": "980.15",
-  "last_price": "58.88",
-  "day_change": "+0.82%",
-  "gainloss": "+2.12%",
-  "gainloss_amount": "+20.81",
-  "allocation": "0.29%"
- },
- "SQM": {
-  "symbol": "SQM",
-  "quantity": "17",
-  "cost": "1,020.92",
-  "last_price": "53.10",
-  "day_change": "-1.47%",
-  "gainloss": "-11.58%",
-  "gainloss_amount": "-118.22",
-  "allocation": "0.26%"
- },
- "ATI": {
-  "symbol": "ATI",
-  "quantity": "18",
-  "cost": "3,105.50",
-  "last_price": "183.09",
-  "day_change": "-3.72%",
-  "gainloss": "+6.12%",
-  "gainloss_amount": "+190.12",
-  "allocation": "0.96%"
- },
- "DXJ": {
-  "symbol": "DXJ",
-  "quantity": "18",
-  "cost": "1,013.35",
-  "last_price": "59.44",
-  "day_change": "+0.51%",
-  "gainloss": "+5.58%",
-  "gainloss_amount": "+56.57",
-  "allocation": "0.31%"
- },
- "ONTO": {
-  "symbol": "ONTO",
-  "quantity": "18",
-  "cost": "3,884.32",
-  "last_price": "200.10",
-  "day_change": "-4.56%",
-  "gainloss": "-7.27%",
-  "gainloss_amount": "-282.52",
-  "allocation": "1.05%"
- },
- "QUAL": {
-  "symbol": "QUAL",
-  "quantity": "18",
-  "cost": "992.13",
-  "last_price": "55.72",
-  "day_change": "-0.59%",
-  "gainloss": "+1.09%",
-  "gainloss_amount": "+10.83",
-  "allocation": "0.29%"
- },
- "IXP": {
-  "symbol": "IXP",
-  "quantity": "18.35193",
-  "cost": "1,961.43",
-  "last_price": "111.89",
-  "day_change": "+0.70%",
-  "gainloss": "+4.69%",
-  "gainloss_amount": "+91.97",
-  "allocation": "0.60%"
- },
- "EWT": {
-  "symbol": "EWT",
-  "quantity": "19",
-  "cost": "1,993.16",
-  "last_price": "97.44",
-  "day_change": "+0.20%",
-  "gainloss": "-7.11%",
-  "gainloss_amount": "-141.80",
-  "allocation": "0.54%"
- },
- "TEX": {
-  "symbol": "TEX",
-  "quantity": "19",
-  "cost": "1,016.38",
-  "last_price": "56.94",
-  "day_change": "-1.08%",
-  "gainloss": "+6.44%",
-  "gainloss_amount": "+65.48",
-  "allocation": "0.32%"
- },
- "ALB": {
-  "symbol": "ALB",
-  "quantity": "20",
-  "cost": "1,939.15",
-  "last_price": "93.89",
-  "day_change": "-1.01%",
-  "gainloss": "-3.16%",
-  "gainloss_amount": "-61.35",
-  "allocation": "0.55%"
- },
- "SHEL": {
-  "symbol": "SHEL",
-  "quantity": "20",
-  "cost": "1,959.76",
-  "last_price": "99.33",
-  "day_change": "+1.59%",
-  "gainloss": "+1.37%",
-  "gainloss_amount": "+26.84",
-  "allocation": "0.58%"
- },
- "SOXX": {
-  "symbol": "SOXX",
-  "quantity": "20",
-  "cost": "2,979.47",
-  "last_price": "147.00",
-  "day_change": "-5.16%",
-  "gainloss": "-1.32%",
-  "gainloss_amount": "-39.47",
-  "allocation": "0.86%"
- },
- "UCTT": {
-  "symbol": "UCTT",
-  "quantity": "20",
-  "cost": "993.48",
-  "last_price": "47.27",
-  "day_change": "-1.73%",
-  "gainloss": "-4.84%",
-  "gainloss_amount": "-48.08",
-  "allocation": "0.28%"
- },
- "GTLB": {
-  "symbol": "GTLB",
-  "quantity": "21",
-  "cost": "998.72",
-  "last_price": "47.05",
-  "day_change": "-0.49%",
-  "gainloss": "-1.07%",
-  "gainloss_amount": "-10.67",
-  "allocation": "0.29%"
- },
- "MS": {
-  "symbol": "MS",
-  "quantity": "22",
-  "cost": "4,002.22",
-  "last_price": "190.27",
-  "day_change": "+0.58%",
-  "gainloss": "+4.59%",
-  "gainloss_amount": "+183.72",
-  "allocation": "1.22%"
- },
- "CECO": {
-  "symbol": "CECO",
-  "quantity": "23",
-  "cost": "1,024.70",
-  "last_price": "54.80",
-  "day_change": "-2.14%",
-  "gainloss": "+23.00%",
-  "gainloss_amount": "+235.70",
-  "allocation": "0.37%"
- },
- "ETSY": {
-  "symbol": "ETSY",
-  "quantity": "23",
-  "cost": "2,012.57",
-  "last_price": "89.00",
-  "day_change": "+0.80%",
-  "gainloss": "+1.71%",
-  "gainloss_amount": "+34.43",
-  "allocation": "0.60%"
- },
- "ROAD": {
-  "symbol": "ROAD",
-  "quantity": "24",
-  "cost": "1,993.26",
-  "last_price": "80.70",
-  "day_change": "-0.40%",
-  "gainloss": "-2.83%",
-  "gainloss_amount": "-56.46",
-  "allocation": "0.56%"
- },
- "IBB": {
-  "symbol": "IBB",
-  "quantity": "25",
-  "cost": "5,072.77",
-  "last_price": "212.01",
-  "day_change": "-0.67%",
-  "gainloss": "+4.48%",
-  "gainloss_amount": "+227.48",
-  "allocation": "1.54%"
- },
- "B": {
-  "symbol": "B",
-  "quantity": "26",
-  "cost": "991.59",
-  "last_price": "37.46",
-  "day_change": "-1.00%",
-  "gainloss": "-1.78%",
-  "gainloss_amount": "-17.63",
-  "allocation": "0.28%"
- },
- "KRMN": {
-  "symbol": "KRMN",
-  "quantity": "26",
-  "cost": "1,005.71",
-  "last_price": "39.00",
-  "day_change": "-3.70%",
-  "gainloss": "+0.82%",
-  "gainloss_amount": "+8.29",
-  "allocation": "0.30%"
- },
- "RAAX": {
-  "symbol": "RAAX",
-  "quantity": "26",
-  "cost": "1,001.28",
-  "last_price": "38.41",
-  "day_change": "-0.13%",
-  "gainloss": "-0.26%",
-  "gainloss_amount": "-2.62",
-  "allocation": "0.29%"
- },
- "REXR": {
-  "symbol": "REXR",
-  "quantity": "26",
-  "cost": "999.03",
-  "last_price": "37.55",
-  "day_change": "-0.24%",
-  "gainloss": "-2.28%",
-  "gainloss_amount": "-22.73",
-  "allocation": "0.28%"
- },
- "HWM": {
-  "symbol": "HWM",
-  "quantity": "28.68468",
-  "cost": "6,143.78",
-  "last_price": "218.50",
-  "day_change": "-2.07%",
-  "gainloss": "+2.02%",
-  "gainloss_amount": "+123.82",
-  "allocation": "1.83%"
- },
- "AMKR": {
-  "symbol": "AMKR",
-  "quantity": "30",
-  "cost": "1,009.29",
-  "last_price": "35.68",
-  "day_change": "-3.88%",
-  "gainloss": "+6.05%",
-  "gainloss_amount": "+61.11",
-  "allocation": "0.31%"
- },
- "ASX": {
-  "symbol": "ASX",
-  "quantity": "31",
-  "cost": "1,012.07",
-  "last_price": "35.00",
-  "day_change": "-3.55%",
-  "gainloss": "+7.21%",
-  "gainloss_amount": "+72.93",
-  "allocation": "0.32%"
- },
- "FLAX": {
-  "symbol": "FLAX",
-  "quantity": "31",
-  "cost": "1,011.38",
-  "last_price": "33.14",
-  "day_change": "-0.66%",
-  "gainloss": "+1.58%",
-  "gainloss_amount": "+15.96",
-  "allocation": "0.30%"
- },
- "TSCO": {
-  "symbol": "TSCO",
-  "quantity": "31",
-  "cost": "990.73",
-  "last_price": "37.00",
-  "day_change": "+1.01%",
-  "gainloss": "+15.77%",
-  "gainloss_amount": "+156.27",
-  "allocation": "0.33%"
- },
- "TOST": {
-  "symbol": "TOST",
-  "quantity": "31.83273",
-  "cost": "1,000.00",
-  "last_price": "34.52",
-  "day_change": "+2.98%",
-  "gainloss": "+9.89%",
-  "gainloss_amount": "+98.87",
-  "allocation": "0.32%"
- },
- "CIBR": {
-  "symbol": "CIBR",
-  "quantity": "32",
-  "cost": "3,017.65",
-  "last_price": "96.50",
-  "day_change": "+0.04%",
-  "gainloss": "+2.33%",
-  "gainloss_amount": "+70.35",
-  "allocation": "0.90%"
- },
- "ORCL": {
-  "symbol": "ORCL",
-  "quantity": "33",
-  "cost": "4,037.01",
-  "last_price": "123.41",
-  "day_change": "-2.91%",
-  "gainloss": "+0.88%",
-  "gainloss_amount": "+35.52",
-  "allocation": "1.19%"
- },
- "ESTC": {
-  "symbol": "ESTC",
-  "quantity": "34",
-  "cost": "2,993.02",
-  "last_price": "87.70",
-  "day_change": "-1.53%",
-  "gainloss": "-0.37%",
-  "gainloss_amount": "-11.22",
-  "allocation": "0.87%"
- },
- "KBWB": {
-  "symbol": "KBWB",
-  "quantity": "34",
-  "cost": "2,959.94",
-  "last_price": "90.17",
-  "day_change": "+0.59%",
-  "gainloss": "+3.58%",
-  "gainloss_amount": "+105.84",
-  "allocation": "0.89%"
- },
- "MIAX": {
-  "symbol": "MIAX",
-  "quantity": "34",
-  "cost": "1,011.16",
-  "last_price": "37.08",
-  "day_change": "+2.80%",
-  "gainloss": "+24.68%",
-  "gainloss_amount": "+249.56",
-  "allocation": "0.37%"
- },
- "AEIS": {
-  "symbol": "AEIS",
-  "quantity": "34.23746",
-  "cost": "8,977.48",
-  "last_price": "215.46",
-  "day_change": "-5.82%",
-  "gainloss": "-17.83%",
-  "gainloss_amount": "-1,600.68",
-  "allocation": "2.15%"
- },
- "BNY": {
-  "symbol": "BNY",
-  "quantity": "34.51362",
-  "cost": "5,000.00",
-  "last_price": "153.41",
-  "day_change": "+0.41%",
-  "gainloss": "+5.89%",
-  "gainloss_amount": "+294.73",
-  "allocation": "1.54%"
- },
- "CRAK": {
-  "symbol": "CRAK",
-  "quantity": "35",
-  "cost": "1,997.07",
-  "last_price": "57.45",
-  "day_change": "-0.71%",
-  "gainloss": "+0.69%",
-  "gainloss_amount": "+13.68",
-  "allocation": "0.59%"
- },
- "EPRT": {
-  "symbol": "EPRT",
-  "quantity": "37",
-  "cost": "992.39",
-  "last_price": "27.78",
-  "day_change": "+0.54%",
-  "gainloss": "+3.57%",
-  "gainloss_amount": "+35.47",
-  "allocation": "0.30%"
- },
- "FUTU": {
-  "symbol": "FUTU",
-  "quantity": "37",
-  "cost": "3,971.27",
-  "last_price": "95.00",
-  "day_change": "-0.65%",
-  "gainloss": "-11.49%",
-  "gainloss_amount": "-456.27",
-  "allocation": "1.02%"
- },
- "QQQ": {
-  "symbol": "QQQ",
-  "quantity": "37",
-  "cost": "25,865.59",
-  "last_price": "674.26",
-  "day_change": "-2.02%",
-  "gainloss": "-3.55%",
-  "gainloss_amount": "-917.97",
-  "allocation": "7.26%"
- },
- "EWM": {
-  "symbol": "EWM",
-  "quantity": "38",
-  "cost": "1,005.40",
-  "last_price": "26.17",
-  "day_change": "-0.30%",
-  "gainloss": "-1.09%",
-  "gainloss_amount": "-10.94",
-  "allocation": "0.29%"
- },
- "TREX": {
-  "symbol": "TREX",
-  "quantity": "38",
-  "cost": "2,054.75",
-  "last_price": "52.50",
-  "day_change": "-0.59%",
-  "gainloss": "-2.91%",
-  "gainloss_amount": "-59.75",
-  "allocation": "0.58%"
- },
- "BABA": {
-  "symbol": "BABA",
-  "quantity": "40",
-  "cost": "4,067.17",
-  "last_price": "93.74",
-  "day_change": "-0.66%",
-  "gainloss": "-7.81%",
-  "gainloss_amount": "-317.57",
-  "allocation": "1.09%"
- },
- "EXC": {
-  "symbol": "EXC",
-  "quantity": "44",
-  "cost": "2,023.47",
-  "last_price": "46.11",
-  "day_change": "+1.05%",
-  "gainloss": "+0.27%",
-  "gainloss_amount": "+5.37",
-  "allocation": "0.59%"
- },
- "FRO": {
-  "symbol": "FRO",
-  "quantity": "45",
-  "cost": "1,999.33",
-  "last_price": "46.92",
-  "day_change": "+0.34%",
-  "gainloss": "+5.61%",
-  "gainloss_amount": "+112.07",
-  "allocation": "0.61%"
- },
- "GFL": {
-  "symbol": "GFL",
-  "quantity": "48",
-  "cost": "2,035.04",
-  "last_price": "42.50",
-  "day_change": "+1.34%",
-  "gainloss": "+0.24%",
-  "gainloss_amount": "+4.96",
-  "allocation": "0.59%"
- },
- "CRWV": {
-  "symbol": "CRWV",
-  "quantity": "49",
-  "cost": "3,001.21",
-  "last_price": "51.76",
+  "cost": "1,003.57",
+  "last_price": "95.27",
   "day_change": "-8.55%",
-  "gainloss": "-15.49%",
-  "gainloss_amount": "-464.97",
-  "allocation": "0.74%"
- },
- "TENB": {
-  "symbol": "TENB",
-  "quantity": "49",
-  "cost": "2,021.50",
-  "last_price": "41.31",
-  "day_change": "+0.63%",
-  "gainloss": "+0.13%",
-  "gainloss_amount": "+2.69",
-  "allocation": "0.59%"
- },
- "BKNG": {
-  "symbol": "BKNG",
-  "quantity": "49.61898",
-  "cost": "7,958.07",
-  "last_price": "158.97",
-  "day_change": "-1.38%",
-  "gainloss": "-0.88%",
-  "gainloss_amount": "-70.14",
-  "allocation": "2.30%"
- },
- "ARMK": {
-  "symbol": "ARMK",
-  "quantity": "57",
-  "cost": "3,003.71",
-  "last_price": "53.94",
-  "day_change": "+0.11%",
-  "gainloss": "+2.36%",
-  "gainloss_amount": "+70.87",
-  "allocation": "0.90%"
- },
- "DRS": {
-  "symbol": "DRS",
-  "quantity": "59",
-  "cost": "1,996.23",
-  "last_price": "35.00",
-  "day_change": "-1.85%",
-  "gainloss": "+3.44%",
-  "gainloss_amount": "+68.77",
-  "allocation": "0.60%"
- },
- "JMUB": {
-  "symbol": "JMUB",
-  "quantity": "63",
-  "cost": "3,000.99",
-  "last_price": "48.86",
-  "day_change": "-0.18%",
-  "gainloss": "+2.57%",
-  "gainloss_amount": "+77.19",
-  "allocation": "0.90%"
- },
- "COLD": {
-  "symbol": "COLD",
-  "quantity": "64",
-  "cost": "1,003.74",
-  "last_price": "16.64",
-  "day_change": "+4.65%",
-  "gainloss": "+6.10%",
-  "gainloss_amount": "+61.22",
-  "allocation": "0.31%"
- },
- "KMI": {
-  "symbol": "KMI",
-  "quantity": "66",
-  "cost": "1,982.88",
-  "last_price": "32.10",
-  "day_change": "+0.28%",
-  "gainloss": "+6.84%",
-  "gainloss_amount": "+135.72",
-  "allocation": "0.62%"
- },
- "HL": {
-  "symbol": "HL",
-  "quantity": "74",
-  "cost": "996.62",
-  "last_price": "13.09",
-  "day_change": "-1.95%",
-  "gainloss": "-2.81%",
-  "gainloss_amount": "-27.96",
-  "allocation": "0.28%"
- },
- "ADMA": {
-  "symbol": "ADMA",
-  "quantity": "76",
-  "cost": "997.85",
-  "last_price": "13.65",
-  "day_change": "+3.10%",
-  "gainloss": "+3.96%",
-  "gainloss_amount": "+39.55",
-  "allocation": "0.30%"
- },
- "POWR": {
-  "symbol": "POWR",
-  "quantity": "81",
-  "cost": "1,995.08",
-  "last_price": "24.87",
-  "day_change": "-0.32%",
-  "gainloss": "+0.97%",
-  "gainloss_amount": "+19.39",
-  "allocation": "0.59%"
- },
- "CLF": {
-  "symbol": "CLF",
-  "quantity": "86",
-  "cost": "998.41",
-  "last_price": "12.55",
-  "day_change": "-3.98%",
-  "gainloss": "+8.10%",
-  "gainloss_amount": "+80.89",
-  "allocation": "0.31%"
- },
- "ILF": {
-  "symbol": "ILF",
-  "quantity": "90",
-  "cost": "2,965.79",
-  "last_price": "32.32",
-  "day_change": "+1.00%",
-  "gainloss": "-1.92%",
-  "gainloss_amount": "-56.99",
-  "allocation": "0.85%"
- },
- "EUAD": {
-  "symbol": "EUAD",
-  "quantity": "99",
-  "cost": "4,036.73",
-  "last_price": "39.74",
-  "day_change": "-0.08%",
-  "gainloss": "-2.54%",
-  "gainloss_amount": "-102.47",
-  "allocation": "1.15%"
- },
- "U": {
-  "symbol": "U",
-  "quantity": "99",
-  "cost": "4,020.18",
-  "last_price": "52.39",
-  "day_change": "+4.40%",
-  "gainloss": "+29.01%",
-  "gainloss_amount": "+1,166.43",
-  "allocation": "1.51%"
- },
- "MFG": {
-  "symbol": "MFG",
-  "quantity": "106",
-  "cost": "996.26",
-  "last_price": "10.33",
-  "day_change": "+2.08%",
-  "gainloss": "+9.91%",
-  "gainloss_amount": "+98.72",
-  "allocation": "0.32%"
- },
- "PFFD": {
-  "symbol": "PFFD",
-  "quantity": "116.59775",
-  "cost": "2,000.38",
-  "last_price": "16.59",
-  "day_change": "-0.42%",
-  "gainloss": "-3.30%",
-  "gainloss_amount": "-66.02",
-  "allocation": "0.56%"
- },
- "SBIO": {
-  "symbol": "SBIO",
-  "quantity": "151",
-  "cost": "7,969.87",
-  "last_price": "55.63",
-  "day_change": "-0.50%",
-  "gainloss": "+5.40%",
-  "gainloss_amount": "+430.26",
-  "allocation": "2.45%"
- },
- "FLLA": {
-  "symbol": "FLLA",
-  "quantity": "152.06797",
-  "cost": "3,971.72",
-  "last_price": "25.59",
-  "day_change": "+0.24%",
-  "gainloss": "-2.02%",
-  "gainloss_amount": "-80.30",
-  "allocation": "1.13%"
- },
- "PATH": {
-  "symbol": "PATH",
-  "quantity": "156",
-  "cost": "2,009.71",
-  "last_price": "13.20",
-  "day_change": "+0.76%",
-  "gainloss": "+2.46%",
-  "gainloss_amount": "+49.49",
-  "allocation": "0.60%"
- },
- "EWZ": {
-  "symbol": "EWZ",
-  "quantity": "176.63002",
-  "cost": "5,992.55",
-  "last_price": "32.22",
-  "day_change": "+1.38%",
-  "gainloss": "-5.03%",
-  "gainloss_amount": "-301.53",
-  "allocation": "1.66%"
- },
- "NVDA": {
-  "symbol": "NVDA",
-  "quantity": "217.96545",
-  "cost": "37,959.72",
-  "last_price": "161.04",
-  "day_change": "-3.10%",
-  "gainloss": "-7.53%",
-  "gainloss_amount": "-2,858.56",
-  "allocation": "10.22%"
+  "gainloss": "-5.07%",
+  "gainloss_amount": "-50.87",
+  "allocation": "0.27%"
  },
  "GDS": {
   "symbol": "GDS",
   "quantity": "220",
   "cost": "5,011.48",
-  "last_price": "19.75",
-  "day_change": "-1.50%",
-  "gainloss": "-13.30%",
-  "gainloss_amount": "-666.48",
-  "allocation": "1.27%"
+  "last_price": "15.13",
+  "day_change": "-7.80%",
+  "gainloss": "-33.58%",
+  "gainloss_amount": "-1,682.88",
+  "allocation": "0.93%"
  },
- "ERIC": {
-  "symbol": "ERIC",
-  "quantity": "286",
-  "cost": "3,004.43",
-  "last_price": "10.59",
-  "day_change": "-0.19%",
-  "gainloss": "+0.81%",
-  "gainloss_amount": "+24.31",
+ "FCX": {
+  "symbol": "FCX",
+  "quantity": "17",
+  "cost": "975.38",
+  "last_price": "51.68",
+  "day_change": "-6.55%",
+  "gainloss": "-9.93%",
+  "gainloss_amount": "-96.82",
+  "allocation": "0.25%"
+ },
+ "HL": {
+  "symbol": "HL",
+  "quantity": "74",
+  "cost": "996.62",
+  "last_price": "11.70",
+  "day_change": "-6.40%",
+  "gainloss": "-13.13%",
+  "gainloss_amount": "-130.82",
+  "allocation": "0.24%"
+ },
+ "COPX": {
+  "symbol": "COPX",
+  "quantity": "15",
+  "cost": "999.98",
+  "last_price": "61.16",
+  "day_change": "-6.35%",
+  "gainloss": "-8.26%",
+  "gainloss_amount": "-82.58",
+  "allocation": "0.26%"
+ },
+ "SCCO": {
+  "symbol": "SCCO",
+  "quantity": "6",
+  "cost": "957.15",
+  "last_price": "146.00",
+  "day_change": "-6.06%",
+  "gainloss": "-8.48%",
+  "gainloss_amount": "-81.15",
+  "allocation": "0.24%"
+ },
+ "MEOH": {
+  "symbol": "MEOH",
+  "quantity": "15",
+  "cost": "999.37",
+  "last_price": "63.00",
+  "day_change": "-6.01%",
+  "gainloss": "-5.44%",
+  "gainloss_amount": "-54.37",
+  "allocation": "0.26%"
+ },
+ "BHP": {
+  "symbol": "BHP",
+  "quantity": "13",
+  "cost": "975.86",
+  "last_price": "69.59",
+  "day_change": "-5.83%",
+  "gainloss": "-7.30%",
+  "gainloss_amount": "-71.19",
+  "allocation": "0.25%"
+ },
+ "SQM": {
+  "symbol": "SQM",
+  "quantity": "17",
+  "cost": "1,020.92",
+  "last_price": "48.74",
+  "day_change": "-5.52%",
+  "gainloss": "-18.84%",
+  "gainloss_amount": "-192.34",
+  "allocation": "0.23%"
+ },
+ "B": {
+  "symbol": "B",
+  "quantity": "53",
+  "cost": "2,003.96",
+  "last_price": "34.62",
+  "day_change": "-5.49%",
+  "gainloss": "-8.44%",
+  "gainloss_amount": "-169.10",
+  "allocation": "0.51%"
+ },
+ "MRNA": {
+  "symbol": "MRNA",
+  "quantity": "5",
+  "cost": "1,087.50",
+  "last_price": "196.07",
+  "day_change": "-5.19%",
+  "gainloss": "-9.85%",
+  "gainloss_amount": "-107.15",
+  "allocation": "0.27%"
+ },
+ "BABA": {
+  "symbol": "BABA",
+  "quantity": "40",
+  "cost": "4,067.17",
+  "last_price": "82.40",
+  "day_change": "-4.90%",
+  "gainloss": "-18.96%",
+  "gainloss_amount": "-771.17",
+  "allocation": "0.92%"
+ },
+ "PATH": {
+  "symbol": "PATH",
+  "quantity": "156",
+  "cost": "2,009.71",
+  "last_price": "11.79",
+  "day_change": "-4.84%",
+  "gainloss": "-8.48%",
+  "gainloss_amount": "-170.47",
+  "allocation": "0.51%"
+ },
+ "OXY": {
+  "symbol": "OXY",
+  "quantity": "17",
+  "cost": "980.15",
+  "last_price": "53.91",
+  "day_change": "-4.62%",
+  "gainloss": "-6.50%",
+  "gainloss_amount": "-63.68",
+  "allocation": "0.26%"
+ },
+ "FUTU": {
+  "symbol": "FUTU",
+  "quantity": "37",
+  "cost": "3,971.27",
+  "last_price": "82.89",
+  "day_change": "-4.60%",
+  "gainloss": "-22.77%",
+  "gainloss_amount": "-904.34",
+  "allocation": "0.86%"
+ },
+ "RIO": {
+  "symbol": "RIO",
+  "quantity": "12",
+  "cost": "965.73",
+  "last_price": "75.90",
+  "day_change": "-4.49%",
+  "gainloss": "-5.69%",
+  "gainloss_amount": "-54.93",
+  "allocation": "0.25%"
+ },
+ "WSE": {
+  "symbol": "WSE",
+  "quantity": "87",
+  "cost": "1,008.64",
+  "last_price": "10.85",
+  "day_change": "-4.49%",
+  "gainloss": "-6.41%",
+  "gainloss_amount": "-64.69",
+  "allocation": "0.26%"
+ },
+ "GKOS": {
+  "symbol": "GKOS",
+  "quantity": "5",
+  "cost": "1,117.11",
+  "last_price": "233.00",
+  "day_change": "-4.21%",
+  "gainloss": "+4.29%",
+  "gainloss_amount": "+47.89",
+  "allocation": "0.33%"
+ },
+ "FLLA": {
+  "symbol": "FLLA",
+  "quantity": "152.06797",
+  "cost": "3,971.72",
+  "last_price": "24.01",
+  "day_change": "-4.15%",
+  "gainloss": "-8.07%",
+  "gainloss_amount": "-320.57",
+  "allocation": "1.02%"
+ },
+ "XOM": {
+  "symbol": "XOM",
+  "quantity": "6",
+  "cost": "1,013.23",
+  "last_price": "160.89",
+  "day_change": "-3.78%",
+  "gainloss": "-4.73%",
+  "gainloss_amount": "-47.89",
+  "allocation": "0.27%"
+ },
+ "CRAK": {
+  "symbol": "CRAK",
+  "quantity": "35",
+  "cost": "1,997.07",
+  "last_price": "54.11",
+  "day_change": "-3.77%",
+  "gainloss": "-5.17%",
+  "gainloss_amount": "-103.22",
+  "allocation": "0.53%"
+ },
+ "JOBY": {
+  "symbol": "JOBY",
+  "quantity": "227",
+  "cost": "1,000.93",
+  "last_price": "4.22",
+  "day_change": "-3.65%",
+  "gainloss": "-4.30%",
+  "gainloss_amount": "-42.99",
+  "allocation": "0.27%"
+ },
+ "PODD": {
+  "symbol": "PODD",
+  "quantity": "7",
+  "cost": "1,044.61",
+  "last_price": "140.16",
+  "day_change": "-3.56%",
+  "gainloss": "-6.08%",
+  "gainloss_amount": "-63.49",
+  "allocation": "0.27%"
+ },
+ "GNR": {
+  "symbol": "GNR",
+  "quantity": "14",
+  "cost": "1,008.03",
+  "last_price": "68.65",
+  "day_change": "-3.38%",
+  "gainloss": "-4.66%",
+  "gainloss_amount": "-46.93",
+  "allocation": "0.27%"
+ },
+ "GFL": {
+  "symbol": "GFL",
+  "quantity": "48",
+  "cost": "2,035.04",
+  "last_price": "41.30",
+  "day_change": "-3.37%",
+  "gainloss": "-2.59%",
+  "gainloss_amount": "-52.64",
+  "allocation": "0.55%"
+ },
+ "HII": {
+  "symbol": "HII",
+  "quantity": "3",
+  "cost": "866.49",
+  "last_price": "287.50",
+  "day_change": "-3.34%",
+  "gainloss": "-0.46%",
+  "gainloss_amount": "-3.99",
+  "allocation": "0.24%"
+ },
+ "EWZ": {
+  "symbol": "EWZ",
+  "quantity": "176.63002",
+  "cost": "5,992.55",
+  "last_price": "30.01",
+  "day_change": "-3.26%",
+  "gainloss": "-11.55%",
+  "gainloss_amount": "-691.88",
+  "allocation": "1.48%"
+ },
+ "KRMN": {
+  "symbol": "KRMN",
+  "quantity": "26",
+  "cost": "1,005.71",
+  "last_price": "34.45",
+  "day_change": "-3.09%",
+  "gainloss": "-10.94%",
+  "gainloss_amount": "-110.01",
+  "allocation": "0.25%"
+ },
+ "MUSA": {
+  "symbol": "MUSA",
+  "quantity": "4",
+  "cost": "2,032.63",
+  "last_price": "514.92",
+  "day_change": "-3.08%",
+  "gainloss": "+1.33%",
+  "gainloss_amount": "+27.05",
+  "allocation": "0.57%"
+ },
+ "ILF": {
+  "symbol": "ILF",
+  "quantity": "90",
+  "cost": "2,965.79",
+  "last_price": "30.40",
+  "day_change": "-2.94%",
+  "gainloss": "-7.75%",
+  "gainloss_amount": "-229.79",
+  "allocation": "0.76%"
+ },
+ "CRWV": {
+  "symbol": "CRWV",
+  "quantity": "49",
+  "cost": "3,001.21",
+  "last_price": "48.52",
+  "day_change": "-2.75%",
+  "gainloss": "-20.78%",
+  "gainloss_amount": "-623.73",
+  "allocation": "0.66%"
+ },
+ "EWT": {
+  "symbol": "EWT",
+  "quantity": "19",
+  "cost": "1,993.16",
+  "last_price": "86.30",
+  "day_change": "-2.69%",
+  "gainloss": "-17.73%",
+  "gainloss_amount": "-353.46",
+  "allocation": "0.46%"
+ },
+ "DB": {
+  "symbol": "DB",
+  "quantity": "30",
+  "cost": "994.75",
+  "last_price": "33.02",
+  "day_change": "-2.54%",
+  "gainloss": "-0.42%",
+  "gainloss_amount": "-4.16",
+  "allocation": "0.28%"
+ },
+ "NVDA": {
+  "symbol": "NVDA",
+  "quantity": "217.96545",
+  "cost": "37,959.72",
+  "last_price": "151.64",
+  "day_change": "-2.46%",
+  "gainloss": "-12.93%",
+  "gainloss_amount": "-4,907.44",
+  "allocation": "9.22%"
+ },
+ "LLY": {
+  "symbol": "LLY",
+  "quantity": "2.77334",
+  "cost": "3,157.19",
+  "last_price": "1,381.02",
+  "day_change": "-2.44%",
+  "gainloss": "+21.31%",
+  "gainloss_amount": "+672.85",
+  "allocation": "1.07%"
+ },
+ "FRO": {
+  "symbol": "FRO",
+  "quantity": "45",
+  "cost": "1,999.33",
+  "last_price": "44.25",
+  "day_change": "-2.37%",
+  "gainloss": "-0.41%",
+  "gainloss_amount": "-8.21",
+  "allocation": "0.56%"
+ },
+ "U": {
+  "symbol": "U",
+  "quantity": "99",
+  "cost": "4,020.17",
+  "last_price": "49.25",
+  "day_change": "-2.20%",
+  "gainloss": "+21.28%",
+  "gainloss_amount": "+855.58",
+  "allocation": "1.36%"
+ },
+ "EXEL": {
+  "symbol": "EXEL",
+  "quantity": "14",
+  "cost": "993.37",
+  "last_price": "67.00",
+  "day_change": "-2.19%",
+  "gainloss": "-5.57%",
+  "gainloss_amount": "-55.37",
+  "allocation": "0.26%"
+ },
+ "QS": {
+  "symbol": "QS",
+  "quantity": "282",
+  "cost": "1,003.36",
+  "last_price": "3.21",
+  "day_change": "-2.13%",
+  "gainloss": "-9.78%",
+  "gainloss_amount": "-98.14",
+  "allocation": "0.25%"
+ },
+ "SHEL": {
+  "symbol": "SHEL",
+  "quantity": "20",
+  "cost": "1,959.76",
+  "last_price": "95.23",
+  "day_change": "-2.07%",
+  "gainloss": "-2.81%",
+  "gainloss_amount": "-55.13",
+  "allocation": "0.53%"
+ },
+ "MFG": {
+  "symbol": "MFG",
+  "quantity": "106",
+  "cost": "996.26",
+  "last_price": "9.63",
+  "day_change": "-2.00%",
+  "gainloss": "+2.50%",
+  "gainloss_amount": "+24.90",
+  "allocation": "0.28%"
+ },
+ "LMT": {
+  "symbol": "LMT",
+  "quantity": "2",
+  "cost": "1,176.14",
+  "last_price": "579.20",
+  "day_change": "-1.89%",
+  "gainloss": "-1.51%",
+  "gainloss_amount": "-17.74",
+  "allocation": "0.32%"
+ },
+ "IESC": {
+  "symbol": "IESC",
+  "quantity": "15",
+  "cost": "3,924.53",
+  "last_price": "165.29",
+  "day_change": "-1.81%",
+  "gainloss": "-36.82%",
+  "gainloss_amount": "-1,445.18",
+  "allocation": "0.69%"
+ },
+ "DXJ": {
+  "symbol": "DXJ",
+  "quantity": "18",
+  "cost": "1,013.35",
+  "last_price": "56.21",
+  "day_change": "-1.75%",
+  "gainloss": "-0.15%",
+  "gainloss_amount": "-1.57",
+  "allocation": "0.28%"
+ },
+ "RAAX": {
+  "symbol": "RAAX",
+  "quantity": "26",
+  "cost": "1,001.28",
+  "last_price": "36.89",
+  "day_change": "-1.73%",
+  "gainloss": "-4.21%",
+  "gainloss_amount": "-42.14",
+  "allocation": "0.27%"
+ },
+ "SMTC": {
+  "symbol": "SMTC",
+  "quantity": "7",
+  "cost": "981.17",
+  "last_price": "105.00",
+  "day_change": "-1.66%",
+  "gainloss": "-25.09%",
+  "gainloss_amount": "-246.17",
+  "allocation": "0.21%"
+ },
+ "APP": {
+  "symbol": "APP",
+  "quantity": "8",
+  "cost": "2,076.50",
+  "last_price": "392.34",
+  "day_change": "-1.65%",
+  "gainloss": "+51.15%",
+  "gainloss_amount": "+1,062.22",
   "allocation": "0.88%"
  },
  "NU": {
   "symbol": "NU",
   "quantity": "493.78021",
   "cost": "5,998.51",
-  "last_price": "13.06",
-  "day_change": "+10.40%",
-  "gainloss": "+7.51%",
-  "gainloss_amount": "+450.26",
-  "allocation": "1.88%"
+  "last_price": "12.14",
+  "day_change": "-1.54%",
+  "gainloss": "-0.07%",
+  "gainloss_amount": "-4.02",
+  "allocation": "1.67%"
+ },
+ "ASX": {
+  "symbol": "ASX",
+  "quantity": "31",
+  "cost": "1,012.07",
+  "last_price": "31.36",
+  "day_change": "-1.48%",
+  "gainloss": "-3.94%",
+  "gainloss_amount": "-39.91",
+  "allocation": "0.27%"
+ },
+ "KBWB": {
+  "symbol": "KBWB",
+  "quantity": "34",
+  "cost": "2,959.94",
+  "last_price": "85.82",
+  "day_change": "-1.38%",
+  "gainloss": "-1.42%",
+  "gainloss_amount": "-42.06",
+  "allocation": "0.81%"
+ },
+ "DELL": {
+  "symbol": "DELL",
+  "quantity": "8",
+  "cost": "3,653.17",
+  "last_price": "318.39",
+  "day_change": "-1.36%",
+  "gainloss": "-30.28%",
+  "gainloss_amount": "-1,106.05",
+  "allocation": "0.71%"
+ },
+ "EWM": {
+  "symbol": "EWM",
+  "quantity": "38",
+  "cost": "1,005.40",
+  "last_price": "25.66",
+  "day_change": "-1.31%",
+  "gainloss": "-3.02%",
+  "gainloss_amount": "-30.32",
+  "allocation": "0.27%"
+ },
+ "COF": {
+  "symbol": "COF",
+  "quantity": "5",
+  "cost": "936.37",
+  "last_price": "184.35",
+  "day_change": "-1.30%",
+  "gainloss": "-1.56%",
+  "gainloss_amount": "-14.62",
+  "allocation": "0.26%"
+ },
+ "CLH": {
+  "symbol": "CLH",
+  "quantity": "3",
+  "cost": "870.69",
+  "last_price": "284.78",
+  "day_change": "-1.29%",
+  "gainloss": "-1.88%",
+  "gainloss_amount": "-16.35",
+  "allocation": "0.24%"
+ },
+ "BNY": {
+  "symbol": "BNY",
+  "quantity": "0.51362",
+  "cost": "72.91",
+  "last_price": "147.89",
+  "day_change": "-1.27%",
+  "gainloss": "+4.18%",
+  "gainloss_amount": "+3.05",
+  "allocation": "0.02%"
+ },
+ "ALB": {
+  "symbol": "ALB",
+  "quantity": "20",
+  "cost": "1,939.15",
+  "last_price": "86.60",
+  "day_change": "-1.22%",
+  "gainloss": "-10.68%",
+  "gainloss_amount": "-207.15",
+  "allocation": "0.48%"
+ },
+ "LHX": {
+  "symbol": "LHX",
+  "quantity": "4",
+  "cost": "1,056.42",
+  "last_price": "257.59",
+  "day_change": "-1.21%",
+  "gainloss": "-2.47%",
+  "gainloss_amount": "-26.06",
+  "allocation": "0.29%"
+ },
+ "SBIO": {
+  "symbol": "SBIO",
+  "quantity": "151",
+  "cost": "7,969.87",
+  "last_price": "52.90",
+  "day_change": "-1.17%",
+  "gainloss": "+0.23%",
+  "gainloss_amount": "+18.53",
+  "allocation": "2.23%"
+ },
+ "URA": {
+  "symbol": "URA",
+  "quantity": "66",
+  "cost": "2,006.84",
+  "last_price": "29.72",
+  "day_change": "-1.07%",
+  "gainloss": "-2.26%",
+  "gainloss_amount": "-45.32",
+  "allocation": "0.55%"
+ },
+ "CAT": {
+  "symbol": "CAT",
+  "quantity": "2",
+  "cost": "1,164.09",
+  "last_price": "564.80",
+  "day_change": "-1.05%",
+  "gainloss": "-2.96%",
+  "gainloss_amount": "-34.50",
+  "allocation": "0.32%"
+ },
+ "DRS": {
+  "symbol": "DRS",
+  "quantity": "59",
+  "cost": "1,996.23",
+  "last_price": "33.36",
+  "day_change": "-1.04%",
+  "gainloss": "-1.40%",
+  "gainloss_amount": "-27.99",
+  "allocation": "0.55%"
+ },
+ "KMB": {
+  "symbol": "KMB",
+  "quantity": "9",
+  "cost": "965.70",
+  "last_price": "107.03",
+  "day_change": "-1.04%",
+  "gainloss": "-0.25%",
+  "gainloss_amount": "-2.43",
+  "allocation": "0.27%"
+ },
+ "ADMA": {
+  "symbol": "ADMA",
+  "quantity": "76",
+  "cost": "997.85",
+  "last_price": "13.49",
+  "day_change": "-1.03%",
+  "gainloss": "+2.74%",
+  "gainloss_amount": "+27.39",
+  "allocation": "0.29%"
+ },
+ "KMI": {
+  "symbol": "KMI",
+  "quantity": "66",
+  "cost": "1,982.88",
+  "last_price": "31.39",
+  "day_change": "-0.98%",
+  "gainloss": "+4.48%",
+  "gainloss_amount": "+88.86",
+  "allocation": "0.58%"
+ },
+ "VEU": {
+  "symbol": "VEU",
+  "quantity": "12",
+  "cost": "982.80",
+  "last_price": "77.66",
+  "day_change": "-0.93%",
+  "gainloss": "-5.17%",
+  "gainloss_amount": "-50.84",
+  "allocation": "0.26%"
+ },
+ "PG": {
+  "symbol": "PG",
+  "quantity": "12",
+  "cost": "1,942.16",
+  "last_price": "170.13",
+  "day_change": "-0.93%",
+  "gainloss": "+5.12%",
+  "gainloss_amount": "+99.40",
+  "allocation": "0.57%"
+ },
+ "MS": {
+  "symbol": "MS",
+  "quantity": "22",
+  "cost": "4,002.22",
+  "last_price": "181.85",
+  "day_change": "-0.92%",
+  "gainloss": "-0.04%",
+  "gainloss_amount": "-1.52",
+  "allocation": "1.12%"
+ },
+ "MRVL": {
+  "symbol": "MRVL",
+  "quantity": "6",
+  "cost": "1,041.75",
+  "last_price": "147.43",
+  "day_change": "-0.88%",
+  "gainloss": "-15.09%",
+  "gainloss_amount": "-157.17",
+  "allocation": "0.25%"
+ },
+ "IBB": {
+  "symbol": "IBB",
+  "quantity": "25",
+  "cost": "5,072.77",
+  "last_price": "205.15",
+  "day_change": "-0.88%",
+  "gainloss": "+1.10%",
+  "gainloss_amount": "+55.98",
+  "allocation": "1.43%"
+ },
+ "MIAX": {
+  "symbol": "MIAX",
+  "quantity": "34",
+  "cost": "1,011.16",
+  "last_price": "37.02",
+  "day_change": "-0.75%",
+  "gainloss": "+24.48%",
+  "gainloss_amount": "+247.52",
+  "allocation": "0.35%"
+ },
+ "IXUS": {
+  "symbol": "IXUS",
+  "quantity": "11",
+  "cost": "1,031.09",
+  "last_price": "89.00",
+  "day_change": "-0.75%",
+  "gainloss": "-5.05%",
+  "gainloss_amount": "-52.09",
+  "allocation": "0.27%"
+ },
+ "POWR": {
+  "symbol": "POWR",
+  "quantity": "81",
+  "cost": "1,995.08",
+  "last_price": "24.02",
+  "day_change": "-0.62%",
+  "gainloss": "-2.48%",
+  "gainloss_amount": "-49.46",
+  "allocation": "0.54%"
+ },
+ "CNH": {
+  "symbol": "CNH",
+  "quantity": "87",
+  "cost": "1,005.96",
+  "last_price": "11.24",
+  "day_change": "-0.53%",
+  "gainloss": "-2.79%",
+  "gainloss_amount": "-28.08",
+  "allocation": "0.27%"
+ },
+ "PRAX": {
+  "symbol": "PRAX",
+  "quantity": "4",
+  "cost": "983.99",
+  "last_price": "303.52",
+  "day_change": "-0.50%",
+  "gainloss": "+23.38%",
+  "gainloss_amount": "+230.09",
+  "allocation": "0.34%"
+ },
+ "RDVY": {
+  "symbol": "RDVY",
+  "quantity": "13",
+  "cost": "1,018.93",
+  "last_price": "77.19",
+  "day_change": "-0.50%",
+  "gainloss": "-1.52%",
+  "gainloss_amount": "-15.46",
+  "allocation": "0.28%"
+ },
+ "PFFD": {
+  "symbol": "PFFD",
+  "quantity": "116.59775",
+  "cost": "2,000.38",
+  "last_price": "16.37",
+  "day_change": "-0.43%",
+  "gainloss": "-4.58%",
+  "gainloss_amount": "-91.67",
+  "allocation": "0.53%"
+ },
+ "WCC": {
+  "symbol": "WCC",
+  "quantity": "6",
+  "cost": "1,954.85",
+  "last_price": "313.54",
+  "day_change": "-0.41%",
+  "gainloss": "-3.77%",
+  "gainloss_amount": "-73.61",
+  "allocation": "0.53%"
+ },
+ "EPAM": {
+  "symbol": "EPAM",
+  "quantity": "6",
+  "cost": "962.33",
+  "last_price": "153.57",
+  "day_change": "-0.37%",
+  "gainloss": "-4.25%",
+  "gainloss_amount": "-40.89",
+  "allocation": "0.26%"
+ },
+ "VST": {
+  "symbol": "VST",
+  "quantity": "9",
+  "cost": "1,040.42",
+  "last_price": "126.69",
+  "day_change": "-0.36%",
+  "gainloss": "+9.59%",
+  "gainloss_amount": "+99.79",
+  "allocation": "0.32%"
+ },
+ "TM": {
+  "symbol": "TM",
+  "quantity": "5",
+  "cost": "1,069.08",
+  "last_price": "212.45",
+  "day_change": "-0.31%",
+  "gainloss": "-0.64%",
+  "gainloss_amount": "-6.83",
+  "allocation": "0.30%"
+ },
+ "MSI": {
+  "symbol": "MSI",
+  "quantity": "2",
+  "cost": "1,027.26",
+  "last_price": "524.53",
+  "day_change": "-0.31%",
+  "gainloss": "+2.12%",
+  "gainloss_amount": "+21.80",
+  "allocation": "0.29%"
+ },
+ "SOFI": {
+  "symbol": "SOFI",
+  "quantity": "66",
+  "cost": "997.82",
+  "last_price": "14.24",
+  "day_change": "-0.28%",
+  "gainloss": "-5.81%",
+  "gainloss_amount": "-57.98",
+  "allocation": "0.26%"
+ },
+ "AJG": {
+  "symbol": "AJG",
+  "quantity": "4",
+  "cost": "1,110.41",
+  "last_price": "282.22",
+  "day_change": "-0.23%",
+  "gainloss": "+1.66%",
+  "gainloss_amount": "+18.47",
+  "allocation": "0.32%"
+ },
+ "SIMO": {
+  "symbol": "SIMO",
+  "quantity": "14",
+  "cost": "2,966.47",
+  "last_price": "151.74",
+  "day_change": "-0.20%",
+  "gainloss": "-28.39%",
+  "gainloss_amount": "-842.11",
+  "allocation": "0.59%"
+ },
+ "ORCL": {
+  "symbol": "ORCL",
+  "quantity": "33",
+  "cost": "4,037.01",
+  "last_price": "114.78",
+  "day_change": "-0.19%",
+  "gainloss": "-6.17%",
+  "gainloss_amount": "-249.27",
+  "allocation": "1.06%"
+ },
+ "MTZ": {
+  "symbol": "MTZ",
+  "quantity": "6",
+  "cost": "923.93",
+  "last_price": "174.36",
+  "day_change": "-0.18%",
+  "gainloss": "+13.23%",
+  "gainloss_amount": "+122.23",
+  "allocation": "0.29%"
+ },
+ "IXP": {
+  "symbol": "IXP",
+  "quantity": "18.35193",
+  "cost": "1,961.43",
+  "last_price": "108.71",
+  "day_change": "-0.17%",
+  "gainloss": "+1.71%",
+  "gainloss_amount": "+33.61",
+  "allocation": "0.56%"
+ },
+ "REXR": {
+  "symbol": "REXR",
+  "quantity": "26",
+  "cost": "999.03",
+  "last_price": "36.14",
+  "day_change": "-0.14%",
+  "gainloss": "-5.94%",
+  "gainloss_amount": "-59.39",
+  "allocation": "0.26%"
+ },
+ "AGCO": {
+  "symbol": "AGCO",
+  "quantity": "10",
+  "cost": "1,033.20",
+  "last_price": "106.43",
+  "day_change": "-0.12%",
+  "gainloss": "+3.01%",
+  "gainloss_amount": "+31.10",
+  "allocation": "0.30%"
+ },
+ "META": {
+  "symbol": "META",
+  "quantity": "2",
+  "cost": "1,250.28",
+  "last_price": "618.16",
+  "day_change": "-0.11%",
+  "gainloss": "-1.12%",
+  "gainloss_amount": "-13.96",
+  "allocation": "0.35%"
+ },
+ "FLAX": {
+  "symbol": "FLAX",
+  "quantity": "31",
+  "cost": "1,011.38",
+  "last_price": "31.50",
+  "day_change": "-0.10%",
+  "gainloss": "-3.45%",
+  "gainloss_amount": "-34.93",
+  "allocation": "0.27%"
+ },
+ "ERIC": {
+  "symbol": "ERIC",
+  "quantity": "286",
+  "cost": "3,004.43",
+  "last_price": "10.31",
+  "day_change": "-0.10%",
+  "gainloss": "-1.86%",
+  "gainloss_amount": "-55.77",
+  "allocation": "0.82%"
+ },
+ "GS": {
+  "symbol": "GS",
+  "quantity": "16.60701",
+  "cost": "15,441.06",
+  "last_price": "876.95",
+  "day_change": "-0.06%",
+  "gainloss": "-5.68%",
+  "gainloss_amount": "-877.53",
+  "allocation": "4.06%"
+ },
+ "NUE": {
+  "symbol": "NUE",
+  "quantity": "4",
+  "cost": "999.38",
+  "last_price": "252.00",
+  "day_change": "-0.03%",
+  "gainloss": "+0.86%",
+  "gainloss_amount": "+8.62",
+  "allocation": "0.28%"
+ },
+ "EXC": {
+  "symbol": "EXC",
+  "quantity": "44",
+  "cost": "2,023.47",
+  "last_price": "45.89",
+  "day_change": "+0.07%",
+  "gainloss": "-0.21%",
+  "gainloss_amount": "-4.31",
+  "allocation": "0.56%"
+ },
+ "ICLR": {
+  "symbol": "ICLR",
+  "quantity": "5",
+  "cost": "992.73",
+  "last_price": "195.16",
+  "day_change": "+0.07%",
+  "gainloss": "-1.71%",
+  "gainloss_amount": "-16.93",
+  "allocation": "0.27%"
+ },
+ "JMUB": {
+  "symbol": "JMUB",
+  "quantity": "63",
+  "cost": "3,000.99",
+  "last_price": "48.63",
+  "day_change": "+0.10%",
+  "gainloss": "+2.09%",
+  "gainloss_amount": "+62.70",
+  "allocation": "0.86%"
+ },
+ "FTAI": {
+  "symbol": "FTAI",
+  "quantity": "6",
+  "cost": "1,044.44",
+  "last_price": "172.50",
+  "day_change": "+0.13%",
+  "gainloss": "-0.90%",
+  "gainloss_amount": "-9.44",
+  "allocation": "0.29%"
+ },
+ "BKNG": {
+  "symbol": "BKNG",
+  "quantity": "49.61898",
+  "cost": "7,958.07",
+  "last_price": "154.74",
+  "day_change": "+0.18%",
+  "gainloss": "-3.52%",
+  "gainloss_amount": "-280.03",
+  "allocation": "2.14%"
+ },
+ "GPK": {
+  "symbol": "GPK",
+  "quantity": "91",
+  "cost": "1,001.34",
+  "last_price": "10.54",
+  "day_change": "+0.19%",
+  "gainloss": "-4.21%",
+  "gainloss_amount": "-42.20",
+  "allocation": "0.27%"
+ },
+ "GTLB": {
+  "symbol": "GTLB",
+  "quantity": "21",
+  "cost": "998.72",
+  "last_price": "44.70",
+  "day_change": "+0.27%",
+  "gainloss": "-6.01%",
+  "gainloss_amount": "-60.02",
+  "allocation": "0.26%"
+ },
+ "ICVT": {
+  "symbol": "ICVT",
+  "quantity": "10",
+  "cost": "1,022.73",
+  "last_price": "100.29",
+  "day_change": "+0.27%",
+  "gainloss": "-1.94%",
+  "gainloss_amount": "-19.83",
+  "allocation": "0.28%"
+ },
+ "WCN": {
+  "symbol": "WCN",
+  "quantity": "6",
+  "cost": "1,086.57",
+  "last_price": "182.00",
+  "day_change": "+0.28%",
+  "gainloss": "+0.50%",
+  "gainloss_amount": "+5.43",
+  "allocation": "0.30%"
+ },
+ "CLF": {
+  "symbol": "CLF",
+  "quantity": "86",
+  "cost": "998.41",
+  "last_price": "11.81",
+  "day_change": "+0.36%",
+  "gainloss": "+1.75%",
+  "gainloss_amount": "+17.46",
+  "allocation": "0.28%"
+ },
+ "QUAL": {
+  "symbol": "QUAL",
+  "quantity": "18",
+  "cost": "992.13",
+  "last_price": "54.74",
+  "day_change": "+0.46%",
+  "gainloss": "-0.69%",
+  "gainloss_amount": "-6.81",
+  "allocation": "0.27%"
+ },
+ "EME": {
+  "symbol": "EME",
+  "quantity": "1",
+  "cost": "730.24",
+  "last_price": "650.00",
+  "day_change": "+0.58%",
+  "gainloss": "-10.99%",
+  "gainloss_amount": "-80.24",
+  "allocation": "0.18%"
+ },
+ "EQIX": {
+  "symbol": "EQIX",
+  "quantity": "3",
+  "cost": "2,970.62",
+  "last_price": "1,036.00",
+  "day_change": "+0.61%",
+  "gainloss": "+4.62%",
+  "gainloss_amount": "+137.38",
+  "allocation": "0.87%"
+ },
+ "NTNX": {
+  "symbol": "NTNX",
+  "quantity": "17",
+  "cost": "1,004.42",
+  "last_price": "56.87",
+  "day_change": "+0.62%",
+  "gainloss": "-3.75%",
+  "gainloss_amount": "-37.63",
+  "allocation": "0.27%"
+ },
+ "CPAY": {
+  "symbol": "CPAY",
+  "quantity": "2",
+  "cost": "883.08",
+  "last_price": "455.22",
+  "day_change": "+0.64%",
+  "gainloss": "+3.10%",
+  "gainloss_amount": "+27.36",
+  "allocation": "0.25%"
+ },
+ "OGS": {
+  "symbol": "OGS",
+  "quantity": "12",
+  "cost": "985.80",
+  "last_price": "82.55",
+  "day_change": "+0.65%",
+  "gainloss": "+0.49%",
+  "gainloss_amount": "+4.80",
+  "allocation": "0.28%"
+ },
+ "STE": {
+  "symbol": "STE",
+  "quantity": "4",
+  "cost": "999.36",
+  "last_price": "259.57",
+  "day_change": "+0.84%",
+  "gainloss": "+3.89%",
+  "gainloss_amount": "+38.92",
+  "allocation": "0.29%"
+ },
+ "ONTO": {
+  "symbol": "ONTO",
+  "quantity": "18",
+  "cost": "3,884.32",
+  "last_price": "201.30",
+  "day_change": "+0.87%",
+  "gainloss": "-6.72%",
+  "gainloss_amount": "-260.92",
+  "allocation": "1.01%"
+ },
+ "ETN": {
+  "symbol": "ETN",
+  "quantity": "3",
+  "cost": "1,032.00",
+  "last_price": "340.22",
+  "day_change": "+0.92%",
+  "gainloss": "-1.10%",
+  "gainloss_amount": "-11.34",
+  "allocation": "0.28%"
+ },
+ "TSM": {
+  "symbol": "TSM",
+  "quantity": "7",
+  "cost": "2,935.91",
+  "last_price": "363.18",
+  "day_change": "+0.97%",
+  "gainloss": "-13.41%",
+  "gainloss_amount": "-393.65",
+  "allocation": "0.71%"
+ },
+ "TOST": {
+  "symbol": "TOST",
+  "quantity": "31.83273",
+  "cost": "1,000.00",
+  "last_price": "34.00",
+  "day_change": "+1.04%",
+  "gainloss": "+8.23%",
+  "gainloss_amount": "+82.31",
+  "allocation": "0.30%"
+ },
+ "ROAD": {
+  "symbol": "ROAD",
+  "quantity": "24",
+  "cost": "1,993.26",
+  "last_price": "79.61",
+  "day_change": "+1.10%",
+  "gainloss": "-4.14%",
+  "gainloss_amount": "-82.62",
+  "allocation": "0.53%"
+ },
+ "HLI": {
+  "symbol": "HLI",
+  "quantity": "7",
+  "cost": "985.30",
+  "last_price": "139.22",
+  "day_change": "+1.13%",
+  "gainloss": "-1.09%",
+  "gainloss_amount": "-10.76",
+  "allocation": "0.27%"
+ },
+ "ZBH": {
+  "symbol": "ZBH",
+  "quantity": "10",
+  "cost": "1,027.22",
+  "last_price": "103.32",
+  "day_change": "+1.20%",
+  "gainloss": "+0.58%",
+  "gainloss_amount": "+5.98",
+  "allocation": "0.29%"
+ },
+ "LNT": {
+  "symbol": "LNT",
+  "quantity": "14",
+  "cost": "1,011.12",
+  "last_price": "72.17",
+  "day_change": "+1.21%",
+  "gainloss": "-0.07%",
+  "gainloss_amount": "-0.74",
+  "allocation": "0.28%"
+ },
+ "TEX": {
+  "symbol": "TEX",
+  "quantity": "19",
+  "cost": "1,016.37",
+  "last_price": "53.82",
+  "day_change": "+1.28%",
+  "gainloss": "+0.61%",
+  "gainloss_amount": "+6.21",
+  "allocation": "0.29%"
+ },
+ "QQQ": {
+  "symbol": "QQQ",
+  "quantity": "24",
+  "cost": "16,777.68",
+  "last_price": "666.00",
+  "day_change": "+1.38%",
+  "gainloss": "-4.73%",
+  "gainloss_amount": "-793.68",
+  "allocation": "4.46%"
+ },
+ "TSCO": {
+  "symbol": "TSCO",
+  "quantity": "31",
+  "cost": "990.73",
+  "last_price": "39.03",
+  "day_change": "+1.39%",
+  "gainloss": "+22.11%",
+  "gainloss_amount": "+219.09",
+  "allocation": "0.34%"
+ },
+ "EPRT": {
+  "symbol": "EPRT",
+  "quantity": "37",
+  "cost": "992.39",
+  "last_price": "28.07",
+  "day_change": "+1.45%",
+  "gainloss": "+4.66%",
+  "gainloss_amount": "+46.20",
+  "allocation": "0.29%"
+ },
+ "MLM": {
+  "symbol": "MLM",
+  "quantity": "4",
+  "cost": "2,102.20",
+  "last_price": "511.60",
+  "day_change": "+1.45%",
+  "gainloss": "-2.65%",
+  "gainloss_amount": "-55.80",
+  "allocation": "0.57%"
+ },
+ "CVNA": {
+  "symbol": "CVNA",
+  "quantity": "14",
+  "cost": "999.06",
+  "last_price": "72.14",
+  "day_change": "+1.46%",
+  "gainloss": "+1.09%",
+  "gainloss_amount": "+10.90",
+  "allocation": "0.28%"
+ },
+ "AMRZ": {
+  "symbol": "AMRZ",
+  "quantity": "25",
+  "cost": "1,013.11",
+  "last_price": "40.41",
+  "day_change": "+1.48%",
+  "gainloss": "-0.28%",
+  "gainloss_amount": "-2.86",
+  "allocation": "0.28%"
+ },
+ "DXCM": {
+  "symbol": "DXCM",
+  "quantity": "13",
+  "cost": "1,030.64",
+  "last_price": "83.39",
+  "day_change": "+1.65%",
+  "gainloss": "+5.18%",
+  "gainloss_amount": "+53.43",
+  "allocation": "0.30%"
+ },
+ "VMC": {
+  "symbol": "VMC",
+  "quantity": "3",
+  "cost": "861.87",
+  "last_price": "279.74",
+  "day_change": "+1.68%",
+  "gainloss": "-2.63%",
+  "gainloss_amount": "-22.65",
+  "allocation": "0.23%"
+ },
+ "SOXX": {
+  "symbol": "SOXX",
+  "quantity": "20",
+  "cost": "2,979.47",
+  "last_price": "143.89",
+  "day_change": "+1.72%",
+  "gainloss": "-3.41%",
+  "gainloss_amount": "-101.67",
+  "allocation": "0.80%"
+ },
+ "ARMK": {
+  "symbol": "ARMK",
+  "quantity": "57",
+  "cost": "3,003.71",
+  "last_price": "57.61",
+  "day_change": "+1.82%",
+  "gainloss": "+9.32%",
+  "gainloss_amount": "+280.06",
+  "allocation": "0.92%"
+ },
+ "SWK": {
+  "symbol": "SWK",
+  "quantity": "9",
+  "cost": "983.72",
+  "last_price": "110.83",
+  "day_change": "+1.86%",
+  "gainloss": "+1.40%",
+  "gainloss_amount": "+13.75",
+  "allocation": "0.28%"
+ },
+ "GOOGL": {
+  "symbol": "GOOGL",
+  "quantity": "3",
+  "cost": "884.09",
+  "last_price": "285.49",
+  "day_change": "+1.89%",
+  "gainloss": "-3.12%",
+  "gainloss_amount": "-27.62",
+  "allocation": "0.24%"
+ },
+ "ARKG": {
+  "symbol": "ARKG",
+  "quantity": "24",
+  "cost": "1,007.28",
+  "last_price": "41.28",
+  "day_change": "+1.93%",
+  "gainloss": "-1.64%",
+  "gainloss_amount": "-16.56",
+  "allocation": "0.28%"
+ },
+ "JCI": {
+  "symbol": "JCI",
+  "quantity": "7",
+  "cost": "967.90",
+  "last_price": "138.96",
+  "day_change": "+1.94%",
+  "gainloss": "+0.50%",
+  "gainloss_amount": "+4.82",
+  "allocation": "0.27%"
+ },
+ "IDCC": {
+  "symbol": "IDCC",
+  "quantity": "4",
+  "cost": "1,101.97",
+  "last_price": "276.58",
+  "day_change": "+1.96%",
+  "gainloss": "+0.39%",
+  "gainloss_amount": "+4.35",
+  "allocation": "0.31%"
+ },
+ "CPRI": {
+  "symbol": "CPRI",
+  "quantity": "53",
+  "cost": "1,006.97",
+  "last_price": "19.46",
+  "day_change": "+1.99%",
+  "gainloss": "+2.42%",
+  "gainloss_amount": "+24.41",
+  "allocation": "0.29%"
+ },
+ "OC": {
+  "symbol": "OC",
+  "quantity": "9",
+  "cost": "1,028.47",
+  "last_price": "114.06",
+  "day_change": "+2.10%",
+  "gainloss": "-0.19%",
+  "gainloss_amount": "-1.93",
+  "allocation": "0.29%"
+ },
+ "CPNG": {
+  "symbol": "CPNG",
+  "quantity": "68",
+  "cost": "996.03",
+  "last_price": "14.30",
+  "day_change": "+2.14%",
+  "gainloss": "-2.37%",
+  "gainloss_amount": "-23.63",
+  "allocation": "0.27%"
+ },
+ "CECO": {
+  "symbol": "CECO",
+  "quantity": "23",
+  "cost": "1,024.70",
+  "last_price": "53.76",
+  "day_change": "+2.34%",
+  "gainloss": "+20.67%",
+  "gainloss_amount": "+211.78",
+  "allocation": "0.35%"
+ },
+ "TMDX": {
+  "symbol": "TMDX",
+  "quantity": "15",
+  "cost": "1,027.50",
+  "last_price": "96.43",
+  "day_change": "+2.68%",
+  "gainloss": "+40.77%",
+  "gainloss_amount": "+418.95",
+  "allocation": "0.40%"
+ },
+ "FRPT": {
+  "symbol": "FRPT",
+  "quantity": "15",
+  "cost": "983.12",
+  "last_price": "67.70",
+  "day_change": "+2.70%",
+  "gainloss": "+3.29%",
+  "gainloss_amount": "+32.38",
+  "allocation": "0.28%"
+ },
+ "EMR": {
+  "symbol": "EMR",
+  "quantity": "12",
+  "cost": "1,991.96",
+  "last_price": "163.66",
+  "day_change": "+2.83%",
+  "gainloss": "-1.41%",
+  "gainloss_amount": "-28.04",
+  "allocation": "0.55%"
+ },
+ "JAZZ": {
+  "symbol": "JAZZ",
+  "quantity": "5",
+  "cost": "1,069.44",
+  "last_price": "247.77",
+  "day_change": "+2.93%",
+  "gainloss": "+15.84%",
+  "gainloss_amount": "+169.41",
+  "allocation": "0.35%"
+ },
+ "GAP": {
+  "symbol": "GAP",
+  "quantity": "50",
+  "cost": "995.29",
+  "last_price": "19.93",
+  "day_change": "+2.98%",
+  "gainloss": "+0.11%",
+  "gainloss_amount": "+1.05",
+  "allocation": "0.28%"
+ },
+ "ETSY": {
+  "symbol": "ETSY",
+  "quantity": "23",
+  "cost": "2,012.57",
+  "last_price": "85.10",
+  "day_change": "+3.01%",
+  "gainloss": "-2.74%",
+  "gainloss_amount": "-55.19",
+  "allocation": "0.55%"
+ },
+ "HWM": {
+  "symbol": "HWM",
+  "quantity": "28.68468",
+  "cost": "6,143.78",
+  "last_price": "222.00",
+  "day_change": "+3.11%",
+  "gainloss": "+3.65%",
+  "gainloss_amount": "+224.22",
+  "allocation": "1.78%"
+ },
+ "COLD": {
+  "symbol": "COLD",
+  "quantity": "64",
+  "cost": "1,003.74",
+  "last_price": "16.80",
+  "day_change": "+3.38%",
+  "gainloss": "+7.12%",
+  "gainloss_amount": "+71.46",
+  "allocation": "0.30%"
+ },
+ "STX": {
+  "symbol": "STX",
+  "quantity": "2",
+  "cost": "984.06",
+  "last_price": "521.58",
+  "day_change": "+3.41%",
+  "gainloss": "+6.01%",
+  "gainloss_amount": "+59.10",
+  "allocation": "0.29%"
+ },
+ "SNOW": {
+  "symbol": "SNOW",
+  "quantity": "9",
+  "cost": "2,818.87",
+  "last_price": "282.28",
+  "day_change": "+3.42%",
+  "gainloss": "-9.87%",
+  "gainloss_amount": "-278.35",
+  "allocation": "0.71%"
+ },
+ "FLEX": {
+  "symbol": "FLEX",
+  "quantity": "14",
+  "cost": "992.82",
+  "last_price": "75.73",
+  "day_change": "+3.61%",
+  "gainloss": "+6.79%",
+  "gainloss_amount": "+67.40",
+  "allocation": "0.30%"
+ },
+ "CDW": {
+  "symbol": "CDW",
+  "quantity": "6",
+  "cost": "949.04",
+  "last_price": "169.01",
+  "day_change": "+3.64%",
+  "gainloss": "+6.85%",
+  "gainloss_amount": "+65.02",
+  "allocation": "0.28%"
+ },
+ "ROST": {
+  "symbol": "ROST",
+  "quantity": "4",
+  "cost": "900.98",
+  "last_price": "228.78",
+  "day_change": "+3.78%",
+  "gainloss": "+1.57%",
+  "gainloss_amount": "+14.14",
+  "allocation": "0.26%"
+ },
+ "CTRE": {
+  "symbol": "CTRE",
+  "quantity": "27",
+  "cost": "1,009.87",
+  "last_price": "38.55",
+  "day_change": "+3.82%",
+  "gainloss": "+3.07%",
+  "gainloss_amount": "+30.98",
+  "allocation": "0.29%"
+ },
+ "ESTC": {
+  "symbol": "ESTC",
+  "quantity": "34",
+  "cost": "2,993.02",
+  "last_price": "83.50",
+  "day_change": "+3.87%",
+  "gainloss": "-5.15%",
+  "gainloss_amount": "-154.02",
+  "allocation": "0.79%"
+ },
+ "ATI": {
+  "symbol": "ATI",
+  "quantity": "18",
+  "cost": "3,105.50",
+  "last_price": "180.87",
+  "day_change": "+3.87%",
+  "gainloss": "+4.84%",
+  "gainloss_amount": "+150.16",
+  "allocation": "0.91%"
+ },
+ "TFX": {
+  "symbol": "TFX",
+  "quantity": "7",
+  "cost": "1,050.00",
+  "last_price": "165.85",
+  "day_change": "+3.95%",
+  "gainloss": "+10.57%",
+  "gainloss_amount": "+110.95",
+  "allocation": "0.32%"
+ },
+ "UCTT": {
+  "symbol": "UCTT",
+  "quantity": "20",
+  "cost": "993.48",
+  "last_price": "44.92",
+  "day_change": "+4.13%",
+  "gainloss": "-9.57%",
+  "gainloss_amount": "-95.08",
+  "allocation": "0.25%"
+ },
+ "BURL": {
+  "symbol": "BURL",
+  "quantity": "4",
+  "cost": "957.96",
+  "last_price": "245.28",
+  "day_change": "+4.31%",
+  "gainloss": "+2.42%",
+  "gainloss_amount": "+23.16",
+  "allocation": "0.27%"
+ },
+ "AMKR": {
+  "symbol": "AMKR",
+  "quantity": "30",
+  "cost": "1,009.29",
+  "last_price": "35.56",
+  "day_change": "+4.43%",
+  "gainloss": "+5.70%",
+  "gainloss_amount": "+57.51",
+  "allocation": "0.30%"
+ },
+ "MIR": {
+  "symbol": "MIR",
+  "quantity": "59",
+  "cost": "995.14",
+  "last_price": "17.43",
+  "day_change": "+4.68%",
+  "gainloss": "+3.34%",
+  "gainloss_amount": "+33.23",
+  "allocation": "0.29%"
+ },
+ "TREX": {
+  "symbol": "TREX",
+  "quantity": "38",
+  "cost": "2,054.75",
+  "last_price": "53.24",
+  "day_change": "+4.81%",
+  "gainloss": "-1.53%",
+  "gainloss_amount": "-31.50",
+  "allocation": "0.56%"
+ },
+ "ENTG": {
+  "symbol": "ENTG",
+  "quantity": "7",
+  "cost": "980.02",
+  "last_price": "148.00",
+  "day_change": "+5.13%",
+  "gainloss": "+5.71%",
+  "gainloss_amount": "+55.98",
+  "allocation": "0.29%"
+ },
+ "EAT": {
+  "symbol": "EAT",
+  "quantity": "5",
+  "cost": "985.05",
+  "last_price": "206.00",
+  "day_change": "+5.74%",
+  "gainloss": "+4.56%",
+  "gainloss_amount": "+44.95",
+  "allocation": "0.29%"
+ },
+ "CVLT": {
+  "symbol": "CVLT",
+  "quantity": "13",
+  "cost": "2,006.88",
+  "last_price": "150.95",
+  "day_change": "+6.27%",
+  "gainloss": "-2.22%",
+  "gainloss_amount": "-44.53",
+  "allocation": "0.55%"
+ },
+ "AMD": {
+  "symbol": "AMD",
+  "quantity": "2",
+  "cost": "863.12",
+  "last_price": "536.68",
+  "day_change": "+6.61%",
+  "gainloss": "+24.36%",
+  "gainloss_amount": "+210.24",
+  "allocation": "0.30%"
+ },
+ "UNF": {
+  "symbol": "UNF",
+  "quantity": "4",
+  "cost": "942.38",
+  "last_price": "242.31",
+  "day_change": "+7.07%",
+  "gainloss": "+2.85%",
+  "gainloss_amount": "+26.88",
+  "allocation": "0.27%"
+ },
+ "CIBR": {
+  "symbol": "CIBR",
+  "quantity": "32",
+  "cost": "3,017.65",
+  "last_price": "98.30",
+  "day_change": "+7.16%",
+  "gainloss": "+4.24%",
+  "gainloss_amount": "+127.95",
+  "allocation": "0.88%"
+ },
+ "TJX": {
+  "symbol": "TJX",
+  "quantity": "8",
+  "cost": "1,051.77",
+  "last_price": "140.40",
+  "day_change": "+8.12%",
+  "gainloss": "+6.79%",
+  "gainloss_amount": "+71.43",
+  "allocation": "0.31%"
+ },
+ "AEIS": {
+  "symbol": "AEIS",
+  "quantity": "34.23746",
+  "cost": "8,977.48",
+  "last_price": "228.15",
+  "day_change": "+8.23%",
+  "gainloss": "-12.99%",
+  "gainloss_amount": "-1,166.20",
+  "allocation": "2.18%"
+ },
+ "NET": {
+  "symbol": "NET",
+  "quantity": "11",
+  "cost": "2,982.01",
+  "last_price": "308.76",
+  "day_change": "+8.41%",
+  "gainloss": "+13.89%",
+  "gainloss_amount": "+414.35",
+  "allocation": "0.95%"
+ },
+ "TTWO": {
+  "symbol": "TTWO",
+  "quantity": "10",
+  "cost": "2,069.72",
+  "last_price": "221.98",
+  "day_change": "+8.85%",
+  "gainloss": "+7.25%",
+  "gainloss_amount": "+150.08",
+  "allocation": "0.62%"
+ },
+ "AKAM": {
+  "symbol": "AKAM",
+  "quantity": "12",
+  "cost": "1,039.05",
+  "last_price": "92.49",
+  "day_change": "+9.27%",
+  "gainloss": "+6.82%",
+  "gainloss_amount": "+70.83",
+  "allocation": "0.31%"
+ },
+ "CRWD": {
+  "symbol": "CRWD",
+  "quantity": "4",
+  "cost": "889.14",
+  "last_price": "246.76",
+  "day_change": "+12.38%",
+  "gainloss": "+11.01%",
+  "gainloss_amount": "+97.90",
+  "allocation": "0.28%"
+ },
+ "OKTA": {
+  "symbol": "OKTA",
+  "quantity": "5",
+  "cost": "931.40",
+  "last_price": "201.10",
+  "day_change": "+15.22%",
+  "gainloss": "+7.96%",
+  "gainloss_amount": "+74.10",
+  "allocation": "0.28%"
+ },
+ "TENB": {
+  "symbol": "TENB",
+  "quantity": "74",
+  "cost": "3,034.38",
+  "last_price": "45.52",
+  "day_change": "+17.93%",
+  "gainloss": "+11.01%",
+  "gainloss_amount": "+334.10",
+  "allocation": "0.94%"
  },
  "_meta": {
-  "updated_at": 1794631096.441608,
-  "updated_at_str": "2026-11-14 12:38:16",
-  "count": 135,
+  "updated_at": 1795054014.6950378,
+  "updated_at_str": "2026-11-19 10:06:54",
+  "count": 175,
   "mode": "overwrite",
   "schema": "lean_v1"
  }

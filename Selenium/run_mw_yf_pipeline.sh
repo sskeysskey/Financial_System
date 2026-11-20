@@ -1,12 +1,13 @@
 #!/bin/bash
-# run_pipeline.sh —— 日更流水线：TE_Merged → Check_yesterday → MW_Today → Verify_wrong(校验并纠正 wrong.txt) → 清理 wrong.txt
+# run_mw_yf_pipeline.sh —— 日更流水线：TE_Merged → Check_yesterday → MW(扩展版 MW_Bridge) → Verify_wrong → 清理 wrong.txt
 # 用法:
-#   bash run_pipeline.sh                  # 手动完整执行（第 4 步逐条确认）
-#   bash run_pipeline.sh --from check     # 从 Check_yesterday 开始
-#   bash run_pipeline.sh --from mw        # 从 MW_Today 开始
-#   bash run_pipeline.sh --from verify    # 只跑第 4 步（校验并纠正 wrong.txt）
-#   bash run_pipeline.sh --unattended     # 无人值守（定时器用）：第 4 步自动模式，结束后熄屏锁定
-# 运行中随时 Ctrl+C 可终止整个流水线（会先让 Python 正常退出并关闭 Chrome）。
+#   bash run_mw_yf_pipeline.sh                  # 手动完整执行（第 4 步逐条确认）
+#   bash run_mw_yf_pipeline.sh --from check     # 从 Check_yesterday 开始
+#   bash run_mw_yf_pipeline.sh --from mw        # 从 MarketWatch 抓取开始
+#   bash run_mw_yf_pipeline.sh --from verify    # 只跑第 4 步（校验并纠正 wrong.txt）
+#   bash run_mw_yf_pipeline.sh --unattended     # 无人值守（定时器用）：第 4 步自动模式，结束后熄屏锁定
+#   MW_ENGINE=selenium bash run_mw_yf_pipeline.sh   # 备用：改用原 Selenium 附着模式 MW_Today.py
+# 运行中随时 Ctrl+C 可终止整个流水线。
 set -u
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export PYTHONUNBUFFERED=1          # 关键：经过管道后输出依然实时显示
@@ -16,10 +17,13 @@ PY="/Library/Frameworks/Python.framework/Versions/Current/bin/python3"
 FS_DIR="$HOME/Coding/Financial_System"
 TE_SCRIPT="$FS_DIR/Selenium/TE_Merged.py"
 CHECK_SCRIPT="$FS_DIR/Query/Check_yesterday.py"
-MW_SCRIPT="$FS_DIR/Selenium/MW_Today.py"
+MW_SCRIPT="$FS_DIR/Selenium/MW_Today.py"            # 备用引擎
+BRIDGE_SCRIPT="$FS_DIR/Selenium/MW_Bridge.py"       # 默认引擎：Chrome 扩展 + 本地桥接
 VERIFY_SCRIPT="$FS_DIR/Selenium/Verify_wrong.py"
 WRONG_TXT="$HOME/Coding/News/wrong.txt"     # 与 Verify_wrong.py 的 WRONG_TXT_PATH 一致
 EMPTY_JSON="$FS_DIR/Modules/Sectors_empty.json"
+DEBUG_CHROME="$FS_DIR/Selenium/mw_debug_chrome.sh"   # 仅 selenium 引擎使用
+MW_ENGINE="${MW_ENGINE:-extension}"                  # extension | selenium
 LOG_DIR="$HOME/Library/Logs/mw_daily"
 LOCK_DIR="/tmp/mw_daily.lock"
 KEEP_LOG_DAYS=30
@@ -31,7 +35,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --from)       FROM="${2:-te}"; shift 2 ;;
         --unattended) UNATTENDED=1; shift ;;
-        -h|--help)    sed -n '2,10p' "$0"; exit 0 ;;
+        -h|--help)    sed -n '2,11p' "$0"; exit 0 ;;
         *)            echo "未知参数: $1"; exit 2 ;;
     esac
 done
@@ -68,7 +72,13 @@ if ! acquire_lock; then
     exit 0
 fi
 trap release_lock EXIT
-trap 'log "⛔ 用户中断 (Ctrl+C)，流水线终止。重跑: bash $0 --from te|check|mw|verify"; notify "流水线已被手动中断"; exit 130' INT TERM
+on_interrupt() {
+    log "⛔ 用户中断 (Ctrl+C)，流水线终止。重跑: bash $0 --from te|check|mw|verify"
+    [ "$MW_ENGINE" = "selenium" ] && bash "$DEBUG_CHROME" stop >/dev/null 2>&1
+    notify "流水线已被手动中断"
+    exit 130
+}
+trap on_interrupt INT TERM
 
 caffeinate -dimsu -w $$ >/dev/null 2>&1 &    # 整个流水线期间：不睡眠、屏幕常亮（避免锁屏影响滑块）
 
@@ -81,7 +91,7 @@ run_step() {
     if [ "$idx" -lt "$START" ]; then log "⏭  [$idx/$TOTAL] 跳过 $name"; return 0; fi
     log "▶▶▶ [$idx/$TOTAL] 开始 $name"
     local t0; t0=$(date +%s)
-    # tee 忽略 SIGINT：Ctrl+C 时 Python 还能把收尾日志写完并关闭 Chrome（否则会 BrokenPipe）
+    # tee 忽略 SIGINT：Ctrl+C 时 Python 还能把收尾日志写完（否则会 BrokenPipe）
     "$@" 2>&1 | ( trap '' INT; exec tee -a "$LOG" )
     local rc=${PIPESTATUS[0]}
     log "◀◀◀ [$idx/$TOTAL] $name 结束，退出码 ${rc}，耗时 $(( $(date +%s) - t0 )) 秒"
@@ -97,7 +107,6 @@ trash_wrong_if_empty() {
         log "wrong.txt 不存在，无需清理"
         return 0
     fi
-    # 只统计有效行（忽略空行和 # 注释）
     local n
     n=$(grep -vcE '^[[:space:]]*(#|$)' "$WRONG_TXT" 2>/dev/null || true)
     if [ "${n:-0}" -gt 0 ]; then
@@ -114,15 +123,27 @@ trash_wrong_if_empty() {
 }
 
 cd "$FS_DIR/Selenium" || exit 1
-log "================ 流水线开始（起点: ${FROM} | 无人值守: ${UNATTENDED}）================"
+log "================ 流水线开始（起点: ${FROM} | 无人值守: ${UNATTENDED} | MW 引擎: ${MW_ENGINE}）================"
 log "日志文件: $LOG    （Ctrl+C 可随时终止）"
 
 run_step 1 "TE_Merged"       "$PY" -u "$TE_SCRIPT" --skipetf
 run_step 2 "Check_yesterday" "$PY" -u "$CHECK_SCRIPT" --nopop
-run_step 3 "MW_Today"        "$PY" -u "$MW_SCRIPT" --headful
+
+# ---------- 第 3 步：MarketWatch ----------
+if [ "$MW_ENGINE" = "selenium" ]; then
+    if [ "$START" -le 3 ]; then
+        log "准备 MarketWatch 调试 Chrome（Selenium 附着模式）"
+        bash "$DEBUG_CHROME" start 2>&1 | tee -a "$LOG"
+    fi
+    run_step 3 "MW_Today" "$PY" -u "$MW_SCRIPT" --headful --no-fast
+    bash "$DEBUG_CHROME" stop 2>&1 | tee -a "$LOG"
+else
+    # 扩展版：MW_Bridge 会自动唤起自用 Chrome 中的 MW Daily Helper 扩展
+    # 退出码：0=清空 2=仍有剩余 3=扩展未连接/失联 1=其它错误
+    run_step 3 "MW_Bridge" "$PY" -u "$BRIDGE_SCRIPT"
+fi
 
 # 第 4 步：校验并纠正 wrong.txt
-# 无人值守：小偏差自动替换，其余保留给人工；手动：逐条确认
 if [ "$UNATTENDED" -eq 1 ]; then
     VERIFY_ARGS=(--unattended --mode auto)
 else
@@ -130,7 +151,6 @@ else
 fi
 run_step 4 "Verify_wrong" "$PY" -u "$VERIFY_SCRIPT" "${VERIFY_ARGS[@]}"
 
-# 仅当第 4 步成功执行（退出码 0）时才尝试清理；退出码 2 表示仍有剩余，不清理
 if [ "$LAST_RC" -eq 0 ]; then
     trash_wrong_if_empty
 elif [ "$LAST_RC" -gt 0 ]; then

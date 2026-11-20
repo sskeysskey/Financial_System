@@ -1,8 +1,8 @@
 {
  "_meta": {
-  "updated_at": 1794553230.825176,
-  "updated_at_str": "2026-11-13 15:00:30",
-  "count": 1543,
+  "updated_at": 1794971383.1556349,
+  "updated_at_str": "2026-11-18 11:09:43",
+  "count": 1612,
   "mode": "append",
   "schema": "lean_v1"
  },
@@ -13427,6 +13427,627 @@
    "quantity": 97,
    "amount": 2008.87,
    "price": 20.71,
+   "st": "F"
+  },
+  "90185542-2232": {
+   "symbol": "WY",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 271,
+   "amount": 5563.63,
+   "price": 20.53,
+   "st": "F"
+  },
+  "90185542-2231": {
+   "symbol": "PODD",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 7,
+   "amount": 1044.61,
+   "price": 149.23,
+   "st": "F"
+  },
+  "90185542-2230": {
+   "symbol": "KRMN",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 26,
+   "amount": 1005.68,
+   "price": 38.68,
+   "st": "F"
+  },
+  "90185542-2229": {
+   "symbol": "TENB",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 25,
+   "amount": 1010.5,
+   "price": 40.42,
+   "st": "F"
+  },
+  "90185542-2228": {
+   "symbol": "PRMB",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 105,
+   "amount": 2525.25,
+   "price": 24.05,
+   "st": "F"
+  },
+  "90185542-2227": {
+   "symbol": "NDSN",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 3,
+   "amount": 979.8,
+   "price": 326.6,
+   "st": "F"
+  },
+  "90185542-2226": {
+   "symbol": "VSEC",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 25,
+   "amount": 4557.5,
+   "price": 182.3,
+   "st": "F"
+  },
+  "90185542-2225": {
+   "symbol": "GTLB",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 21,
+   "amount": 998.76,
+   "price": 47.56,
+   "st": "F"
+  },
+  "90185542-2224": {
+   "symbol": "TREX",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 19,
+   "amount": 1019.92,
+   "price": 53.68,
+   "st": "F"
+  },
+  "90185542-2223": {
+   "symbol": "PATH",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 77,
+   "amount": 1004.85,
+   "price": 13.05,
+   "st": "F"
+  },
+  "90185542-2222": {
+   "symbol": "HL",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 74,
+   "amount": 996.78,
+   "price": 13.47,
+   "st": "F"
+  },
+  "90185542-2221": {
+   "symbol": "GFL",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 24,
+   "amount": 1016.64,
+   "price": 42.36,
+   "st": "F"
+  },
+  "90185542-2220": {
+   "symbol": "B",
+   "side": "buy",
+   "date": "2026-11-13",
+   "quantity": 26,
+   "amount": 991.64,
+   "price": 38.14,
+   "st": "F"
+  },
+  "90185542-2219": {
+   "symbol": "VNT",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 25,
+   "amount": 1082.5,
+   "price": 43.3,
+   "st": "F"
+  },
+  "90185542-2218": {
+   "symbol": "IONS",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 34,
+   "amount": 930.24,
+   "price": 27.36,
+   "st": "F"
+  },
+  "90185542-2217": {
+   "symbol": "ANET",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 17,
+   "amount": 3536.51,
+   "price": 208.03,
+   "st": "F"
+  },
+  "90185542-2216": {
+   "symbol": "JCI",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 7,
+   "amount": 991.9,
+   "price": 141.7,
+   "st": "F"
+  },
+  "90185542-2215": {
+   "symbol": "NBIS",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 0.52477,
+   "amount": 61.62,
+   "price": 117.42,
+   "st": "F"
+  },
+  "90185542-2214": {
+   "symbol": "PRI",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 3,
+   "amount": 882.15,
+   "price": 294.05,
+   "st": "F"
+  },
+  "90185542-2213": {
+   "symbol": "SMCI",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 90,
+   "amount": 2409.3,
+   "price": 26.77,
+   "st": "F"
+  },
+  "90185542-2212": {
+   "symbol": "ARWR",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 17,
+   "amount": 799.34,
+   "price": 47.02,
+   "st": "F"
+  },
+  "90185542-2211": {
+   "symbol": "AVAV",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 9,
+   "amount": 1072.35,
+   "price": 119.15,
+   "st": "F"
+  },
+  "90185542-2210": {
+   "symbol": "ENS",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 12,
+   "amount": 1761,
+   "price": 146.75,
+   "st": "F"
+  },
+  "90185542-2209": {
+   "symbol": "AMAT",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 4,
+   "amount": 1501.08,
+   "price": 375.27,
+   "st": "F"
+  },
+  "90185542-2208": {
+   "symbol": "CSCO",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 10,
+   "amount": 994.7,
+   "price": 99.47,
+   "st": "F"
+  },
+  "90185542-2207": {
+   "symbol": "SITM",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 6,
+   "amount": 2792.22,
+   "price": 465.37,
+   "st": "F"
+  },
+  "90185542-2206": {
+   "symbol": "NBIS",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 30,
+   "amount": 3609,
+   "price": 120.3,
+   "st": "F"
+  },
+  "90185542-2205": {
+   "symbol": "ACMR",
+   "side": "sell",
+   "date": "2026-11-13",
+   "quantity": 36,
+   "amount": 1737,
+   "price": 48.25,
+   "st": "F"
+  },
+  "90185542-2247": {
+   "symbol": "UNF",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 4,
+   "amount": 942.4,
+   "price": 235.6,
+   "st": "F"
+  },
+  "90185542-2246": {
+   "symbol": "FCX",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 17,
+   "amount": 975.46,
+   "price": 57.38,
+   "st": "F"
+  },
+  "90185542-2245": {
+   "symbol": "CVLT",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 7,
+   "amount": 1062.88,
+   "price": 151.84,
+   "st": "F"
+  },
+  "90185542-2244": {
+   "symbol": "SCCO",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 6,
+   "amount": 957.12,
+   "price": 159.52,
+   "st": "F"
+  },
+  "90185542-2243": {
+   "symbol": "B",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 27,
+   "amount": 1012.23,
+   "price": 37.49,
+   "st": "F"
+  },
+  "90185542-2242": {
+   "symbol": "ARKG",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 24,
+   "amount": 1007.28,
+   "price": 41.97,
+   "st": "F"
+  },
+  "90185542-2241": {
+   "symbol": "CBRS",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 10,
+   "amount": 1003.6,
+   "price": 100.36,
+   "st": "F"
+  },
+  "90185542-2240": {
+   "symbol": "SOFI",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 66,
+   "amount": 997.92,
+   "price": 15.12,
+   "st": "F"
+  },
+  "90185542-2239": {
+   "symbol": "MRNA",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 5,
+   "amount": 1087.5,
+   "price": 217.5,
+   "st": "F"
+  },
+  "90185542-2238": {
+   "symbol": "JCI",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 7,
+   "amount": 967.89,
+   "price": 138.27,
+   "st": "F"
+  },
+  "90185542-2237": {
+   "symbol": "QS",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 282,
+   "amount": 1003.92,
+   "price": 3.56,
+   "st": "F"
+  },
+  "90185542-2236": {
+   "symbol": "GPK",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 91,
+   "amount": 1001,
+   "price": 11,
+   "st": "F"
+  },
+  "90185542-2235": {
+   "symbol": "CRWD",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 4,
+   "amount": 889.12,
+   "price": 222.28,
+   "st": "F"
+  },
+  "90185542-2234": {
+   "symbol": "TENB",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 25,
+   "amount": 1012.75,
+   "price": 40.51,
+   "st": "F"
+  },
+  "90185542-2233": {
+   "symbol": "WSE",
+   "side": "buy",
+   "date": "2026-11-16",
+   "quantity": 87,
+   "amount": 1008.33,
+   "price": 11.59,
+   "st": "F"
+  },
+  "90185542-2273": {
+   "symbol": "ROST",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 4,
+   "amount": 900.96,
+   "price": 225.24,
+   "st": "F"
+  },
+  "90185542-2272": {
+   "symbol": "CVNA",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 14,
+   "amount": 999.04,
+   "price": 71.36,
+   "st": "F"
+  },
+  "90185542-2271": {
+   "symbol": "XOM",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 6,
+   "amount": 1013.22,
+   "price": 168.87,
+   "st": "F"
+  },
+  "90185542-2270": {
+   "symbol": "RIO",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 12,
+   "amount": 965.76,
+   "price": 80.48,
+   "st": "F"
+  },
+  "90185542-2269": {
+   "symbol": "LHX",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 4,
+   "amount": 1056.4,
+   "price": 264.1,
+   "st": "F"
+  },
+  "90185542-2268": {
+   "symbol": "IDCC",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 4,
+   "amount": 1101.96,
+   "price": 275.49,
+   "st": "F"
+  },
+  "90185542-2267": {
+   "symbol": "HLI",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 7,
+   "amount": 985.32,
+   "price": 140.76,
+   "st": "F"
+  },
+  "90185542-2266": {
+   "symbol": "GNR",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 14,
+   "amount": 1008,
+   "price": 72,
+   "st": "F"
+  },
+  "90185542-2265": {
+   "symbol": "BHP",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 13,
+   "amount": 975.91,
+   "price": 75.07,
+   "st": "F"
+  },
+  "90185542-2264": {
+   "symbol": "AMRZ",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 25,
+   "amount": 1013,
+   "price": 40.52,
+   "st": "F"
+  },
+  "90185542-2263": {
+   "symbol": "BURL",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 4,
+   "amount": 957.96,
+   "price": 239.49,
+   "st": "F"
+  },
+  "90185542-2262": {
+   "symbol": "CNH",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 87,
+   "amount": 1005.72,
+   "price": 11.56,
+   "st": "F"
+  },
+  "90185542-2261": {
+   "symbol": "FTAI",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 6,
+   "amount": 1044.42,
+   "price": 174.07,
+   "st": "F"
+  },
+  "90185542-2260": {
+   "symbol": "COPX",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 15,
+   "amount": 1000.05,
+   "price": 66.67,
+   "st": "F"
+  },
+  "90185542-2259": {
+   "symbol": "CPNG",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 68,
+   "amount": 996.2,
+   "price": 14.65,
+   "st": "F"
+  },
+  "90185542-2258": {
+   "symbol": "EAT",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 5,
+   "amount": 985.05,
+   "price": 197.01,
+   "st": "F"
+  },
+  "90185542-2257": {
+   "symbol": "GAP",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 50,
+   "amount": 995.5,
+   "price": 19.91,
+   "st": "F"
+  },
+  "90185542-2256": {
+   "symbol": "LMT",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 2,
+   "amount": 1176.14,
+   "price": 588.07,
+   "st": "F"
+  },
+  "90185542-2255": {
+   "symbol": "OC",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 9,
+   "amount": 1028.43,
+   "price": 114.27,
+   "st": "F"
+  },
+  "90185542-2254": {
+   "symbol": "TJX",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 8,
+   "amount": 1051.76,
+   "price": 131.47,
+   "st": "F"
+  },
+  "90185542-2253": {
+   "symbol": "URA",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 33,
+   "amount": 1001.55,
+   "price": 30.35,
+   "st": "F"
+  },
+  "90185542-2252": {
+   "symbol": "URA",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 33,
+   "amount": 1005.51,
+   "price": 30.47,
+   "st": "F"
+  },
+  "90185542-2251": {
+   "symbol": "ZBH",
+   "side": "buy",
+   "date": "2026-11-17",
+   "quantity": 10,
+   "amount": 1027.2,
+   "price": 102.72,
+   "st": "F"
+  },
+  "90185542-2250": {
+   "symbol": "APH",
+   "side": "sell",
+   "date": "2026-11-17",
+   "quantity": 14,
+   "amount": 1055.32,
+   "price": 75.38,
+   "st": "F"
+  },
+  "90185542-2249": {
+   "symbol": "BNY",
+   "side": "sell",
+   "date": "2026-11-17",
+   "quantity": 34,
+   "amount": 5135.7,
+   "price": 151.05,
+   "st": "F"
+  },
+  "90185542-2248": {
+   "symbol": "EUAD",
+   "side": "sell",
+   "date": "2026-11-17",
+   "quantity": 99,
+   "amount": 3898.62,
+   "price": 39.38,
    "st": "F"
   }
  }

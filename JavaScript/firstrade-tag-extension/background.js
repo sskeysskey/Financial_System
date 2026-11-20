@@ -1,5 +1,5 @@
 /* ============================================================================
- * Firstrade 桥接后台 v10.1
+ * Firstrade 桥接后台 v10.2
  *  ★ FT_RUN_ON_PAGE / FT_PEEK_PAGE / FT_COMBO（同 v10）
  *  ★ FT_POS_QUOTE：G 键取数 —— 读持仓页单行（隐藏标签页会短暂切过去再切回，不抢窗口焦点）
  *  ★ FT_WL_ENQUEUE：持仓页成交后「移出分组」排队给自选股页代理
@@ -329,7 +329,10 @@ const COMBOS = {
           page: 'watchlist', label: `③ 一键同步「${tg}」系列分组`, waitJob: true,
           msg: { action: 'FT_WL_START', clearFirst: false, strictSync: o.strictSync !== false, targetGroup: tg, skipQuotes: true }
         },
-        { page: 'watchlist', label: '④ 抓取 Earning 系列变更%', msg: { action: 'FT_WL_SCAN_QUOTES' }, fmt: fmtQuotes },
+        {
+          page: 'watchlist', label: '④ 抓取 Earning 系列变更%', msg: { action: 'FT_WL_SCAN_QUOTES' }, fmt: fmtQuotes,
+          check: r => !(r.empty && r.srcOk && r.srcCount > 0)
+        },
         {
           // ★ 新增：清空除 Earning 系列 / Wrong 外的所有分组（只清空，不删分组）
           page: 'watchlist', label: '⑤ 清空除 Earning 系列 / Wrong 外的分组', waitJob: true,
@@ -369,6 +372,16 @@ async function waitWlJob(tabId, onTick) {
   }
   if (!last) return { ok: false, msg: '无法读取自选股任务状态' };
   if (last.running || last.finishing) return { ok: false, msg: '等待任务结束超时' };
+  /* ★ v10.2：任务被中止（含刷新续跑失败）→ 本步失败，交给 runCombo 重试 */
+  if (last.fatal) {
+    const gs = [];
+    if ((last.famDeleted || []).length) gs.push(`删组 ${last.famDeleted.join('/')}`);
+    if ((last.famCreated || []).length) gs.push(`建组 ${last.famCreated.join('/')}`);
+    return {
+      ok: false,
+      msg: `任务中止：${last.fatal}｜已删除 ${last.cleared || 0}｜已新增 ${last.added || 0}` + (gs.length ? '｜' + gs.join('｜') : '')
+    };
+  }
   /* ★ 清空非保留分组任务（status 里带 multi） */
   if (last.multi && last.multi.length) {
     const cleared = last.cleared || 0;
@@ -442,6 +455,7 @@ async function runCombo(msg) {
 
         ok = !!r.ok;
         if (ok && r.resp && r.resp.server && r.resp.server.ok === false) ok = false;
+        if (ok && s.check && !s.check(r.resp || {})) ok = false;
         text = r.ok ? (s.fmt ? s.fmt(r.resp || {}) : 'OK') : (r.error || '失败');
 
         if (r.ok && s.waitJob && !(r.resp && r.resp.started === false)) {
@@ -610,4 +624,4 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   if (changed) awakeApply();
 });
 
-console.log(LOG, 'service worker 就绪 (v10.1：持仓页交易 / 按股数下单 / G 键取变更%)');
+console.log(LOG, 'service worker 就绪 (v10.2：持仓页交易 / 按股数下单 / G 键取变更%)');

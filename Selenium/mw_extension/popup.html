@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font: 13px -apple-system, "PingFang SC", sans-serif;
+      width: 300px;
+      margin: 12px
+    }
+
+    .row {
+      margin: 6px 0
+    }
+
+    button {
+      width: 100%;
+      padding: 6px;
+      margin-top: 6px
+    }
+
+    #bridge.ok {
+      color: #0a7d24
+    }
+
+    #bridge.bad {
+      color: #b00
+    }
+
+    input {
+      width: 70px
+    }
+
+    small {
+      color: #777
+    }
+  </style>
+</head>
+
+<body>
+  <b>MW Daily Helper</b>
+  <div class="row">桥接端口 <input id="port" type="number"> <span id="bridge">检测中…</span></div>
+  <div class="row" id="run">尚未运行</div>
+  <button id="start">开始（需先运行 MW_Bridge.py）</button>
+  <button id="console">打开控制台</button>
+  <button id="stop">停止当前任务</button>
+  <div class="row"><small>启动命令：python3 ~/Coding/Financial_System/Selenium/MW_Bridge.py --no-open</small></div>
+  <script src="popup.js"></script>
+</body>
+
+</html>

@@ -8,9 +8,11 @@ MW_Today.py
   - ETFs + 11 个股票分组      -> download-data 历史表格 (OHLCV)
   - Bonds / Currencies / Crypto / Indices / Commodities -> 行情概览页的实时价格
 
+运行方式（附着模式）：连接 mw_debug_chrome.sh 启动的调试 Chrome（127.0.0.1:9222），
+若调试 Chrome 未运行会自动调用 mw_debug_chrome.sh start。附着模式下始终为有界面模式。
+
 用法:
-    python MW_Today.py                      # 默认无头模式（遇到滑块验证会自动切换为有界面模式并自动拖拽）
-    python MW_Today.py --headful            # 有界面
+    python MW_Today.py --headful --no-fast  # 流水线使用的方式
     python MW_Today.py --groups ETFs Energy # 只跑指定分组
     python MW_Today.py --dry-run            # 只抓取并打印，不写库、不改 JSON（验证映射用）
     python MW_Today.py --no-sanity          # 关闭价格偏差校验
@@ -18,25 +20,31 @@ MW_Today.py
     python MW_Today.py --no-auto-slider     # 关闭滑块自动验证（遇到验证码只能手动）
     python MW_Today.py --no-escalate        # 无头模式遇到验证码时不自动切换为有界面模式
     python MW_Today.py --no-fast            # 关闭快速通道，每个 symbol 都完整打开页面（最保守）
+    python MW_Today.py --ignore-cooldown    # 忽略"距上次被封未满冷却期"的启动等待
+
+防封机制：
+    1. 拟人节奏：页面间隔 3~6.5 秒随机，每连续 40~70 页休息 1~2.5 分钟；
+    2. 自适应限速：触发验证后间隔放大，成功后缓慢恢复；
+    3. 区分"滑块验证"与"硬封禁页"（DataDome iframe t=bv / access restricted 文本）：
+       硬封禁时不再尝试滑块、不再重试，立刻停止访问并逐级冷却（12/25/45 分钟），冷却后继续；
+    4. 被封时间写入 mw_block_state.json，下次启动若距上次被封不足 STARTUP_GRACE_MINUTES 会先等待；
+    5. 无人值守模式（环境变量 FS_UNATTENDED=1）下滑块自动失败直接转冷却，不空等人工。
 
 提速机制：
     1. 快速通道：首个 symbol 正常导航拿到 marketwatch.com 同源上下文与反爬 Cookie 后，
-       后续 symbol 在页面内 fetch() 目标 HTML 并用 DOMParser 解析，不渲染、不执行广告脚本；
-       任何非 "ready" 结果（反爬 / 解析失败 / 重定向 / 未找到）都自动回退为页面导航，由原有流程处理验证码与确认；
-    2. 页面导航使用 pageLoadStrategy=none + 0.12s 轮询，目标元素"后面已有兄弟元素"即视为解析完整，立即提取；
-    3. CDP 屏蔽广告/统计域名（反爬与验证码域名不屏蔽）；
-    4. 自适应限速：正常时间隔很短，触发验证码后自动放大间隔，成功后逐步恢复。
+       后续 symbol 在页面内 fetch() 目标 HTML 并用 DOMParser 解析；
+       任何非 "ready" 结果都自动回退为页面导航；
+    2. 页面导航使用 pageLoadStrategy=none + 轮询，目标元素"后面已有兄弟元素"即视为解析完整，立即提取。
 
 滑块自动验证（macOS）：
-    检测到验证码 -> 将爬虫启动的 Chrome 窗口切到最前台 -> 屏幕模板匹配 marketwatch_verify.png
+    检测到验证码 -> 按 9222 端口精确定位调试 Chrome 并切到最前台 -> 屏幕模板匹配 marketwatch_verify.png
     -> 拟人化拖拽 -> 滑块消失即判定通过 -> 把终端切回最前台 -> 等待页面自动跳转后继续抓取。
-    自动失败时退回手动模式（系统通知 + 等待 CAPTCHA_MANUAL_WAIT 秒），手动通过后同样切回终端。
     需要给终端授予「屏幕录制」「辅助功能」「自动化」权限。
 
 防串页机制：
-    1. 每次导航前在旧文档上打 window.__mwStalePage 标记；状态检测发现标记仍在（仍停留在旧页面）时只会继续等待；
-    2. 历史表格页校验 URL 中的 symbol 段与目标一致（快速通道用 fetch 的最终 URL 校验）；
-    3. 同一轮内数据指纹去重：与其它 symbol 数据完全相同即判定为串页，重试，仍相同则不写库。
+    1. 每次导航前在旧文档上打 window.__mwStalePage 标记；
+    2. 历史表格页校验 URL 中的 symbol 段与目标一致；
+    3. 同一轮内数据指纹去重。
 """
 import argparse
 import atexit
@@ -54,6 +62,7 @@ import sys
 import tempfile
 import time
 import urllib.parse
+import urllib.request
 
 import pandas_market_calendars as mcal
 from selenium import webdriver
@@ -84,14 +93,18 @@ SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapp
 MW_SYMBOL_OVERRIDE_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping_mw.json")
 CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
 
-# Sectors_empty.json 的跨进程锁（YF_Today 使用同一路径即可互斥；放在系统临时目录，不污染仓库）
 JSON_LOCK_PATH = os.path.join(tempfile.gettempdir(), "Financial_System_Sectors_empty.lock")
 
-# 波动偏差过大异常记录文件
 WRONG_TXT_PATH = os.path.join(NEWS_DIR, "wrong.txt")
-PRICE_DEVIATION_ALERT_THRESHOLD = 0.10  # 偏差超过 10% 记录到 wrong.txt
+PRICE_DEVIATION_ALERT_THRESHOLD = 0.10
 
-# 独立的浏览器 Profile（保存 Cookie，降低被反爬拦截概率；不要与正在运行的 Chrome 共用）
+# ---- 附着模式（连接 mw_debug_chrome.sh 启动的调试 Chrome） ----
+ATTACH_MODE = True
+DEBUG_PORT = 9222
+DEBUG_CHROME_SCRIPT = os.path.join(FINANCIAL_SYSTEM_DIR, "Selenium", "mw_debug_chrome.sh")
+UNATTENDED = os.environ.get("FS_UNATTENDED") == "1"
+
+# 非附着模式才使用的独立 Profile（附着模式下 Profile 由 mw_debug_chrome.sh 管理）
 USE_PERSISTENT_PROFILE = True
 MW_PROFILE_DIR = os.environ.get("MW_PROFILE_DIR") or os.path.join(DOWNLOADS_DIR, "backup", "mw_chrome_profile")
 LEGACY_MW_PROFILE_DIRS = [
@@ -120,29 +133,38 @@ else:
 
 # ---- 抓取参数 ----
 MW_BASE_URL = "https://www.marketwatch.com/investing"
-PAGE_LOAD_TIMEOUT = 30          # driver.get 超时
-TABLE_WAIT_TIMEOUT = 15         # 等待历史表格出现的超时
-QUOTE_WAIT_TIMEOUT = 15         # 等待行情价格出现的超时
-POLL_INTERVAL = 0.12            # 页面状态轮询间隔（秒）
-CAPTCHA_MANUAL_WAIT = 180       # 有界面模式下，等待手动完成验证码的最长时间
+PAGE_LOAD_TIMEOUT = 30
+TABLE_WAIT_TIMEOUT = 15
+QUOTE_WAIT_TIMEOUT = 15
+POLL_INTERVAL = 0.2             # 页面状态轮询间隔（秒）
+CAPTCHA_MANUAL_WAIT = 180       # 有人值守时，等待手动完成验证码的最长时间
 MAX_RETRIES = 3
-MAX_CONSECUTIVE_BLOCKS = 3      # 连续被反爬拦截次数达到此值，终止整轮任务
-BLOCK_BACKOFF_SECONDS = 10      # 被拦截后的退避基数（秒）
-MAX_ROWS_TO_EXTRACT = 5         # 从表格顶部提取的行数（用于日期匹配）
+MAX_ROWS_TO_EXTRACT = 5
 
 # ---- 快速通道（页面内 fetch） ----
-FAST_FETCH_ENABLED = True       # 总开关（命令行 --no-fast 可关闭）
-FAST_FETCH_TIMEOUT = 12         # 单次 fetch 超时（秒）
-FAST_FETCH_MAX_MISSES = 3       # 连续解析失败多少次后本轮停用快速通道（被反爬不计入）
-FAST_FETCH_RENAV_EVERY = 60     # 每连续快速抓取多少个，正常导航一次以刷新宿主页面
+FAST_FETCH_ENABLED = True
+FAST_FETCH_TIMEOUT = 12
+FAST_FETCH_MAX_MISSES = 3
+FAST_FETCH_RENAV_EVERY = 60
 
-# ---- 限速（自适应） ----
-FETCH_DELAY_RANGE = (0.15, 0.5)   # 快速通道之间的随机间隔（秒）
-NAV_DELAY_RANGE = (0.6, 1.4)      # 页面导航之间的随机间隔（秒）
-THROTTLE_MAX_SCALE = 6.0          # 触发验证后间隔最多放大倍数
-THROTTLE_DECAY = 0.85             # 每成功一次，放大倍数向 1 衰减
+# ---- 限速（拟人节奏 + 自适应） ----
+FETCH_DELAY_RANGE = (1.0, 2.5)    # 快速通道之间的随机间隔（秒）
+NAV_DELAY_RANGE = (3.0, 6.5)      # 页面导航之间的随机间隔（秒）——原 0.6~1.4 过快，是被封主因
+THROTTLE_MAX_SCALE = 4.0          # 触发验证后间隔最多放大倍数
+THROTTLE_DECAY = 0.97             # 每成功一次，放大倍数向 1 缓慢衰减
+LONG_BREAK_EVERY = (40, 70)       # 每连续导航这么多页（随机）……
+LONG_BREAK_SECONDS = (60, 150)    # ……休息这么久（随机）
+EST_SECONDS_PER_SYMBOL = 9        # 仅用于启动时估算耗时
 
-# ---- 资源屏蔽（仅广告/统计；反爬与验证码相关域名绝不屏蔽） ----
+# ---- 硬封禁冷却 ----
+HARD_BLOCK_COOLDOWN_MINUTES = [12, 25, 45]   # 连续第 1/2/3 次封禁的冷却时长
+HARD_BLOCK_JITTER = 0.2                      # 冷却时长 ±20% 随机
+HARD_BLOCK_MAX_PER_RUN = 5                   # 单轮累计封禁上限
+BLOCK_STATE_PATH = os.path.join(NEWS_DIR, "mw_block_state.json")
+STARTUP_GRACE_MINUTES = 15                   # 启动时距上次被封不足此时长则先等待
+RECENT_BLOCK_HOURS = 6                       # 此时间内被封过，本轮从 ×2 间隔起步
+
+# ---- 资源屏蔽（仅非附着模式下可用；当前附着模式未启用） ----
 BLOCK_AD_RESOURCES = True
 BLOCKED_URL_PATTERNS = [
     "*doubleclick.net*", "*googlesyndication.com*", "*googletagservices.com*",
@@ -176,10 +198,8 @@ CAPTCHA_POST_SOLVE_WAIT = 15
 RETURN_TO_TERMINAL = True
 SLIDER_DEBUG_DIR = "/tmp"
 
-# 日期对不上时的策略："overwrite_date" / "skip"
 STALE_DATA_POLICY = "skip"
 
-# 价格合理性校验（仅对行情页分组生效）
 PRICE_SANITY_CHECK = True
 PRICE_SANITY_THRESHOLD = 0.25
 PRICE_SANITY_ACTION = "skip"
@@ -313,14 +333,81 @@ class CaptchaBlockedError(ScrapeError):
     pass
 
 
+class HardBlockedError(CaptchaBlockedError):
+    """硬封禁页（access restricted / DataDome t=bv），没有可拖拽的滑块，只能冷却等待"""
+    pass
+
+
 class StalePageError(ScrapeError):
     """页面未完成跳转（仍停留在旧页面）或抓到的数据与其它 symbol 完全一致（串页）"""
     pass
 
 
 class _NeverRaised(Exception):
-    """占位异常：永远不会被抛出，仅用于 pyautogui 不可用时的兜底"""
     pass
+
+
+# ================= 通用小工具 =================
+
+def notify_mac(msg, title="MW_Today"):
+    if not IS_MAC:
+        return
+    try:
+        subprocess.run(["osascript", "-e", "on run argv",
+                        "-e", f'display notification (item 1 of argv) with title "{title}"',
+                        "-e", "end run", msg], capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+
+def sleep_with_countdown(seconds, label):
+    end = time.time() + max(0.0, seconds)
+    last_print = None
+    while True:
+        left = end - time.time()
+        if left <= 0:
+            break
+        if last_print is None or time.time() - last_print >= 60:
+            tqdm.write(f"   ⏳ {label}：剩余约 {int(left // 60)} 分 {int(left % 60)} 秒")
+            last_print = time.time()
+        time.sleep(min(5.0, left))
+
+
+def load_block_state():
+    try:
+        with open(BLOCK_STATE_PATH, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_block_state(**kw):
+    st = load_block_state()
+    st.update(kw)
+    try:
+        os.makedirs(NEWS_DIR, exist_ok=True)
+        with open(BLOCK_STATE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(st, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        tqdm.write(f"⚠️ 写入封禁状态文件失败: {e}")
+
+
+def wait_startup_grace(ignore=False):
+    """距上次被封不足 STARTUP_GRACE_MINUTES 则先等待；返回是否近期被封过（用于提高初始间隔）"""
+    ts = load_block_state().get("last_block_ts")
+    try:
+        ts = float(ts)
+    except (TypeError, ValueError):
+        return False
+    since = time.time() - ts
+    recent = since < RECENT_BLOCK_HOURS * 3600
+    left = STARTUP_GRACE_MINUTES * 60 - since
+    if left > 0 and not ignore:
+        tqdm.write(f"🧊 距上次被 MarketWatch 拦截仅 {since / 60:.1f} 分钟，先冷却 {left / 60:.1f} 分钟再开始"
+                   f"（--ignore-cooldown 可跳过）")
+        sleep_with_countdown(left, "启动前冷却")
+    return recent
 
 
 # ================= 自适应限速 =================
@@ -330,9 +417,12 @@ class AdaptiveThrottle:
 
     def on_block(self):
         old = self.scale
-        self.scale = min(THROTTLE_MAX_SCALE, max(2.0, self.scale * 2))
+        self.scale = min(THROTTLE_MAX_SCALE, max(2.0, self.scale * 1.5))
         if self.scale != old:
             tqdm.write(f"   🐢 触发反爬，后续请求间隔放大到 ×{self.scale:.1f}")
+
+    def set_floor(self, v):
+        self.scale = max(self.scale, min(THROTTLE_MAX_SCALE, v))
 
     def on_success(self):
         if self.scale > 1.0:
@@ -519,7 +609,6 @@ def load_mw_overrides(json_path):
 
 @contextlib.contextmanager
 def json_file_lock():
-    """跨进程互斥锁（MW_Today / YF_Today 同时改 Sectors_empty.json 时防止互相覆盖）"""
     if fcntl is None:
         yield
         return
@@ -543,7 +632,7 @@ def atomic_write_json(json_path, data):
             json.dump(data, f, indent=4, ensure_ascii=False)
             f.flush()
             os.fsync(f.fileno())
-        os.chmod(tmp_path, mode)   # mkstemp 默认 0600，保持原文件权限
+        os.chmod(tmp_path, mode)
         os.replace(tmp_path, json_path)
     except Exception:
         if os.path.exists(tmp_path):
@@ -568,7 +657,6 @@ def remove_symbol_from_json(json_path, group_name, symbol):
 # ================= 2. 交易日 =================
 
 def get_prev_trading_date(ref_date):
-    """严格小于 ref_date 的最近一个 NYSE 交易日 ('YYYY-MM-DD')"""
     try:
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=ref_date - datetime.timedelta(days=15), end_date=ref_date)
@@ -746,7 +834,7 @@ def _remove_dir_if_empty(path):
 
 
 def prepare_profile_dir():
-    if not USE_PERSISTENT_PROFILE:
+    if ATTACH_MODE or not USE_PERSISTENT_PROFILE:
         return
     target = os.path.abspath(MW_PROFILE_DIR)
 
@@ -774,7 +862,8 @@ def prepare_profile_dir():
 
 
 def clean_profile_cache():
-    if not (USE_PERSISTENT_PROFILE and CLEAN_PROFILE_CACHE_ON_EXIT):
+    # 附着模式下 Profile 由调试 Chrome 使用中，不能也不需要清理
+    if ATTACH_MODE or not (USE_PERSISTENT_PROFILE and CLEAN_PROFILE_CACHE_ON_EXIT):
         return
     root = os.path.abspath(MW_PROFILE_DIR)
     if not os.path.isdir(root):
@@ -786,65 +875,51 @@ def clean_profile_cache():
             shutil.rmtree(p, ignore_errors=True)
 
 
-def create_driver(headless=True):
-    options = webdriver.ChromeOptions()
-    if os.path.exists(CHROME_BINARY_PATH):
-        options.binary_location = CHROME_BINARY_PATH
-    if headless:
-        options.add_argument('--headless=new')
-    options.add_argument('--window-size=1920,1080')
-    options.add_argument('--lang=en-US')
-    options.add_argument('--disable-blink-features=AutomationControlled')
-    options.add_argument('--disable-extensions')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--blink-settings=imagesEnabled=false')
-    options.add_argument('--disable-backgrounding-occluded-windows')
-    options.add_argument('--disable-renderer-backgrounding')
-    options.add_argument('--disable-background-timer-throttling')
-    options.add_experimental_option('excludeSwitches', ['enable-automation'])
-    options.add_experimental_option('useAutomationExtension', False)
-    options.add_argument('--no-first-run')
-    options.add_argument('--no-default-browser-check')
-    options.add_argument('--disk-cache-size=52428800')
-    if USE_PERSISTENT_PROFILE:
-        os.makedirs(MW_PROFILE_DIR, exist_ok=True)
-        options.add_argument(f'--user-data-dir={os.path.abspath(MW_PROFILE_DIR)}')
-    # none：driver.get 立即返回，由轮询判断目标元素是否已解析完整（不再等整页 DOMContentLoaded）
-    options.page_load_strategy = 'none'
+def debug_chrome_ready():
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{DEBUG_PORT}/json/version", timeout=2) as r:
+            return r.status == 200
+    except Exception:
+        return False
 
+
+def ensure_debug_chrome():
+    if debug_chrome_ready():
+        return True
+    if not os.path.exists(DEBUG_CHROME_SCRIPT):
+        return False
+    tqdm.write("🌐 调试 Chrome 未运行，正在通过 mw_debug_chrome.sh 启动...")
+    try:
+        subprocess.run(["/bin/bash", DEBUG_CHROME_SCRIPT, "start"], timeout=75)
+    except Exception as e:
+        tqdm.write(f"⚠️ 启动调试 Chrome 失败: {e}")
+    return debug_chrome_ready()
+
+
+def _debug_chrome_pid():
+    """附着模式：监听调试端口的进程即调试 Chrome 主进程"""
+    try:
+        out = subprocess.run(["lsof", "-nP", f"-iTCP:{DEBUG_PORT}", "-sTCP:LISTEN", "-t"],
+                             capture_output=True, text=True, timeout=5)
+        for x in out.stdout.split():
+            if x.strip().isdigit():
+                return int(x)
+    except Exception:
+        pass
+    return None
+
+
+def create_driver(headless=True):
+    """附着模式：连接到调试 Chrome（127.0.0.1:9222）。headless 参数在附着模式下不生效。"""
+    if ATTACH_MODE and not ensure_debug_chrome():
+        raise RuntimeError(f"无法连接调试 Chrome（127.0.0.1:{DEBUG_PORT}），"
+                           f"请先运行: bash {DEBUG_CHROME_SCRIPT} start")
+    options = webdriver.ChromeOptions()
+    options.debugger_address = f"127.0.0.1:{DEBUG_PORT}"
+    options.page_load_strategy = 'none'
     driver = webdriver.Chrome(service=Service(executable_path=CHROME_DRIVER_PATH), options=options)
     driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
     driver.set_script_timeout(FAST_FETCH_TIMEOUT + 5)
-
-    if not headless:
-        try:
-            driver.set_window_position(0, 0)
-        except Exception:
-            pass
-
-    try:
-        driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
-            'source': "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
-        })
-    except Exception:
-        pass
-
-    try:
-        ua = driver.execute_script("return navigator.userAgent")
-        if 'HeadlessChrome' in ua:
-            driver.execute_cdp_cmd('Network.setUserAgentOverride', {
-                'userAgent': ua.replace('HeadlessChrome', 'Chrome'),
-                'acceptLanguage': 'en-US,en;q=0.9',
-            })
-    except Exception:
-        pass
-
-    if BLOCK_AD_RESOURCES:
-        try:
-            driver.execute_cdp_cmd('Network.enable', {})
-            driver.execute_cdp_cmd('Network.setBlockedURLs', {'urls': BLOCKED_URL_PATTERNS})
-        except Exception:
-            pass
     return driver
 
 
@@ -874,10 +949,6 @@ def _mark_current_document_stale(driver):
 
 
 def load_page(driver, url):
-    """
-    防串页导航：先给旧文档打标记，再导航。新文档的 window 是全新的，标记自然消失；
-    在新文档提交之前（pageLoadStrategy=none 下 get 立即返回）轮询到的都是带标记的旧文档 -> 'stale'，只会继续等待。
-    """
     _mark_current_document_stale(driver)
     try:
         driver.get(url)
@@ -1005,6 +1076,13 @@ class CaptchaAutoSolver:
                 return pid
             except OSError:
                 self._pid_cache.pop(key, None)
+
+        # 附着模式：Chrome 不是 chromedriver 的子进程，必须按调试端口定位（否则会激活到自用 Chrome）
+        if ATTACH_MODE:
+            pid = _debug_chrome_pid()
+            if pid:
+                self._pid_cache[key] = pid
+                return pid
         try:
             svc_pid = driver.service.process.pid
             out = subprocess.run(["pgrep", "-P", str(svc_pid)], capture_output=True, text=True, timeout=5)
@@ -1039,6 +1117,8 @@ class CaptchaAutoSolver:
                 'end tell')
             if not ok:
                 tqdm.write(f"   ⚠️ 按进程号切换浏览器失败（{msg[:120]}），改用应用名激活")
+        else:
+            tqdm.write("   ⚠️ 未能定位调试 Chrome 进程，改用应用名激活（可能激活到自用 Chrome）")
         if not ok:
             ok, msg = _osascript(f'tell application "{self.chrome_app_name}" to activate')
             if not ok:
@@ -1164,7 +1244,7 @@ class CaptchaAutoSolver:
         return None
 
 
-# ================= 5. 页面解析 JS（同时适用于实时页面与 fetch 得到的离线文档） =================
+# ================= 5. 页面解析 JS =================
 
 JS_COMMON = r"""
 function mwIsStale() {
@@ -1178,7 +1258,6 @@ function mwCellText(el) {
     const d = el.querySelector('div');
     return mwText(d || el);
 }
-// el 之后（在 maxDepth 层祖先范围内）已出现兄弟元素 -> HTML 解析器已越过 el，el 的内容一定完整
 function mwHasFollowing(el, maxDepth) {
     let n = el, d = 0;
     const lim = maxDepth || 3;
@@ -1196,14 +1275,22 @@ function mwBodyText(doc, live) {
     c.querySelectorAll('script, style, noscript, template').forEach(e => e.remove());
     return (c.textContent || '').replace(/\s+/g, ' ').slice(0, 3000);
 }
-function mwIsCaptcha(doc, live) {
-    if (doc.querySelector('iframe[src*="captcha-delivery.com"], iframe[src*="geo.captcha"]')) return true;
-    // 已出现正常内容 -> 不是验证页（避免每次轮询都读 innerText 触发重排）
+// 返回 'blocked'（硬封禁页，无滑块）/ 'captcha'（滑块验证）/ null（正常页面）
+// DataDome：iframe src 中 t=bv 为封禁页，t=fe 为可交互的验证
+function mwChallengeKind(doc, live) {
+    const ifr = doc.querySelector('iframe[src*="captcha-delivery.com"], iframe[src*="geo.captcha"]');
+    if (ifr) {
+        const src = ifr.getAttribute('src') || '';
+        return /[?&]t=bv(&|$)/i.test(src) ? 'blocked' : 'captcha';
+    }
     if (doc.querySelector('.element--intraday, mw-downloaddata, .download-data, '
-                        + 'table[aria-label="Historical Quotes data table"], h1[class*="company"]')) return false;
-    return /access denied|you have been blocked|verify you are (a )?human|are you a robot/i
-        .test(mwBodyText(doc, live));
+                        + 'table[aria-label="Historical Quotes data table"], h1[class*="company"]')) return null;
+    const txt = mwBodyText(doc, live);
+    if (/access is temporarily restricted|temporarily restricted|access denied|you have been blocked|unusual activity/i.test(txt)) return 'blocked';
+    if (/verify you are (a )?human|are you a robot/i.test(txt)) return 'captcha';
+    return null;
 }
+function mwIsCaptcha(doc, live) { return mwChallengeKind(doc, live) !== null; }
 function mwPathSymbolSeg(pathname) {
     const segs = (pathname || '').toLowerCase().split('/').filter(Boolean);
     let seg = segs.length > 2 ? segs[2] : '';
@@ -1223,7 +1310,8 @@ function mwFindTable(doc) {
     return null;
 }
 function mwTableState(doc, pathname, expectSeg, maxRows, complete, live) {
-    if (mwIsCaptcha(doc, live)) return 'captcha';
+    const ck = mwChallengeKind(doc, live);
+    if (ck) return ck;
     if (!(pathname || '').toLowerCase().includes('download-data')) return 'notfound';
     if (expectSeg && mwPathSymbolSeg(pathname) !== expectSeg) return 'wrong_symbol';
     const tbl = mwFindTable(doc);
@@ -1324,7 +1412,8 @@ function qTimestamp(doc) {
     return { text: t, el: t ? el : null };
 }
 function mwQuoteState(doc, pathname, expectType, complete, live) {
-    if (mwIsCaptcha(doc, live)) return 'captcha';
+    const ck = mwChallengeKind(doc, live);
+    if (ck) return ck;
     const path = (pathname || '').toLowerCase();
     if (path.includes('/search') || path === '/' || path === '/investing' || path === '/investing/') return 'notfound';
     const bc = doc.body ? (doc.body.className || '') : '';
@@ -1384,7 +1473,6 @@ r.url = location.href;
 return r;
 """
 
-# 快速通道：在已打开的 marketwatch.com 页面内 fetch 目标 HTML 并离线解析
 FETCH_JS = JS_COMMON + r"""
 const done = arguments[arguments.length - 1];
 const url = arguments[0], mode = arguments[1];
@@ -1456,10 +1544,17 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=Non
         try:
             state = state_fn()
         except WebDriverException:
-            # 文档切换瞬间脚本上下文失效（document unloaded / Cannot find context）属正常现象，继续轮询
             if not is_driver_alive(driver):
                 raise
             state = 'transient'
+
+        # 硬封禁页：没有滑块，任何重试都只会加重封禁 -> 立即上抛，由上层冷却
+        if state == 'blocked':
+            if not captcha_reported and on_captcha:
+                on_captcha()
+            if captcha_solver:
+                captcha_solver.restore_terminal()
+            raise HardBlockedError("页面显示访问受限（硬封禁页，没有可拖拽的滑块）")
 
         if seen_captcha and state not in ('captcha', 'transient', 'stale'):
             seen_captcha = False
@@ -1521,6 +1616,11 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=Non
                     time.sleep(1.5)
                 continue
             elif not manual_mode:
+                if UNATTENDED:
+                    # 无人值守：没人能手动处理，空等只会让会话风险分继续升高，直接转冷却
+                    if captcha_solver:
+                        captcha_solver.restore_terminal()
+                    raise HardBlockedError("无人值守模式下滑块未能自动通过")
                 manual_mode = True
                 if captcha_solver:
                     captcha_solver.alert_manual(driver)
@@ -1550,7 +1650,6 @@ def wait_for_quote(driver, timeout, headless, expect_type, captcha_solver=None, 
 
 
 def fetch_via_page(driver, url, mode, expect_seg, expect_type):
-    """快速通道。返回 dict，state ∈ ready/captcha/notfound/mismatch/wrong_symbol/unparsed/http_error/error/need_nav"""
     try:
         r = driver.execute_async_script(FETCH_JS, url, mode, (expect_seg or "").lower(), expect_type or "",
                                         MAX_ROWS_TO_EXTRACT, int(FAST_FETCH_TIMEOUT * 1000))
@@ -1674,6 +1773,42 @@ def check_and_register_fingerprint(ctx, fp, symbol, group):
     ctx["fingerprints"][fp] = (group, symbol)
 
 
+# ================= 6.8 硬封禁冷却 =================
+
+def handle_hard_block(driver, ctx, symbol, reason, solver=None):
+    """返回 True 表示已冷却完毕可继续；False 表示达到上限应终止本轮"""
+    ctx["hard_blocks"] += 1
+    streak = ctx["hard_streak"]
+    ctx["hard_streak"] += 1
+    save_block_state(last_block_ts=time.time(), last_symbol=symbol, reason=reason,
+                     last_block_at=datetime.datetime.now().isoformat(timespec="seconds"))
+    if solver:
+        solver.restore_terminal()
+
+    # 立即离开封禁页，停止对 MarketWatch 的一切请求
+    try:
+        driver.get("about:blank")
+    except Exception:
+        pass
+
+    if streak >= len(HARD_BLOCK_COOLDOWN_MINUTES) or ctx["hard_blocks"] > HARD_BLOCK_MAX_PER_RUN:
+        tqdm.write(f"🛑 [{symbol}] {reason}；已连续冷却 {streak} 次 / 本轮累计被封 {ctx['hard_blocks']} 次，"
+                   f"终止本轮（剩余 symbol 保留在 JSON，稍后重跑即可续抓）。")
+        notify_mac("MarketWatch 多次冷却后仍被拦截，本轮已终止，剩余项保留在 JSON")
+        return False
+
+    minutes = HARD_BLOCK_COOLDOWN_MINUTES[streak] * random.uniform(1 - HARD_BLOCK_JITTER, 1 + HARD_BLOCK_JITTER)
+    tqdm.write(f"🧊 [{symbol}] {reason}\n"
+               f"   第 {streak + 1}/{len(HARD_BLOCK_COOLDOWN_MINUTES)} 次冷却 {minutes:.0f} 分钟，"
+               f"期间不访问 MarketWatch，结束后自动续抓（Ctrl+C 可中止）")
+    notify_mac(f"MarketWatch 访问受限，冷却 {minutes:.0f} 分钟后自动继续")
+    ctx["throttle"].set_floor(2.0 + streak)
+    sleep_with_countdown(minutes * 60, "冷却中")
+    ctx["nav_since_break"] = 0
+    tqdm.write("   ▶️ 冷却结束，继续抓取")
+    return True
+
+
 # ================= 7. 主流程 =================
 
 def build_task_list(tasks_dict, only_groups=None):
@@ -1695,7 +1830,7 @@ def build_task_list(tasks_dict, only_groups=None):
 def _note_fast_miss(ctx, symbol, res):
     fast = ctx["fast"]
     st = res.get("state")
-    if st == "captcha":
+    if st in ("captcha", "blocked"):
         fast["captchas"] += 1
         ctx["throttle"].on_block()
         tqdm.write(f"🛡️ [{symbol}] 快速通道被反爬拦截（HTTP {res.get('http')}），改走页面导航以处理验证...")
@@ -1706,7 +1841,6 @@ def _note_fast_miss(ctx, symbol, res):
         if fast["misses"] >= FAST_FETCH_MAX_MISSES:
             fast["enabled"] = False
             tqdm.write(f"⚠️ 快速通道连续 {fast['misses']} 次未取到数据，本轮停用，全部改走页面导航。")
-    # need_nav / notfound / mismatch / wrong_symbol：静默改走页面导航，由原流程确认
 
 
 def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, opts,
@@ -1742,6 +1876,7 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
             if payload is None:
                 load_page(driver, url)
                 fast["since_nav"] = 0
+                ctx["nav_since_break"] += 1
                 if mode == "table":
                     wait_for_table(driver, TABLE_WAIT_TIMEOUT, headless, expect_seg=mw_path,
                                    captcha_solver=solver, on_captcha=throttle.on_block)
@@ -1751,7 +1886,7 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                                    captcha_solver=solver, on_captcha=throttle.on_block)
                     payload = driver.execute_script(QUOTE_EXTRACT_JS)
 
-            ctx["consecutive_blocks"] = 0
+            ctx["hard_streak"] = 0
             ctx["last_via"] = via
             page_info = ""
 
@@ -1810,9 +1945,10 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                     ctx["mismatch_hints"].append(hint)
             return "not_found", driver
 
-        except CaptchaBlockedError as e:
+        except CaptchaBlockedError as e:   # 含 HardBlockedError
             force_nav = True
-            if headless and opts.get("escalate") and solver is not None and solver.ensure_ready():
+            if (not isinstance(e, HardBlockedError) and headless and opts.get("escalate")
+                    and solver is not None and solver.ensure_ready()):
                 tqdm.write(f"🔁 [{symbol}] 无头模式触发验证，切换为有界面模式以自动拖拽滑块...")
                 safe_quit(driver)
                 time.sleep(1.5)
@@ -1827,12 +1963,12 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                 attempt -= 1
                 continue
 
-            ctx["consecutive_blocks"] += 1
-            tqdm.write(f"🛑 [{symbol}] 被反爬拦截 ({ctx['consecutive_blocks']}/{MAX_CONSECUTIVE_BLOCKS}): {e}")
-            if ctx["consecutive_blocks"] >= MAX_CONSECUTIVE_BLOCKS:
+            # 不再"10 秒后重试"——被封期间每次访问都会延长封禁；改为逐级冷却后续抓
+            if not handle_hard_block(driver, ctx, symbol, str(e), solver):
                 ctx["aborted"] = True
                 return "failed", driver
-            time.sleep(BLOCK_BACKOFF_SECONDS * attempt + random.uniform(0, 5))
+            attempt -= 1     # 冷却不消耗重试次数（冷却次数本身有上限，不会死循环）
+            continue
 
         except StalePageError as e:
             force_nav = True
@@ -1855,14 +1991,16 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                     return "failed", None
             if attempt < MAX_RETRIES:
                 tqdm.write(f"⏳ [{symbol}] 第 {attempt} 次抓取出错，准备重试: {str(e)[:120]}")
-                time.sleep(1.5 * attempt)
+                time.sleep(1.5 * attempt + random.uniform(0, 1))
             else:
                 tqdm.write(f"❌ [{symbol}] 抓取失败 (已重试 {MAX_RETRIES} 次): {str(e)[:150]}")
     return "failed", driver
 
 
 def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=True,
-                       auto_slider=True, escalate=True, fast=True):
+                       auto_slider=True, escalate=True, fast=True, ignore_cooldown=False):
+    if ATTACH_MODE and headless:
+        headless = False   # 附着的调试 Chrome 始终有窗口，按有界面模式处理验证
     tasks_dict = load_tasks_from_json(SECTORS_JSON_PATH)
     alias_to_symbol = load_alias_mapping(SYMBOL_MAPPING_PATH)
     mw_overrides = load_mw_overrides(MW_SYMBOL_OVERRIDE_PATH)
@@ -1882,21 +2020,24 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
         tqdm.write("✅ 支持的分组中没有待抓取的 Symbol，任务结束。")
         return empty_stats
 
+    recently_blocked = wait_startup_grace(ignore=ignore_cooldown)
+
     captcha_solver = CaptchaAutoSolver(enabled=auto_slider and AUTO_SLIDER_ENABLED)
     fast_enabled = bool(fast and FAST_FETCH_ENABLED)
 
     tqdm.write(f"共加载 {len(task_list)} 个待抓取任务。（模式: {'无头' if headless else '有界面'}"
                f"{' | 快速通道' if fast_enabled else ' | 逐页导航'}"
                f"{' | DRY-RUN 不写库' if dry_run else ''}{' | 已关闭价格校验' if not sanity else ''}"
-               f"{' | 滑块自动验证' if captcha_solver.enabled else ' | 滑块需手动'}）")
+               f"{' | 滑块自动验证' if captcha_solver.enabled else ' | 滑块需手动'}"
+               f"{' | 无人值守' if UNATTENDED else ''}）")
+    tqdm.write(f"⏱️ 预计耗时约 {len(task_list) * EST_SECONDS_PER_SYMBOL / 60:.0f} 分钟"
+               f"（拟人节奏，不含可能的冷却时间）")
 
     prepare_profile_dir()
     try:
         driver = create_driver(headless)
     except Exception as e:
         tqdm.write(f"❌ Selenium 启动失败: {e}")
-        if USE_PERSISTENT_PROFILE:
-            tqdm.write(f"   提示：若提示 Profile 被占用，请关闭使用 {MW_PROFILE_DIR} 的浏览器进程。")
         empty_stats["failed"] = [f"{t[1]}:{t[0]}" for t in task_list]
         empty_stats["aborted"] = True
         return empty_stats
@@ -1905,9 +2046,14 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
         captcha_solver.activate_terminal()
 
     stats = {"success": [], "failed": [], "not_found": [], "skipped": [], "aborted": False}
-    ctx = {"consecutive_blocks": 0, "aborted": False, "mismatch_hints": [], "fingerprints": {},
+    ctx = {"aborted": False, "mismatch_hints": [], "fingerprints": {},
+           "hard_blocks": 0, "hard_streak": 0,
+           "nav_since_break": 0, "next_break": random.randint(*LONG_BREAK_EVERY),
            "fast": {"enabled": fast_enabled, "misses": 0, "captchas": 0, "since_nav": 0},
            "throttle": AdaptiveThrottle(), "last_via": "nav", "via_count": {"fetch": 0, "nav": 0}}
+    if recently_blocked:
+        ctx["throttle"].set_floor(2.0)
+        tqdm.write(f"   🐢 {RECENT_BLOCK_HOURS} 小时内曾被拦截，本轮请求间隔从 ×2.0 起步")
     opts = {"headless": headless, "dry_run": dry_run, "sanity": sanity,
             "captcha_solver": captcha_solver, "escalate": escalate and AUTO_ESCALATE_HEADFUL}
 
@@ -1954,11 +2100,18 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
 
             if ctx["aborted"]:
                 stats["aborted"] = True
-                tqdm.write("🛑 连续被反爬拦截或浏览器无法恢复，终止本轮任务。")
+                tqdm.write("🛑 多次冷却后仍被拦截或浏览器无法恢复，终止本轮任务。")
                 break
 
             if idx < len(task_list) - 1:
                 ctx["throttle"].sleep(ctx["last_via"])
+                # 拟人节奏：连续访问一定数量页面后长休息
+                if ctx["nav_since_break"] >= ctx["next_break"]:
+                    secs = random.uniform(*LONG_BREAK_SECONDS)
+                    tqdm.write(f"☕ 已连续访问 {ctx['nav_since_break']} 个页面，休息 {secs:.0f} 秒（降低被风控概率）")
+                    time.sleep(secs)
+                    ctx["nav_since_break"] = 0
+                    ctx["next_break"] = random.randint(*LONG_BREAK_EVERY)
     finally:
         if pbar is not None:
             pbar.close()
@@ -1971,9 +2124,11 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
                f"未找到 {len(stats['not_found'])} | 跳过 {len(stats['skipped'])}")
     if processed:
         vc = ctx["via_count"]
-        tqdm.write(f"⏱️ 总耗时 {elapsed:.1f}s，平均 {elapsed / processed:.2f} 秒/个（含请求间隔）"
+        tqdm.write(f"⏱️ 总耗时 {elapsed:.1f}s，平均 {elapsed / processed:.2f} 秒/个（含间隔、休息与冷却）"
                    f" | ⚡快速通道 {vc['fetch']} 个 | 🌐页面导航 {vc['nav']} 个"
                    f"{' | 快速通道遇反爬 ' + str(ctx['fast']['captchas']) + ' 次' if ctx['fast']['captchas'] else ''}")
+    if ctx["hard_blocks"]:
+        tqdm.write(f"🧊 本轮共触发访问受限 {ctx['hard_blocks']} 次（若频繁出现，请调大 NAV_DELAY_RANGE）")
     for key, label in (("failed", "失败"), ("not_found", "未找到"), ("skipped", "跳过")):
         if stats[key]:
             tqdm.write(f"   {label}列表: {', '.join(stats[key])}")
@@ -2020,7 +2175,7 @@ def count_remaining_tasks(only_groups=None):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="MarketWatch 每日数据抓取")
-    parser.add_argument("--headful", action="store_true", help="显示浏览器窗口")
+    parser.add_argument("--headful", action="store_true", help="显示浏览器窗口（附着模式下始终有界面）")
     parser.add_argument("--groups", nargs="+", default=None, help="只抓取指定分组，例如 --groups Currencies Indices")
     parser.add_argument("--dry-run", action="store_true", help="只抓取并打印，不写数据库、不修改 JSON")
     parser.add_argument("--no-sanity", action="store_true", help="关闭价格偏差合理性校验")
@@ -2030,6 +2185,8 @@ def parse_args():
                         help="无头模式遇到验证码时不自动切换为有界面模式")
     parser.add_argument("--no-fast", action="store_true",
                         help="关闭快速通道（页面内 fetch），每个 symbol 都完整打开页面")
+    parser.add_argument("--ignore-cooldown", action="store_true",
+                        help="忽略启动时的“距上次被封未满冷却期”等待")
     return parser.parse_args()
 
 
@@ -2041,7 +2198,7 @@ if __name__ == "__main__":
         stats = scrape_marketwatch(headless=not args.headful, only_groups=args.groups,
                                    dry_run=args.dry_run, sanity=not args.no_sanity,
                                    auto_slider=not args.no_auto_slider, escalate=not args.no_escalate,
-                                   fast=not args.no_fast)
+                                   fast=not args.no_fast, ignore_cooldown=args.ignore_cooldown)
         if args.dry_run:
             exit_code = 0
         else:

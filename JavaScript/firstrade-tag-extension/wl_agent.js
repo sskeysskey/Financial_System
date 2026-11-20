@@ -440,14 +440,18 @@
     if (!ENABLED || busy || !isWatchlistPage()) return;
     const a = api();
     if (!a || !a.addOneSymbol) return;
-    if (a.isBusy() || window.__FT_TRADE_BUSY__) return;
-    busy = true;                                   // ★ 先占锁，防止 focus+interval 并发领两次
+    /* ★ 分组归属扫描 / 交易 / 批量任务期间都不领任务（原来只看 isBusy，会和扫描同时操作页面） */
+    if (a.isBusy() || window.__FT_AUTOMATION__ || window.__FT_TRADE_BUSY__) return;
+    const M = window.__FT_WL_MEMBER__;
+    if (M && M.isScanning && M.isScanning()) return;
+    busy = true;
+    let held = false;
     try {
       const r = await bg({ action: 'FT_WL_TASKS', max: 3, vis: !document.hidden });
       if (!r.ok) return;
       const tasks = (r.data && r.data.tasks) || [];
       if (!tasks.length) return;
-      try { a.setExternalBusy(true); } catch (e) { }
+      try { a.setExternalBusy(true); held = true; } catch (e) { }
       for (const t of tasks) {
         if (!ENABLED) break;
         await handleTask(t);
@@ -455,7 +459,7 @@
       }
     } finally {
       busy = false;
-      try { a.setExternalBusy(false); } catch (e) { }
+      if (held) { try { a.setExternalBusy(false); } catch (e) { } }   // ★ 只释放自己占的，不误清扫描的忙碌标记
     }
   }
 

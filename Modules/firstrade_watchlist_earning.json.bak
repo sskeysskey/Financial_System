@@ -1,16 +1,121 @@
 {
  "_meta": {
-  "updated_at": 1794631179.821437,
-  "updated_at_str": "2026-11-14 12:39:39",
-  "count": 0,
+  "updated_at": 1794976405.7786791,
+  "updated_at_str": "2026-11-18 12:33:25",
+  "count": 13,
   "mode": "overwrite",
   "group": "Earning",
   "groups": {
    "Earning": {
-    "updated_at": 1794631179.821437,
-    "count": 0
+    "updated_at": 1794976405.7786791,
+    "count": 13
    }
   }
  },
- "quotes": {}
+ "quotes": {
+  "BLSH": {
+   "symbol": "BLSH",
+   "change_pct": "-1.32%",
+   "change_pct_num": -1.316456,
+   "last": "19.49",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "BRBR": {
+   "symbol": "BRBR",
+   "change_pct": "+1.71%",
+   "change_pct_num": 1.706161,
+   "last": "10.73",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "CAAP": {
+   "symbol": "CAAP",
+   "change_pct": "-1.60%",
+   "change_pct_num": -1.599016,
+   "last": "24.00",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "DLB": {
+   "symbol": "DLB",
+   "change_pct": "-5.98%",
+   "change_pct_num": -5.984303,
+   "last": "57.50",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "GLBE": {
+   "symbol": "GLBE",
+   "change_pct": "-1.15%",
+   "change_pct_num": -1.148381,
+   "last": "40.90",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "GLNG": {
+   "symbol": "GLNG",
+   "change_pct": "+1.67%",
+   "change_pct_num": 1.667069,
+   "last": "42.08",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "LOW": {
+   "symbol": "LOW",
+   "change_pct": "-1.93%",
+   "change_pct_num": -1.933935,
+   "last": "220.58",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "NVDA": {
+   "symbol": "NVDA",
+   "change_pct": "+0.95%",
+   "change_pct_num": 0.954272,
+   "last": "157.63",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "PONY": {
+   "symbol": "PONY",
+   "change_pct": "-3.81%",
+   "change_pct_num": -3.809524,
+   "last": "4.04",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "SQM": {
+   "symbol": "SQM",
+   "change_pct": "+1.64%",
+   "change_pct_num": 1.642871,
+   "last": "51.97",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "TGT": {
+   "symbol": "TGT",
+   "change_pct": "-0.22%",
+   "change_pct_num": -0.224551,
+   "last": "159.96",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "TJX": {
+   "symbol": "TJX",
+   "change_pct": "-0.82%",
+   "change_pct_num": -0.823861,
+   "last": "130.01",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  },
+  "ZTO": {
+   "symbol": "ZTO",
+   "change_pct": "+0.44%",
+   "change_pct_num": 0.439453,
+   "last": "20.57",
+   "group": "Earning",
+   "updated_at": 1794976405.7786791
+  }
+ }
 }

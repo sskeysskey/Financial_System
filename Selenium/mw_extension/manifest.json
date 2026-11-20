@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "MW Daily Helper",
+  "version": "1.0.0",
+  "description": "在自用 Chrome 中按 MW_Bridge.py 下发的任务抓取 MarketWatch 每日数据",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.marketwatch.com/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MW Daily Helper"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "trigger.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

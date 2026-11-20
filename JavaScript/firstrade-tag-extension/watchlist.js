@@ -1,5 +1,5 @@
 /* ============================================================================
- * Firstrade 自选股助手 watchlist.js  v11.5      仅在 /app/watchlist 生效
+ * Firstrade 自选股助手 watchlist.js  v11.7      仅在 /app/watchlist 生效
  *
  * v11 变更:
  *   ★ Earning 系列分组：源清单按「每组上限(默认35，可配)」分配到 Earning / Earning1 / Earning2 …
@@ -56,7 +56,11 @@
     switchRetry: 3,          // 切换分组最多尝试次数
     switchSettle: 1000,      // 切换成功后固定停顿(ms)，让表格和下拉稳定
     missingGroupWait: 3000,  // 下拉里找不到分组时，累计最多等它出现多久(ms)
-    reloadMax: 3             // 单次任务最多自动刷新页面次数（防死循环）
+    reloadMax: 3,            // 单次任务最多自动刷新页面次数（防死循环）
+    /* ★ v11.7 */
+    rebuildBase: true,      // 基组 Earning 不整组删除（逐只删），Earning1/2/3… 仍可整组重建
+    triggerWait: 12000,      // 找不到分组选择器时最多等多久(ms)
+    resumeReadyWait: 30000   // 刷新续跑前等分组选择器出现的最长时间(ms)
   };
   let RUN = Object.assign({}, CFG);
 
@@ -283,14 +287,18 @@
   }
 
   async function listGroupOptions() {
-    const trig = groupTriggerEl();
+    const trig = groupTriggerEl() || await waitFor(groupTriggerEl, RUN.triggerWait || 12000, 250);
     if (!trig) return { ok: false, error: '找不到分组选择器 [data-select-trigger]' };
     await closeGroupSelect();
-    fireMouseSeq(groupTriggerEl() || trig);
-    const opts = await waitFor(() => { const o = groupOptions(); return o.length ? o : null; }, 3500, 120);
-    const names = opts ? opts.map(o => cleanText(o)).filter(Boolean) : [];
-    await closeGroupSelect();
-    return { ok: !!names.length, current: groupName(), options: names };
+    for (let i = 0; i < 2; i++) {
+      fireMouseSeq(groupTriggerEl() || trig);
+      const opts = await waitFor(() => { const o = groupOptions(); return o.length ? o : null; }, 3500, 120);
+      const names = opts ? opts.map(o => cleanText(o)).filter(Boolean) : [];
+      await closeGroupSelect();
+      if (names.length) return { ok: true, current: groupName(), options: names };
+      await sleep(800);
+    }
+    return { ok: false, current: groupName(), options: [], error: '分组下拉没有选项' };
   }
 
   async function waitGridSettled(timeout) {
@@ -313,7 +321,9 @@
     const want = normGroup(target);
     if (!want) return { ok: false, error: '目标分组名为空' };
     if (normGroup(groupName()) === want) { await closeGroupSelect(); return { ok: true, changed: false }; }
-    if (!groupTriggerEl()) return { ok: false, error: '页面上找不到分组选择器 [data-select-trigger]' };
+    if (!groupTriggerEl() && !(await waitFor(groupTriggerEl, RUN.triggerWait || 12000, 250))) {
+      return { ok: false, error: '页面上找不到分组选择器 [data-select-trigger]' };
+    }
 
     const tries = Math.max(1, RUN.switchRetry || 3);
     let lastErr = '', missing = false;
@@ -1722,7 +1732,8 @@
     multi: null, skipQuotes: false,
     family: false, famText: '', famCreated: [], famDeleted: [],
     retry: [],                       // ★ v11.5 待收尾重试的失败项
-    reloads: 0                      // ★ 本次任务已自动刷新页面的次数
+    reloads: 0,                     // ★ 本次任务已自动刷新页面的次数
+    fatal: ''                       // ★ v11.7 任务被中止的原因（非空 = 本次同步失败）
   };
 
   const scanState = { running: false, abort: false };
@@ -1931,8 +1942,15 @@
     hudInfo('正在读取数据源…');
     const src = await getSourceSymbols();
     hudInfo(`来源 ${src.from}：${src.symbols.length} 只，正在读取分组列表…`);
-    const lr = await listGroupOptions();
-    await sleep(300);
+    let lr = null;
+    for (let i = 0; i < 3; i++) {
+      lr = await listGroupOptions();
+      await sleep(300);
+      if (lr.ok) break;
+      if (halted()) throw new Error('已停止');
+      hudInfo(`读取分组列表失败（${lr.error || '无选项'}），第 ${i + 1}/3 次，稍后重试…`);
+      await sleep(1500 * (i + 1));
+    }
     if (!lr.ok) throw new Error('读不到页面分组列表（' + (lr.error || '下拉框没有选项') + '），已中止未修改');
     const names = Array.from(new Set((lr.options || []).map(stripCount).filter(Boolean)));
     const fam = names.filter(n => familyIndex(n, base) >= 0).sort((a, b) => familyIndex(a, base) - familyIndex(b, base));
@@ -1947,7 +1965,7 @@
     }
     const P = planFamily(src.symbols, base, fam, contents, cap, !!opts.strict, !!opts.wipe, {
       rebuild: CFG.groupRebuild !== false,
-      canRebuildBase: others.length > 0,
+      canRebuildBase: CFG.rebuildBase === true && others.length > 0,
       cost: { del: CFG.costDelSym, add: CFG.costAddSym, group: CFG.costGroupRebuild, minRemove: CFG.rebuildMinRemove }
     });
     return Object.assign(P, {
@@ -2161,7 +2179,8 @@
         base: job.targetGroup, strictSync: job.strictSync, originGroup: job.originGroup,
         famCreated: job.famCreated, famDeleted: job.famDeleted,
         cleared: job.cleared, added: job.added,
-        failed: job.failed, clearFailed: job.clearFailed, retry: job.retry
+        failed: job.failed, clearFailed: job.clearFailed, retry: job.retry,
+        skipQuotes: job.skipQuotes, clearFirst: job.clearFirst, backedUp: job.backedUp
       }
     });
     renderHud(`${reason}：页面将自动刷新（第 ${job.reloads}/${max} 次），刷新后自动续跑…`);
@@ -2179,8 +2198,12 @@
     return false;
   }
 
-  function resumeFamily(fr) {
-    resetJob({ clearFirst: false, clearOnly: false, strictSync: fr.strictSync, targetGroup: fr.base });
+  async function resumeFamily(fr) {
+    resetJob({
+      clearFirst: false, clearOnly: false,
+      strictSync: !!fr.strictSync || !!fr.clearFirst,     // 全清模式续跑改用严格同步，避免把已加好的再删掉
+      targetGroup: fr.base, skipQuotes: !!fr.skipQuotes
+    });
     job.originGroup = fr.originGroup || job.originGroup;
     job.reloads = fr.reloads || 0;
     job.cleared = fr.cleared || 0;
@@ -2190,15 +2213,20 @@
     job.failed = fr.failed || [];
     job.clearFailed = fr.clearFailed || [];
     job.retry = fr.retry || [];
+    job.backedUp = !!fr.backedUp;
     ensureHud('job');
-    renderHud(`页面已刷新（第 ${job.reloads} 次），继续「${job.targetGroup}」系列同步…`);
-    runFamilyPipeline({ resumed: true }).catch(e => {
-      job.lastError = String((e && e.message) || e);
-      renderHud('❌ ' + job.lastError);
-      toast('❌ ' + job.lastError);
-      finishJob();
-    });
-    return true;
+    renderHud(`页面已刷新（第 ${job.reloads} 次），等待分组选择器就绪…`);
+    /* ★ v11.7 关键修复：表格先于分组选择器渲染，必须等选择器出现再续跑 */
+    const trig = await waitFor(groupTriggerEl, CFG.resumeReadyWait || 30000, 300);
+    if (!trig) {
+      if (await checkpointReload('刷新后分组选择器迟迟未出现')) return 'reload';
+      throw new Error('页面刷新后分组选择器一直未出现，续跑已放弃（未做后续修改）');
+    }
+    await waitGridSettled();
+    await sleep(1200);
+    if (job.stop) return finishJob();
+    renderHud(`继续「${job.targetGroup}」系列同步…`);
+    return runFamilyPipeline({ resumed: true });
   }
 
   async function runFamilyPipeline(opts) {
@@ -2397,6 +2425,7 @@
     job.skipQuotes = !!opts.skipQuotes;
     job.family = false; job.famText = ''; job.famCreated = []; job.famDeleted = [];
     job.retry = [];                 // ★ v11.5
+    job.fatal = '';
     RUN = Object.assign({}, CFG);
     scanState.abort = false;
     syncBusy();
@@ -2420,12 +2449,7 @@
     renderHud('正在启动…');
 
     const runner = job.clearOnly ? runPipeline({}) : runFamilyPipeline();
-    runner.catch(e => {
-      job.lastError = String((e && e.message) || e);
-      renderHud('❌ ' + job.lastError);
-      toast('❌ ' + job.lastError);
-      finishJob();
-    });
+    runner.catch(failJob);
 
     return {
       ok: true, started: true, group: job.group,
@@ -2444,12 +2468,7 @@
     if (want && normGroup(groupName()) !== normGroup(want)) {
       renderHud(`正在从「${job.originGroup || '?'}」切换到目标分组「${want}」…`);
       const sr = await switchGroup(want);
-      if (!sr.ok) {
-        job.lastError = sr.error || '切换分组失败';
-        renderHud('❌ ' + job.lastError);
-        toast('❌ ' + job.lastError);
-        return finishJob();
-      }
+      if (!sr.ok) return failJob(sr.error || '切换分组失败');
       await waitGridSettled();
     }
     job.group = groupName() || want;
@@ -2457,12 +2476,7 @@
 
     if (!job.clearOnly) {
       const addBtn = await waitFor(findAddButton, 6000, 200);
-      if (!addBtn) {
-        job.lastError = `分组「${job.group}」里找不到「添加自选股」按钮（该分组可能不支持添加）`;
-        renderHud('❌ ' + job.lastError);
-        toast('❌ ' + job.lastError);
-        return finishJob();
-      }
+      if (!addBtn) return failJob(`分组「${job.group}」里找不到「添加自选股」按钮（该分组可能不支持添加）`);
     }
     renderHud(`已定位到分组「${job.group}」（表内 ${dataRowsTotal()} 只）`);
     await sleep(300);
@@ -2515,9 +2529,7 @@
         pressEscape();
         await sleep(200);
       } catch (e) {
-        job.lastError = '输入框自检失败: ' + String((e && e.message) || e);
-        renderHud('❌ ' + job.lastError);
-        return finishJob();
+        return failJob('输入框自检失败: ' + String((e && e.message) || e));
       }
     }
     await persist(true);
@@ -2611,10 +2623,15 @@
       if (job.cleared > 0 || job.clearFailed.length) bits.push(`删除 ${job.cleared}（失败 ${job.clearFailed.length}）`);
       if (!job.clearOnly) bits.push(`新增 ${job.added}（失败 ${job.failed.length}）`);
       const summary = bits.join(' ｜ ') || '无操作';
-      renderHud(job.stop ? '⏹ 已手动停止：' + summary : `✅ 完成：${summary}`);
-      toast(job.stop ? '⏹ 自选股任务已停止' : `✅ 自选股任务完成：${summary}`);
+      if (job.fatal) {
+        renderHud(`❌ 已中止：${job.fatal}｜${summary}`);
+        toast(`❌ 自选股任务中止：${job.fatal}`);
+      } else {
+        renderHud(job.stop ? '⏹ 已手动停止：' + summary : `✅ 完成：${summary}`);
+        toast(job.stop ? '⏹ 自选股任务已停止' : `✅ 自选股任务完成：${summary}`);
+      }
 
-      if (!job.stop && !job.clearOnly && !job.skipQuotes) { try { await fullScanQuotes(true); } catch (e) { } }
+      if (!job.stop && !job.fatal && !job.clearOnly && !job.skipQuotes) { try { await fullScanQuotes(true); } catch (e) { } }
       else if (!job.stop && job.clearOnly && !job.multi) { try { await collectWatchlist(); } catch (e) { } }
 
       try {
@@ -2631,6 +2648,16 @@
       job.finishing = false;
       syncBusy();
     }
+  }
+
+  /* ★ v11.7 致命错误统一出口：记录 fatal → background 判本步失败 → 一键全流程自动重试 */
+  function failJob(e) {
+    const m = String((e && e.message) || e || '未知错误');
+    job.lastError = m;
+    job.fatal = m;
+    renderHud('❌ ' + m);
+    toast('❌ ' + m);
+    return finishJob();
   }
 
   /* ================= 一键清空非保留分组（Earning 系列整体保留） ================= */
@@ -2666,11 +2693,7 @@
     RUN.clearReloadEvery = 0;
     ensureHud('job');
     renderHud(`准备清空 ${groups.length} 个分组：${groups.join(' / ')}`);
-    runMultiClear(groups, keepAll).catch(e => {
-      job.lastError = String((e && e.message) || e);
-      renderHud('❌ ' + job.lastError);
-      finishJob();
-    });
+    runMultiClear(groups, keepAll).catch(failJob);
     return { ok: true, started: true, groups, keep: keepAll };
   }
 
@@ -2729,11 +2752,7 @@
     cleanNavSearch();
     ensureHud('job');
     renderHud('已从上次进度续跑');
-    runPipeline({ resume: true }).catch(e => {
-      job.lastError = String((e && e.message) || e);
-      renderHud('❌ ' + job.lastError);
-      finishJob();
-    });
+    runPipeline({ resume: true }).catch(failJob);
   }
 
   /* ================= ★ v11 变更% 快照：覆盖整个 Earning 系列 ================= */
@@ -2889,27 +2908,27 @@
     const ready = await waitFor(() => (document.querySelector('.ag-root, [role="grid"], main') &&
       (findAddButton() || document.querySelector('[role="grid"]') || emptyStateEl())), 25000, 400);
 
-    if (ready) {
-      /* ★ 刷新检查点：页面就绪后才认领 */
-      const fr = (await storeGet([FAMILY_RESUME_KEY]))[FAMILY_RESUME_KEY];
-      if (fr) {
-        if (fr.pending && fr.expires > Date.now()) {
-          await storeSet({
-            [FAMILY_RESUME_KEY]: Object.assign({}, fr, {
-              pending: false,
-              expires: Date.now() + FAMILY_RESUME_TTL
-            })
-          });
-          resumeFamily(fr);      // resetJob 同步设置 running = true
-          return;
-        }
-        // 已过期，或已被认领过：清掉
-        await new Promise(r => chrome.storage.local.remove(FAMILY_RESUME_KEY, r));
+    const fr = (await storeGet([FAMILY_RESUME_KEY]))[FAMILY_RESUME_KEY];
+    if (fr) {
+      const live = fr.expires > Date.now();
+      if (ready && live && fr.pending) {
+        await storeSet({
+          [FAMILY_RESUME_KEY]: Object.assign({}, fr, { pending: false, expires: Date.now() + FAMILY_RESUME_TTL })
+        });
+        resumeFamily(fr).catch(failJob);       // resetJob 同步设置 running = true
+        return;
       }
-    } else {
-      // 25 秒内页面没就绪：放弃本次续跑，避免 background 误以为任务还在运行
       await new Promise(r => chrome.storage.local.remove(FAMILY_RESUME_KEY, r));
-      console.warn(LOG, '页面未就绪，已放弃本次检查点续跑');
+      if (live) {
+        /* ★ v11.7 续跑放弃也要如实上报，否则 background 会把它当成「已一致」 */
+        job.fatal = job.lastError = !ready
+          ? '页面刷新后 25 秒内未就绪，已放弃续跑（请重新执行一键同步）'
+          : '同步任务执行中页面被意外刷新，已放弃续跑（请重新执行一键同步）';
+        console.warn(LOG, job.fatal);
+        toast('❌ ' + job.fatal);
+      }
+    } else if (!ready) {
+      console.warn(LOG, '页面 25 秒内未就绪');
     }
 
     const st = await storeGet([JOB_KEY]);
@@ -2971,6 +2990,7 @@
         srcFrom: job.srcFrom, srcCount: job.srcCount, haveCount: job.haveCount,
         finishing: job.finishing, multi: job.multi,
         famText: job.famText, famCreated: job.famCreated, famDeleted: job.famDeleted,
+        fatal: job.fatal,
         lastError: job.lastError
       });
       return;
@@ -3144,5 +3164,5 @@
   };
 
   bootstrap();
-  console.log(LOG, `watchlist.js v11.3 就绪（isWatchlist=${isWatchlistPage()}，系列基名 ${TARGET.group}）`);
+  console.log(LOG, `watchlist.js v11.7 就绪（isWatchlist=${isWatchlistPage()}，系列基名 ${TARGET.group}）`);
 })();

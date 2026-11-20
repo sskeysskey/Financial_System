@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <title>MW 抓取控制台</title>
+  <style>
+    body {
+      font: 13px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      margin: 16px;
+      color: #222
+    }
+
+    h2 {
+      margin: 0 0 10px
+    }
+
+    small {
+      color: #888;
+      font-weight: normal
+    }
+
+    #stats span {
+      display: inline-block;
+      margin-right: 16px;
+      font-weight: 600
+    }
+
+    #current {
+      margin-top: 6px;
+      color: #555
+    }
+
+    #status {
+      margin: 8px 0;
+      padding: 6px 10px;
+      background: #f2f4f7;
+      border-radius: 6px
+    }
+
+    #log {
+      margin-top: 10px;
+      height: 68vh;
+      overflow: auto;
+      font: 12px Menlo, monospace;
+      background: #151515;
+      color: #ddd;
+      padding: 8px;
+      border-radius: 6px;
+      white-space: pre-wrap
+    }
+
+    .line.warn {
+      color: #f5c26b
+    }
+
+    .line.err {
+      color: #ff7b7b
+    }
+
+    button {
+      padding: 6px 16px;
+      font-size: 13px
+    }
+
+    .tip {
+      color: #a00;
+      margin: 6px 0
+    }
+  </style>
+</head>
+
+<body>
+  <h2>MW 抓取控制台 <small id="ver"></small></h2>
+  <div class="tip">运行期间请勿关闭本页和「抓取窗口」，也不要在抓取窗口里手动浏览。</div>
+  <div id="stats">
+    <span id="s-progress">进度 -/-</span><span id="s-ok">成功 0</span><span id="s-fail">失败 0</span>
+    <span id="s-nf">未找到 0</span><span id="s-skip">跳过 0</span><span id="s-block">封禁 0</span>
+  </div>
+  <div id="current"></div>
+  <div id="status">初始化…</div>
+  <button id="stop">停止</button>
+  <div id="log"></div>
+  <script src="runner.js"></script>
+</body>
+
+</html>
